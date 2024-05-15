@@ -18,13 +18,13 @@
 
   <ItemGroup>
     <Reference Include="Ephemera.NBagOfTricks">
-      <HintPath>lib\Ephemera.NBagOfTricks.dll</HintPath>
+      <HintPath>..\lib\Ephemera.NBagOfTricks.dll</HintPath>
     </Reference>
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Ephemera.NBagOfUis">
-      <HintPath>lib\Ephemera.NBagOfUis.dll</HintPath>
+      <HintPath>..\lib\Ephemera.NBagOfUis.dll</HintPath>
     </Reference>
   </ItemGroup>
 
