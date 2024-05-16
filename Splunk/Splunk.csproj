@@ -17,6 +17,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="Ephemera.NBagOfTricks">
       <HintPath>..\lib\Ephemera.NBagOfTricks.dll</HintPath>
     </Reference>

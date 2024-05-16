@@ -5,16 +5,16 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
+using Com = Splunk.Common.Common;
 
+
+//TODO1 make into windows service like MassProcessing.
 
 namespace Splunk
 {
     public partial class MainForm : Form
     {
-        //const string TS_FORMAT = @"mm\:ss\.fff";
-        const string PIPE_NAME = "058F684D-AF82-4FE5-BD1E-9FD031FE28CF";
-        const string LOGFILE = @"C:\Dev\repos\Splunk\test_ipc_log.txt";
-        readonly Ipc.MpLog _log;// = new(LOGFILE, "SPLUNK");
+        readonly Ipc.MpLog _log;
 
         Ipc.Server server;
 
@@ -22,21 +22,16 @@ namespace Splunk
         {
             InitializeComponent();
 
-            if (!File.Exists(LOGFILE))
-            {
-                File.WriteAllText(LOGFILE, $"===== New log file ===={Environment.NewLine}");
-            }
-            _log = new(LOGFILE, "SPLUNK");
-
+            _log = new(Com.LogFileName, "SPLUNK");
             _log.Write("Hello from UI");
 
-            ///// Text control.
+            // Text control.
             tvInfo.MatchColors.Add("ERR ", Color.Purple);
             // tvInfo.MatchColors.Add("55", Color.Green);
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
 
-            ///// FilTree.
+            // FilTree.
             filTree.FilterExts = [".txt", ".ntr", ".md", ".xml", ".cs", ".py"];
             filTree.IgnoreDirs = [".vs", ".git", "bin", "obj", "lib"];
             filTree.RootDirs =
@@ -52,21 +47,12 @@ namespace Splunk
             filTree.SplitterPosition = 40;
             filTree.SingleClickSelect = false;
             filTree.InitTree();
-            //            filTree.FileSelected += (object? sender, string fn) => { Tell($"Selected file: {fn}"); _settings.UpdateMru(fn); };
-
-
-            //case "SingleClickSelect":
-            //    filTree.SingleClickSelect = _settings.SingleClickSelect;
-            //    break;
-
-            //case "SplitterPosition":
-            //    filTree.SplitterPosition = _settings.SplitterPosition;
-            //    break;
-
+            //filTree.FileSelected += (object? sender, string fn) => { Tell($"Selected file: {fn}"); _settings.UpdateMru(fn); };
+            //filTree.SingleClickSelect = _settings.SingleClickSelect;
+            //filTree.SplitterPosition = _settings.SplitterPosition;
 
             // Run server
-            //using Ipc.Server server = new(PIPE_NAME, LOGFILE);
-            server = new(PIPE_NAME, LOGFILE);
+            server = new(Com.PipeName, Common.Common.LogFileName);
             server.IpcReceive += Server_IpcReceive;
 
             server.Start();
@@ -89,10 +75,61 @@ namespace Splunk
 
         void Server_IpcReceive(object? sender, Ipc.IpcReceiveEventArgs e)
         {
-            var stat = e.Error ? "ERR " : "";
+            var stat = e.Error ? "ERR" : "RCV";
 
             tvInfo.AppendLine($"{stat} {e.Message}");
+            _log.Write($"{stat} {e.Message}");
         }
+
+
+        /* =====================
+        Commander
+        Open a second XP in dir - aligned with first. opt for full screen?
+        src: Dir
+        "path\SplunkClient.exe" "src" "cmder" "%V"
+
+        Tree
+        Cmd line to clipboard for current or sel dir
+        src: dir/file/dirbg
+        "path\SplunkClient.exe" "src" "tree" "%V"
+
+        Dir
+        Cmd line to clipboard for current or sel dir
+        src: dir/file/dirbg
+        "path\SplunkClient.exe" "src" "dir" "%V"
+
+        Open in tab
+        Open dir in tab in current window
+        src: dir/desktop  (In XP use middle button)
+        "path\SplunkClient.exe" "src" "newtab" "%V"
+        TODO1 Desktop (other?) items need open in new tab / window. Might need something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+
+        Open dir in sublime
+        Open dir in a new ST
+        src: dir/dirbg
+        "path\SplunkClient.exe" "src" "stdir" "%V"
+        ST cl:
+        Usage: subl [arguments] [files]         Edit the given files
+           or: subl [arguments] [directories]   Open the given directories
+           or: subl [arguments] -- [files]      Edit files that may start with '-'
+           or: subl [arguments] -               Edit stdin
+           or: subl [arguments] - >out          Edit stdin and write the edit to stdout
+        Arguments:
+          --project <project>:    Load the given project
+          --command <command>:    Run the given command
+          -n or --new-window:     Open a new window
+          --launch-or-new-window: Only open a new window if the application is open
+          -a or --add:            Add folders to the current window
+          -w or --wait:           Wait for the files to be closed before returning
+          -b or --background:     Don't activate the application
+          -s or --stay:           Keep the application activated after closing the file
+          --safe-mode:            Launch using a sandboxed (clean) environment
+          -h or --help:           Show help (this message) and exit
+          -v or --version:        Show version and exit
+        Filenames may be given a :line or :line:column suffix to open at a specific location.
+        */
+
+
 
         void Stuff()
         {

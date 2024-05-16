@@ -1,34 +1,39 @@
 ﻿using System;
+using System.IO;
 using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
-
+using Com = Splunk.Common.Common;
 
 
 namespace Splunk.Client
 {
     internal class Program
     {
-        // TODO1 copied - or config?
-        const string PIPE_NAME = "058F684D-AF82-4FE5-BD1E-9FD031FE28CF";
-        const string LOGFILE = @"C:\Dev\repos\Splunk\test_ipc_log.txt";
-        //static readonly Ipc.MpLog _log = new(LOGFILE, "CLI");
+        static Ipc.MpLog _log;
 
-        static Ipc.Client client;// = new(PIPE_NAME, LOGFILE);
+        static Ipc.Client _client;
 
         static void Main(string[] _)
         {
+            _log = new(Com.LogFileName, "SPLCLI");
+
             var cl = Environment.CommandLine;
+            _log.Write($"Client says [{cl}]");
 
             Console.WriteLine($"Client says [{cl}]");
 
             foreach (var arg in Environment.GetCommandLineArgs())
             {
+                _log.Write($"    {arg}");
                 Console.WriteLine($"  {arg}");
             }
 
             try
             {
-                client = new(PIPE_NAME, LOGFILE);
-                var res = client.Send($"{cl}", 1000);
+                _client = new(Com.PipeName, Com.LogFileName);
+
+                var res = _client.Send($"{cl}", 1000);
+
+                _log.Write($"res:{res}");
 
                 switch (res)
                 {
@@ -37,7 +42,7 @@ namespace Splunk.Client
                         break;
 
                     case Ipc.ClientStatus.Error:
-                        Console.WriteLine($"Client error:{client.Error}", true);
+                        Console.WriteLine($"Client error:{_client.Error}", true);
                         break;
 
                     case Ipc.ClientStatus.Timeout:
@@ -49,36 +54,8 @@ namespace Splunk.Client
             {
                 Console.WriteLine(ex.Message);
             }
+
+            System.Threading.Thread.Sleep(2000);
         }
-
-        //static void Main(string[] _)
-        //{
-        //    var cl = Environment.CommandLine;
-
-        //    Ipc.Client client = new(PIPE_NAME, LOGFILE);
-        //    _log.Write($"Client says [{cl}]");
-
-        //    foreach (var arg in Environment.GetCommandLineArgs())
-        //    {
-        //        _log.Write($"  {arg}");
-        //    }
-
-        //    var res = client.Send($"{cl}", 1000);
-
-        //    switch (res)
-        //    {
-        //        case Ipc.ClientStatus.Ok:
-        //            _log.Write($"Client ok");
-        //            break;
-
-        //        case Ipc.ClientStatus.Error:
-        //            _log.Write($"Client error:{client.Error}", true);
-        //            break;
-
-        //        case Ipc.ClientStatus.Timeout:
-        //            _log.Write($"Client timeout", true);
-        //            break;
-        //    }
-        //}
     }
 }
