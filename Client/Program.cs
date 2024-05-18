@@ -2,53 +2,40 @@
 using System.IO;
 using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
 using Com = Splunk.Common.Common;
+using System.Collections.Generic;
+using Ephemera.NBagOfTricks;
 
 
 namespace Splunk.Client
 {
     internal class Program
     {
-        static Ipc.MpLog _log;
-
-        static Ipc.Client _client;
-
-        static void Main(string[] _)
+        static void Main(string[] args)
         {
-            _log = new(Com.LogFileName, "SPLCLI");
+            //Ipc.MpLog _log = new(Com.LogFileName, "SPLCLI");
+            //_log.Write($"Client cmd line: [{Environment.CommandLine}]");
+            //Console.WriteLine($"Client cmd line: [{Environment.CommandLine}]");
 
-            var cl = Environment.CommandLine;
-            _log.Write($"Client says [{cl}]");
-
-            Console.WriteLine($"Client says [{cl}]");
-
-            foreach (var arg in Environment.GetCommandLineArgs())
-            {
-                _log.Write($"    {arg}");
-                Console.WriteLine($"  {arg}");
-            }
+            // Clean up args and make them safe for server.
+            List<string> cleanArgs = [];
+            args.ForEach(a => { cleanArgs.Add($"\"{a}\""); });
+            var cmdString = string.Join(" ", cleanArgs);
+            Console.WriteLine(cmdString);
 
             try
             {
-                _client = new(Com.PipeName, Com.LogFileName);
+                Ipc.Client ipcClient = new(Com.PIPE_NAME, Com.LogFileName);
+                var res = ipcClient.Send(cmdString, 1000);
 
-                var res = _client.Send($"{cl}", 1000);
-
-                _log.Write($"res:{res}");
-
-                switch (res)
+                string sres = res switch
                 {
-                    case Ipc.ClientStatus.Ok:
-                        Console.WriteLine($"Client ok");
-                        break;
+                    Ipc.ClientStatus.Ok => "Client ok",
+                    Ipc.ClientStatus.Error => $"Client error:{ipcClient.Error}",
+                    Ipc.ClientStatus.Timeout => "Client timeout",
+                    _ => $"Unknown ClientStatus: {res}"
+                };
 
-                    case Ipc.ClientStatus.Error:
-                        Console.WriteLine($"Client error:{_client.Error}", true);
-                        break;
-
-                    case Ipc.ClientStatus.Timeout:
-                        Console.WriteLine($"Client timeout", true);
-                        break;
-                }
+                Console.WriteLine(sres);
             }
             catch (Exception ex)
             {
