@@ -69,7 +69,7 @@ https://superuser.com/questions/136838/which-special-variables-are-available-whe
 
 ## Registry keys of interest
 
-Not shown are things like icon spec.
+Not shown are things like icon, extended, ...
 
 ```
 ;Right click in explorer_right_pane or windows_desktop with a directory selected.
@@ -79,7 +79,7 @@ Not shown are things like icon spec.
 
 ;The command to execute - arg is the directory.
 [HKEY_CURRENT_USER\Software\Classes\Directory\shell\menu_item\command]
-@="my_command.exe %V"
+@="my_command.exe" "%V"
 ```
 ```
 ;Right click in explorer_right_pane with nothing selected (background)
@@ -89,7 +89,7 @@ Not shown are things like icon spec.
 
 ;The command to execute - arg is not used.
 [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\menu_item\command]
-@="my_command.exe"
+@="my_command.exe" "%V"
 ```
 ```
 ;Right click in windows_desktop with nothing selected (background).
@@ -99,7 +99,7 @@ Not shown are things like icon spec.
 
 ;The command to execute - arg is not used.
 [HKEY_CURRENT_USER\Software\Classes\DesktopBackground\shell\menu_item\command]
-@="my_command.exe"
+@="my_command.exe" "%V"
 ```
 ```
 ;Right click in explorer_left_pane (navigation) with a folder selected.
@@ -109,7 +109,7 @@ Not shown are things like icon spec.
 
 ;The command to execute - arg is the folder.
 [HKEY_CURRENT_USER\Software\Classes\Folder\shell\menu_item\command]
-@="my_command.exe %V"
+@="my_command.exe" "%V"
 ```
 ```
 ;Right click in explorer_right_pane or windows_desktop with a file selected (* for all exts).
@@ -119,7 +119,7 @@ Not shown are things like icon spec.
 
 ;The command to execute - arg is the file name.
 [HKEY_CURRENT_USER\Software\Classes\*\shell\menu_item\command]
-@="my_command.exe %V"
+@="my_command.exe" "%V"
 ```
 
 

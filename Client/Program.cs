@@ -16,30 +16,22 @@ namespace Splunk.Client
             //_log.Write($"Client cmd line: [{Environment.CommandLine}]");
             //Console.WriteLine($"Client cmd line: [{Environment.CommandLine}]");
 
-            // Clean up args and make them safe for server.
+            // Clean up args and make them safe for server by quoting.
             List<string> cleanArgs = [];
             args.ForEach(a => { cleanArgs.Add($"\"{a}\""); });
             var cmdString = string.Join(" ", cleanArgs);
-            Console.WriteLine(cmdString);
+            Console.WriteLine($"Send: {cmdString}");
 
             try
             {
                 Ipc.Client ipcClient = new(Com.PIPE_NAME, Com.LogFileName);
                 var res = ipcClient.Send(cmdString, 1000);
-
-                string sres = res switch
-                {
-                    Ipc.ClientStatus.Ok => "Client ok",
-                    Ipc.ClientStatus.Error => $"Client error:{ipcClient.Error}",
-                    Ipc.ClientStatus.Timeout => "Client timeout",
-                    _ => $"Unknown ClientStatus: {res}"
-                };
-
-                Console.WriteLine(sres);
+                var error = res == Ipc.ClientStatus.Error;
+                Console.WriteLine($"Result: {res} {(error ? ipcClient.Error : "")}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Client failed: {ex.Message}");
             }
 
             System.Threading.Thread.Sleep(2000);

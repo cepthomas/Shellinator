@@ -5,7 +5,12 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
+using Ephemera.NBagOfTricks;
+//using Nbot = Ephemera.NBagOfTricks;
 using Com = Splunk.Common.Common;
+
+//using Splunk.Common;
+//using Ephemera.NBagOfTricks;
 
 
 //TODO1 make into windows service like MassProcessing.
@@ -17,12 +22,16 @@ namespace Splunk
 {
     public partial class MainForm : Form
     {
+        /// <summary>The boilerplate.</summary>
+        readonly Ipc.Server server;
+
+        /// <summary>The multi log.</summary>
         readonly Ipc.MpLog _log;
 
-        Ipc.Server server;
-
-
-
+        #region Lifecycle
+        /// <summary>
+        /// 
+        /// </summary>
         public MainForm()
         {
             InitializeComponent();
@@ -31,27 +40,15 @@ namespace Splunk
             _log.Write("Hello from UI");
 
             // Text control.
-            tvInfo.MatchColors.Add("ERR ", Color.Purple);
-            // tvInfo.MatchColors.Add("55", Color.Green);
+            tvInfo.MatchColors.Add("ERROR ", Color.LightPink);
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
 
             // FilTree.
-            filTree.FilterExts = [".txt", ".ntr", ".md", ".xml", ".cs", ".py"];
-            filTree.IgnoreDirs = [".vs", ".git", "bin", "obj", "lib"];
-            filTree.RootDirs =
-            [
-                @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages\Notr",
-                @"C:\Users\cepth\OneDrive\OneDriveDocuments\notes"
-            ];
-            //filTree.RecentFiles = new()
-            //{
-            //    @"C:\Dev\repos\repos_common\audio_file_info.txt",
-            //    @"C:\Dev\repos\repos_common\build.txt"
-            //};
             filTree.SplitterPosition = 40;
             filTree.SingleClickSelect = false;
-            filTree.InitTree();
+            filTree.Visible = false;
+            //filTree.InitTree();
             //filTree.FileSelected += (object? sender, string fn) => { Tell($"Selected file: {fn}"); _settings.UpdateMru(fn); };
             //filTree.SingleClickSelect = _settings.SingleClickSelect;
             //filTree.SplitterPosition = _settings.SplitterPosition;
@@ -63,13 +60,16 @@ namespace Splunk
             server.Start();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="e"></param>
         protected override void OnLoad(EventArgs e)
         {
             DoRegistry();
 
             base.OnLoad(e);
         }
-
 
         /// <summary>
         ///  Clean up any resources being used.
@@ -84,45 +84,80 @@ namespace Splunk
             }
             base.Dispose(disposing);
         }
+        #endregion
 
-        void Server_IpcReceive(object? sender, Ipc.IpcReceiveEventArgs e)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="_"></param>
+        /// <param name="e"></param>
+        void Server_IpcReceive(object? _, Ipc.IpcReceiveEventArgs e)
         {
-            if (!e.Error)
+            string? smsg = null;
+
+            if (e.Error)
             {
-                // Process the command string.
-
-                //All client commands are of the form:
-                //"CL_PATH\SplunkClient.exe" "command" "%V"
-
-
-                // Execute a command.
-                // path = "C:\Dev\repos\Apps\Splunk\Client\bin\Debug\net8.0\SplunkClient.exe"
-
-                //Commands:
-                //"path\SplunkClient.exe" "cmder" "%V"
-                //    TODO1
-                //"path\SplunkClient.exe" "tree" "%V"
-                //    tree /a /f arg[2].GetDir() | clip
-                //"path\SplunkClient.exe" "newtab" "%V"
-                //    TODO1 open arg[2].GetDir() in new tab / window. Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
-                //"path\SplunkClient.exe" "stdir" "%V"
-                //    subl -n arg[2].GetDir()
-
+                smsg = $"ERROR Ipc: {e.Message}";
             }
-            else
+
+            if (smsg is null)
             {
-                var smsg = $"ERROR {e.Message}";
+                // Process the command string. Should be like "A1 B2" "C3" => A1 B2,C3.
+
+                // Split and remove spaces.
+                var parts = StringUtils.SplitByToken(e.Message, "\"");
+                parts.RemoveAll(string.IsNullOrWhiteSpace);
+
+                if (parts.Count != 2)
+                {
+                    smsg = $"ERROR command parts: {e.Message}";
+                }
+
+                if (smsg is null)
+                {
+                    var path = parts[1];
+                    Path.Exists(path);
+
+                    switch (parts[0])
+                    {
+                        case "cmder":
+                            //TODO1
+                            break;
+
+                        case "tree":
+                            //tree /a /f arg[2].GetDir() | clip
+                            break;
+
+                        case "newtab":
+                            //TODO1 open arg[2].GetDir() in new tab / window. Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+                            break;
+
+                        case "stdir":
+                            //subl - n arg[2].GetDir()
+                            break;
+
+                        default:
+                            smsg = $"ERROR command verb: {parts[0]}";
+                            break;
+                    }
+                }
+
+                if (smsg is null)
+                {
+                    smsg = $"ERROR command: {e.Message}";
+                    tvInfo.AppendLine(smsg);
+                    _log.Write(smsg);
+                }
+            }
+
+            if (smsg is not null)
+            {
                 tvInfo.AppendLine(smsg);
                 _log.Write(smsg);
             }
-
-
-            var stat = e.Error ? "ERR" : "RCV";
-
-            tvInfo.AppendLine($"{stat} {e.Message}");
-            _log.Write($"{stat} {e.Message}");
-
         }
+
+
 
         void DoRegistry()
         {
@@ -154,7 +189,7 @@ namespace Splunk
             // "MUIVerb"="Menu Item"
             // ;The command to execute - arg is not used.
             // [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\menu_item\command]
-            // @="my_command.exe"
+            // @="my_command.exe" "%V"
             // 
             // ;Right click in windows_desktop with nothing selected (background).
             // [HKEY_CURRENT_USER\Software\Classes\DesktopBackground\shell\menu_item]
@@ -162,7 +197,7 @@ namespace Splunk
             // "MUIVerb"="Menu Item"
             // ;The command to execute - arg is not used.
             // [HKEY_CURRENT_USER\Software\Classes\DesktopBackground\shell\menu_item\command]
-            // @="my_command.exe"
+            // @="my_command.exe" "%V"
             // 
             // ;Right click in explorer_left_pane (navigation) with a folder selected.
             // [HKEY_CURRENT_USER\Software\Classes\Folder\shell\menu_item]
