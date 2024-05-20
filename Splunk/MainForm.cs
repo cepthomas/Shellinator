@@ -1,25 +1,17 @@
-using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using System.Diagnostics;
 using Ephemera.NBagOfTricks;
 using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
 using Com = Splunk.Common.Common;
-using System.Diagnostics;
 
 
-//TODO1 make into windows service like MassProcessing. Or at least run at startup.
+//TODO1 ? make into windows service like MassProcessing. Or at least run at startup.
 
-//TODO1 clean up registry testcmds.
-
-
-
-// TODO fix nav bar + history. (re)Implement?
-// TODO tag files/dirs. Use builtin libraries and/or favorites?
-// TDOO more info/hover?. filters, fullpath, size, thumbnail
-
+//TODO1 ? generic script runner - Use for all? ps, cmd, lua, py, ... or Default/builtin
 
 
 namespace Splunk
@@ -27,14 +19,14 @@ namespace Splunk
     public partial class MainForm : Form
     {
         /// <summary>The boilerplate.</summary>
-        readonly Ipc.Server server;
+        readonly Ipc.Server _server;
 
-        /// <summary>The multi log.</summary>
+        /// <summary>The multiprocess log.</summary>
         readonly Ipc.MpLog _log;
 
         #region Lifecycle
         /// <summary>
-        ///
+        ///Constructor.
         /// </summary>
         public MainForm()
         {
@@ -43,37 +35,27 @@ namespace Splunk
             _log = new(Com.LogFileName, "SPLUNK");
             _log.Write("Hello from UI");
 
-            // Text control.
+            // Info display.
             tvInfo.MatchColors.Add("ERROR ", Color.LightPink);
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
 
-            // FilTree.
-            filTree.SplitterPosition = 40;
-            filTree.SingleClickSelect = false;
-            filTree.Visible = false;
-            //filTree.InitTree();
-            //filTree.FileSelected += (object? sender, string fn) => { Tell($"Selected file: {fn}"); _settings.UpdateMru(fn); };
-            //filTree.SingleClickSelect = _settings.SingleClickSelect;
-            //filTree.SplitterPosition = _settings.SplitterPosition;
-
             // Run server
-            server = new(Com.PIPE_NAME, Common.Common.LogFileName);
-            server.IpcReceive += Server_IpcReceive;
-
-            server.Start();
+            _server = new(Com.PIPE_NAME, Common.Common.LogFileName);
+            _server.IpcReceive += Server_IpcReceive;
+            _server.Start();
         }
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnLoad(EventArgs e)
-        {
-    //        DoRegistry();
+        ///// <summary>
+        /////
+        ///// </summary>
+        ///// <param name="e"></param>
+        //protected override void OnLoad(EventArgs e)
+        //{
+        //    DoRegistry();
 
-            base.OnLoad(e);
-        }
+        //    base.OnLoad(e);
+        //}
 
         /// <summary>
         ///  Clean up any resources being used.
@@ -84,7 +66,7 @@ namespace Splunk
             if (disposing && (components != null))
             {
                 components.Dispose();
-                server.Dispose();
+                _server.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -97,141 +79,87 @@ namespace Splunk
         /// <param name="e"></param>
         void Server_IpcReceive(object? _, Ipc.IpcReceiveEventArgs e)
         {
-            string? serr = null;
-            string? cmd = null;
-            string? path = null;
-            string? dir = null;
-            bool? isdir = null;
-
-            if (e.Error)
+            try
             {
-                serr = $"ipc server error: {e.Message}";
-            }
+                string cmd;
+                string path;
+                string dir;
+                //string? cmd = null;
+                //string? path = null;
+                //string? dir = null;
 
-            // Process the command string. Should be like "command" "args".
-            if (serr is null)
-            {
+                if (e.Error)
+                {
+                    throw new($"ipc server error: {e.Message}");
+                }
+
+                // Process the command string. Should be like "command" "args".
                 // Split and remove spaces.
                 var parts = StringUtils.SplitByToken(e.Message, "\"");
                 parts.RemoveAll(string.IsNullOrWhiteSpace);
-                if (parts.Count != 2)
-                {
-                    serr = $"invalid command format";
-                }
-                else
-                {
-                    cmd = parts[0];
-                    path = parts[1];
-                }
-            }
+                if (parts.Count != 2) { throw new($"invalid command format"); }
+                cmd = parts[0];
+                path = parts[1];
 
-            // Check for valid path arg.
-            if (serr is null)
-            {
-                if (Path.Exists(path))
-                {
-                    FileAttributes attr = File.GetAttributes(path);
-                    if (attr.HasFlag(FileAttributes.Directory))
-                    {
-                        isdir = true;
-                        dir = path;
-                    }
-                    else
-                    {
-                        isdir = false;
-                        dir = Path.GetDirectoryName(path);
-                    }
-                }
-                else
-                {
-                    serr = $"invalid path: {path}";
-                }
-            }
+                // Check for valid path arg.
+                if (!Path.Exists(path)) { throw new($"invalid path: {path}"); }
+                FileAttributes attr = File.GetAttributes(path);
+                dir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
 
-            // Check for valid command and execute it.
-            if (serr is null)
-            {
-                Process? p = null;
-                string? exe = null;
-                string? args = null;
+                // Check for valid command and execute it.
+                ProcessStartInfo pinfo = new()
+                {
+                    UseShellExecute = true,
+                    CreateNoWindow = true,
+                    WorkingDirectory = dir
+                };
 
                 switch (cmd)
                 {
                     case "cmder":
-                        //TODO1  option for full screen?
-                        break;
+                        // Open a new explorer window at the dir selected in the first one.
+                        // Locate it on one side or other of the first, same size.
+                        // TODO option for full screen?
 
-                    case "tree":
-
-                        exe = "dir";
-                        args = $" | clip";
-
-                        //exe = "tree";
-                        //args = $"{dir} /a /f | clip";
-
-                        //args = $"{dir} /a /f > C:\\Dev\\clip.txt";
                         break;
 
                     case "newtab":
-                        // (explorer middle button?)
-                        //TODO1 open arg[2].GetDir() in new tab / window. Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+                        // Open a new explorer tab in current window at the dir selected in the first one.
+
+                        // Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+                        break;
+
+
+                    case "tree":
+                        pinfo.FileName = "cmd";
+                        pinfo.Arguments = $"/C tree {dir} /a /f | clip";
                         break;
 
                     case "stdir":
-                        exe = "subl";
-                        args = $"-n {dir}";
+                        pinfo.FileName = "subl";
+                        pinfo.Arguments = $"-n {dir}";
                         break;
 
                     case "find":
-                        exe = "everything";
-                        args = $"-parent {dir}";
+                        pinfo.FileName = "everything";
+                        pinfo.Arguments = $"-parent {dir}";
+                        pinfo.WorkingDirectory = @"C:\Program Files\Everything";
                         break;
 
                     default:
-                        serr = $"command verb: {cmd}";
-                        break;
+                        throw new($"command verb: {cmd}");
                 }
 
-                if (exe is not null && args is not null)
-                {
-                    try
-                    {
-                        var info = new ProcessStartInfo()
-                        {
+                var proc = new Process() { StartInfo = pinfo };
+                proc.Start();
+                proc.WaitForExit();
 
-                            FileName = Path.GetFileName(exe),
-                            Arguments = args,
-                            UseShellExecute = true,
-                             CreateNoWindow = true,
-                              ErrorDialog = true,
-                        };
-
-                        var proc = new Process()
-                        {
-                            StartInfo = info
-                        };
-
-                        if (proc is null)
-                        {
-                            serr = $"process execute failed: {exe} {args}";
-                        }
-                        else
-                        {
-                            proc.Start();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        serr = $"execute failed: {ex.Message}";
-                    }
-                }
+                if (proc.ExitCode != 0) { throw new($"process exit code: {proc.ExitCode}"); }
             }
-
-            // Handle errors.
-            if (serr is not null)
+            catch (Exception ex) // handle errors
             {
-                tvInfo.AppendLine("ERROR " + serr);
-                _log.Write("ERROR " + serr);
+                tvInfo.AppendLine("ERROR " + ex.Message);
+                _log.Write("ERROR " + ex.Message);
             }
         }
 
@@ -241,7 +169,9 @@ namespace Splunk
         ///////////////////////////////////////////////////////////////////////////
         void DoRegistry()
         {
-            var hkcu = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
+            //using Microsoft.Win32;
+
+            var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
             var subkey = hkcu.OpenSubKey(@"Software\Classes");
 
             var knames = subkey.GetSubKeyNames();

@@ -19,16 +19,8 @@ namespace Splunk
         /// </summary>
         private void InitializeComponent()
         {
-            filTree = new Ephemera.NBagOfUis.FilTree();
             tvInfo = new Ephemera.NBagOfUis.TextViewer();
             SuspendLayout();
-            // 
-            // filTree
-            // 
-            filTree.Location = new Point(747, 45);
-            filTree.Name = "filTree";
-            filTree.Size = new Size(437, 459);
-            filTree.TabIndex = 0;
             // 
             // tvInfo
             // 
@@ -37,7 +29,7 @@ namespace Splunk
             tvInfo.MaxText = 50000;
             tvInfo.Name = "tvInfo";
             tvInfo.Prompt = "";
-            tvInfo.Size = new Size(515, 380);
+            tvInfo.Size = new Size(800, 500);
             tvInfo.TabIndex = 1;
             tvInfo.WordWrap = true;
             // 
@@ -47,7 +39,6 @@ namespace Splunk
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1196, 608);
             Controls.Add(tvInfo);
-            Controls.Add(filTree);
             Name = "MainForm";
             Text = "Form1";
             ResumeLayout(false);
@@ -55,7 +46,6 @@ namespace Splunk
 
         #endregion
 
-        private Ephemera.NBagOfUis.FilTree filTree;
         private Ephemera.NBagOfUis.TextViewer tvInfo;
     }
 }
