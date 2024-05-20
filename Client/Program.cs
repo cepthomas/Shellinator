@@ -16,10 +16,28 @@ namespace Splunk.Client
             //_log.Write($"Client cmd line: [{Environment.CommandLine}]");
             //Console.WriteLine($"Client cmd line: [{Environment.CommandLine}]");
 
-            // Clean up args and make them safe for server by quoting.
+            // Clean up args and make them safe for server by quoting before concatenating.
             List<string> cleanArgs = [];
-            args.ForEach(a => { cleanArgs.Add($"\"{a}\""); });
+
+            //foreach (var arg in args)
+            //{
+            //    // Corner case for accidental escaped quote.
+            //    var s = arg.Replace("\"", "");
+            //    cleanArgs.Add($"\"{s}\"");
+            //}
+
+            args.ForEach(a => { cleanArgs.Add($"\"{a.Replace("\"", "")}\""); });
+
+
+            //args.ForEach(a => Console.WriteLine($"raw:{a}"));
+
+            //cleanArgs.ForEach(Console.WriteLine);
+
+
             var cmdString = string.Join(" ", cleanArgs);
+
+            Console.WriteLine(cmdString);
+
             Console.WriteLine($"Send: {cmdString}");
 
             try
@@ -34,7 +52,7 @@ namespace Splunk.Client
                 Console.WriteLine($"Client failed: {ex.Message}");
             }
 
-            System.Threading.Thread.Sleep(2000);
+            //System.Threading.Thread.Sleep(2000);
         }
     }
 }

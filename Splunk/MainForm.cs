@@ -4,18 +4,22 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
-using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
 using Ephemera.NBagOfTricks;
-//using Nbot = Ephemera.NBagOfTricks;
+using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
 using Com = Splunk.Common.Common;
-
-//using Splunk.Common;
-//using Ephemera.NBagOfTricks;
+using System.Diagnostics;
 
 
-//TODO1 make into windows service like MassProcessing.
+//TODO1 make into windows service like MassProcessing. Or at least run at startup.
 
 //TODO1 clean up registry testcmds.
+
+
+
+// TODO fix nav bar + history. (re)Implement?
+// TODO tag files/dirs. Use builtin libraries and/or favorites?
+// TDOO more info/hover?. filters, fullpath, size, thumbnail
+
 
 
 namespace Splunk
@@ -30,7 +34,7 @@ namespace Splunk
 
         #region Lifecycle
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public MainForm()
         {
@@ -61,12 +65,12 @@ namespace Splunk
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="e"></param>
         protected override void OnLoad(EventArgs e)
         {
-            DoRegistry();
+    //        DoRegistry();
 
             base.OnLoad(e);
         }
@@ -87,78 +91,154 @@ namespace Splunk
         #endregion
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="_"></param>
         /// <param name="e"></param>
         void Server_IpcReceive(object? _, Ipc.IpcReceiveEventArgs e)
         {
-            string? smsg = null;
+            string? serr = null;
+            string? cmd = null;
+            string? path = null;
+            string? dir = null;
+            bool? isdir = null;
 
             if (e.Error)
             {
-                smsg = $"ERROR Ipc: {e.Message}";
+                serr = $"ipc server error: {e.Message}";
             }
 
-            if (smsg is null)
+            // Process the command string. Should be like "command" "args".
+            if (serr is null)
             {
-                // Process the command string. Should be like "A1 B2" "C3" => A1 B2,C3.
-
                 // Split and remove spaces.
                 var parts = StringUtils.SplitByToken(e.Message, "\"");
                 parts.RemoveAll(string.IsNullOrWhiteSpace);
-
                 if (parts.Count != 2)
                 {
-                    smsg = $"ERROR command parts: {e.Message}";
+                    serr = $"invalid command format";
                 }
-
-                if (smsg is null)
+                else
                 {
-                    var path = parts[1];
-                    Path.Exists(path);
-
-                    switch (parts[0])
-                    {
-                        case "cmder":
-                            //TODO1
-                            break;
-
-                        case "tree":
-                            //tree /a /f arg[2].GetDir() | clip
-                            break;
-
-                        case "newtab":
-                            //TODO1 open arg[2].GetDir() in new tab / window. Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
-                            break;
-
-                        case "stdir":
-                            //subl - n arg[2].GetDir()
-                            break;
-
-                        default:
-                            smsg = $"ERROR command verb: {parts[0]}";
-                            break;
-                    }
-                }
-
-                if (smsg is null)
-                {
-                    smsg = $"ERROR command: {e.Message}";
-                    tvInfo.AppendLine(smsg);
-                    _log.Write(smsg);
+                    cmd = parts[0];
+                    path = parts[1];
                 }
             }
 
-            if (smsg is not null)
+            // Check for valid path arg.
+            if (serr is null)
             {
-                tvInfo.AppendLine(smsg);
-                _log.Write(smsg);
+                if (Path.Exists(path))
+                {
+                    FileAttributes attr = File.GetAttributes(path);
+                    if (attr.HasFlag(FileAttributes.Directory))
+                    {
+                        isdir = true;
+                        dir = path;
+                    }
+                    else
+                    {
+                        isdir = false;
+                        dir = Path.GetDirectoryName(path);
+                    }
+                }
+                else
+                {
+                    serr = $"invalid path: {path}";
+                }
+            }
+
+            // Check for valid command and execute it.
+            if (serr is null)
+            {
+                Process? p = null;
+                string? exe = null;
+                string? args = null;
+
+                switch (cmd)
+                {
+                    case "cmder":
+                        //TODO1  option for full screen?
+                        break;
+
+                    case "tree":
+
+                        exe = "dir";
+                        args = $" | clip";
+
+                        //exe = "tree";
+                        //args = $"{dir} /a /f | clip";
+
+                        //args = $"{dir} /a /f > C:\\Dev\\clip.txt";
+                        break;
+
+                    case "newtab":
+                        // (explorer middle button?)
+                        //TODO1 open arg[2].GetDir() in new tab / window. Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+                        break;
+
+                    case "stdir":
+                        exe = "subl";
+                        args = $"-n {dir}";
+                        break;
+
+                    case "find":
+                        exe = "everything";
+                        args = $"-parent {dir}";
+                        break;
+
+                    default:
+                        serr = $"command verb: {cmd}";
+                        break;
+                }
+
+                if (exe is not null && args is not null)
+                {
+                    try
+                    {
+                        var info = new ProcessStartInfo()
+                        {
+
+                            FileName = Path.GetFileName(exe),
+                            Arguments = args,
+                            UseShellExecute = true,
+                             CreateNoWindow = true,
+                              ErrorDialog = true,
+                        };
+
+                        var proc = new Process()
+                        {
+                            StartInfo = info
+                        };
+
+                        if (proc is null)
+                        {
+                            serr = $"process execute failed: {exe} {args}";
+                        }
+                        else
+                        {
+                            proc.Start();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        serr = $"execute failed: {ex.Message}";
+                    }
+                }
+            }
+
+            // Handle errors.
+            if (serr is not null)
+            {
+                tvInfo.AppendLine("ERROR " + serr);
+                _log.Write("ERROR " + serr);
             }
         }
 
 
-
+        ///////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////
         void DoRegistry()
         {
             var hkcu = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
@@ -173,7 +253,7 @@ namespace Splunk
             var vvv = ddd.GetValue("MUIVerb").ToString();
 
             //Computer\HKEY_CURRENT_USER\Software\Classes\Directory\shell\splunk_top_menu
-            //Computer\HKEY_CURRENT_USER\Software\Classes\*\shell\splunk_top            
+            //Computer\HKEY_CURRENT_USER\Software\Classes\*\shell\splunk_top
 
             // ;Right click in explorer_right_pane or windows_desktop with a directory selected.
             // [HKEY_CURRENT_USER\Software\Classes\Directory\shell\menu_item]
@@ -182,7 +262,7 @@ namespace Splunk
             // ;The command to execute - arg is the directory.
             // [HKEY_CURRENT_USER\Software\Classes\Directory\shell\menu_item\command]
             // @="my_command.exe" "%V"
-            // 
+            //
             // ;Right click in explorer_right_pane with nothing selected (background)
             // [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\menu_item]
             // @=""
@@ -190,7 +270,7 @@ namespace Splunk
             // ;The command to execute - arg is not used.
             // [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\menu_item\command]
             // @="my_command.exe" "%V"
-            // 
+            //
             // ;Right click in windows_desktop with nothing selected (background).
             // [HKEY_CURRENT_USER\Software\Classes\DesktopBackground\shell\menu_item]
             // @=""
@@ -198,7 +278,7 @@ namespace Splunk
             // ;The command to execute - arg is not used.
             // [HKEY_CURRENT_USER\Software\Classes\DesktopBackground\shell\menu_item\command]
             // @="my_command.exe" "%V"
-            // 
+            //
             // ;Right click in explorer_left_pane (navigation) with a folder selected.
             // [HKEY_CURRENT_USER\Software\Classes\Folder\shell\menu_item]
             // @=""
@@ -206,7 +286,7 @@ namespace Splunk
             // ;The command to execute - arg is the folder.
             // [HKEY_CURRENT_USER\Software\Classes\Folder\shell\menu_item\command]
             // @="my_command.exe" "%V"
-            // 
+            //
             // ;Right click in explorer_right_pane or windows_desktop with a file selected (* for all exts).
             // [HKEY_CURRENT_USER\Software\Classes\*\shell\menu_item]
             // @=""
