@@ -42,7 +42,6 @@ namespace Splunk
             btnGo.TabIndex = 2;
             btnGo.Text = "GO!!";
             btnGo.UseVisualStyleBackColor = true;
-            btnGo.Click += btnGo_Click;
             // 
             // MainForm
             // 
