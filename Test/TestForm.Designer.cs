@@ -28,18 +28,43 @@
         /// </summary>
         private void InitializeComponent()
         {
+            rtbInfo = new RichTextBox();
+            btnGo = new Button();
             SuspendLayout();
             // 
-            // MainForm
+            // rtbInfo
+            // 
+            rtbInfo.Location = new Point(49, 154);
+            rtbInfo.Name = "rtbInfo";
+            rtbInfo.Size = new Size(718, 391);
+            rtbInfo.TabIndex = 0;
+            rtbInfo.Text = "";
+            // 
+            // btnGo
+            // 
+            btnGo.Location = new Point(57, 43);
+            btnGo.Name = "btnGo";
+            btnGo.Size = new Size(94, 29);
+            btnGo.TabIndex = 1;
+            btnGo.Text = "GO!!!";
+            btnGo.UseVisualStyleBackColor = true;
+            btnGo.Click += btnGo_Click;
+            // 
+            // TestForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(960, 599);
-            Name = "MainForm";
+            Controls.Add(btnGo);
+            Controls.Add(rtbInfo);
+            Name = "TestForm";
             Text = "Form1";
             ResumeLayout(false);
         }
 
         #endregion
+
+        private RichTextBox rtbInfo;
+        private Button btnGo;
     }
 }

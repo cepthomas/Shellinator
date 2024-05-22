@@ -6,13 +6,16 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Splunk.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <RootNamespace>Splunk.Test</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Registry.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\Splunk\Splunk.csproj" />
-    <ProjectReference Include="..\Client\Client.csproj" />
   </ItemGroup>
 
 </Project>

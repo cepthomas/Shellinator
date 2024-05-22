@@ -20,6 +20,7 @@ namespace Splunk
         private void InitializeComponent()
         {
             tvInfo = new Ephemera.NBagOfUis.TextViewer();
+            btnGo = new Button();
             SuspendLayout();
             // 
             // tvInfo
@@ -33,11 +34,22 @@ namespace Splunk
             tvInfo.TabIndex = 1;
             tvInfo.WordWrap = true;
             // 
+            // btnGo
+            // 
+            btnGo.Location = new Point(76, 18);
+            btnGo.Name = "btnGo";
+            btnGo.Size = new Size(94, 29);
+            btnGo.TabIndex = 2;
+            btnGo.Text = "GO!!";
+            btnGo.UseVisualStyleBackColor = true;
+            btnGo.Click += btnGo_Click;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1196, 608);
+            Controls.Add(btnGo);
             Controls.Add(tvInfo);
             Name = "MainForm";
             Text = "Form1";
@@ -47,5 +59,6 @@ namespace Splunk
         #endregion
 
         private Ephemera.NBagOfUis.TextViewer tvInfo;
+        private Button btnGo;
     }
 }

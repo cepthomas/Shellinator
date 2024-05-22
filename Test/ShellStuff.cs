@@ -8,8 +8,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Ephemera.NBagOfTricks.Slog;
-using Ephemera.NBagOfTricks;
 using System.Drawing;
 
 
@@ -69,6 +67,59 @@ namespace Splunk.Test
 {
     public class ShellStuff
     {
+        public string ExecInNewProcess1()
+        {
+            string ret = "Nada";
+
+            // https://stackoverflow.com/questions/1469764/run-command-prompt-commands
+
+            // One:
+            Process process = new();
+            ProcessStartInfo startInfo = new()
+            {
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                FileName = "cmd",
+
+                Arguments = "/c echo 123 Oscar 456 | clip",
+                //Arguments = "echo 123 Oscar 456 | clip & exit",
+
+                //Arguments = "echo >>>>>>Oscar"  //"/C copy /b Image1.jpg + Archive.rar Image2.jpg"
+            };
+            process.StartInfo = startInfo;
+            process.Start();
+
+             process.WaitForExit(1000);
+            // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
+            // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
+            // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
+            // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
+
+            return ret;
+        }
+
+
+        public string ExecInNewProcess2()
+        {
+            string ret = "Nada";
+
+            Process cmd = new();
+            cmd.StartInfo.FileName = "cmd.exe";
+            cmd.StartInfo.RedirectStandardInput = true;
+            cmd.StartInfo.RedirectStandardOutput = true;
+            cmd.StartInfo.CreateNoWindow = true;
+            cmd.StartInfo.UseShellExecute = false;
+            cmd.Start();
+            cmd.StandardInput.WriteLine("echo >>>>>>Oscar");
+            cmd.StandardInput.Flush();
+            cmd.StandardInput.Close();
+            cmd.WaitForExit(); // wait for the process to complete before continuing and process.ExitCode
+            ret = cmd.StandardOutput.ReadToEnd();
+
+            return ret;
+        }
+
+
         public List<string> DoFileAssociation()
         {
             List<string> vals = [];
@@ -137,39 +188,6 @@ namespace Splunk.Test
             return executablePath;
         }
 
-        public string ExecInNewProcess()
-        {
-            string ret = "Nada";
-
-            // https://stackoverflow.com/questions/1469764/run-command-prompt-commands
-
-            // One:
-            Process process = new();
-            ProcessStartInfo startInfo = new()
-            {
-                WindowStyle = ProcessWindowStyle.Hidden,
-                FileName = "cmd.exe",
-                Arguments = "/C copy /b Image1.jpg + Archive.rar Image2.jpg"
-            };
-            process.StartInfo = startInfo;
-            process.Start();
-
-            // Another:
-            Process cmd = new();
-            cmd.StartInfo.FileName = "cmd.exe";
-            cmd.StartInfo.RedirectStandardInput = true;
-            cmd.StartInfo.RedirectStandardOutput = true;
-            cmd.StartInfo.CreateNoWindow = true;
-            cmd.StartInfo.UseShellExecute = false;
-            cmd.Start();
-            cmd.StandardInput.WriteLine("echo Oscar");
-            cmd.StandardInput.Flush();
-            cmd.StandardInput.Close();
-            cmd.WaitForExit(); // wait for the process to complete before continuing and process.ExitCode
-            ret = cmd.StandardOutput.ReadToEnd();
-
-            return ret;
-        }
 
         public Icon GetSmallFolderIcon()
         {

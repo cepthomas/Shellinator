@@ -258,32 +258,31 @@ namespace Splunk.Test
         }
     }
 
-    class Program_XXX
+    class Program_Test
     {
-        static void Main()
-        {
+        //static void Main()
+        //{
+        //    var test = 3;
+        //    switch (test)
+        //    {
+        //        case 0:
+        //            var mydocs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        //            ShowSelectedInExplorer.FileOrFolder(Path.Combine(mydocs, "Visual Studio 2010"), edit: true);
 
-            var test = 3;
-            switch (test)
-            {
-                case 0:
-                    var mydocs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                    ShowSelectedInExplorer.FileOrFolder(Path.Combine(mydocs, "Visual Studio 2010"), edit: true);
+        //            break;
 
-                    break;
+        //        case 1:
+        //            ShowSelectedInExplorer.FileOrFolder(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        //            break;
 
-                case 1:
-                    ShowSelectedInExplorer.FileOrFolder(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-                    break;
+        //        case 2:
+        //            ShowSelectedInExplorer.FilesOrFolders(@"C:\Windows\", new[] { "Microsoft.NET", "System32", "Setup" });
+        //            break;
 
-                case 2:
-                    ShowSelectedInExplorer.FilesOrFolders(@"C:\Windows\", new[] { "Microsoft.NET", "System32", "Setup" });
-                    break;
-
-                case 3:
-                    ShowSelectedInExplorer.FilesOrFolders(@"C:\Windows\Microsoft.NET\", @"C:\Windows\System32", @"C:\Windows\Setup", @"C:\Program Files");
-                    break;
-            }
-        }
+        //        case 3:
+        //            ShowSelectedInExplorer.FilesOrFolders(@"C:\Windows\Microsoft.NET\", @"C:\Windows\System32", @"C:\Windows\Setup", @"C:\Program Files");
+        //            break;
+        //    }
+        //}
     }
 }

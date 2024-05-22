@@ -42,6 +42,7 @@ namespace Splunk.Test
 // /e   
 // /idlist,:handle:process
 //     specifies object as ITEMIDLIST in shared memory block with given handle in context of given process
+//
 // /n
 //     redundant in Windows Vista
 // /root,/idlist,:handle:process

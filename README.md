@@ -28,7 +28,7 @@ In subsequent sections, `HKEY_XX` is `HKEY_CURRENT_USER\Software\Classes`.
 Arguments available in commands executed by registry handlers:
 
 | Main | Description |
-|----  | ----        |
+| ---- | ----------- |
 | %L   | Long file name form of the command. |
 | %D   | Desktop absolute parsing name of the command (for items that don't have file system paths). |
 | %V   | For verbs that are none implies all. If there is no parameter passed this is the working directory. |

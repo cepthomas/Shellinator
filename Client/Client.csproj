@@ -6,7 +6,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>SplunkClient</AssemblyName>
-    <RootNamespace>Splunk.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <RootNamespace>Splunk.Client</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -26,5 +26,9 @@
       <HintPath>..\lib\Ephemera.NBagOfTricks.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="pushd ..\&#xD;&#xA;call post_build.cmd&#xD;&#xA;popd" />
+  </Target>
 
 </Project>

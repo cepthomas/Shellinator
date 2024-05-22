@@ -1,41 +1,48 @@
 ﻿using System;
 using System.IO;
-using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
-using Com = Splunk.Common.Common;
 using System.Collections.Generic;
 using Ephemera.NBagOfTricks;
 
 
 namespace Splunk.Client
 {
-    internal class Program
+    /// <summary>The worker. Public for testing ease.</summary>
+    public class Client
     {
-        static void Main(string[] args)
+        public void Run(string[] args, TextWriter twr)
         {
             try
             {
                 //Ipc.MpLog _log = new(Com.LogFileName, "SPLCLI");
                 //_log.Write($"Client cmd line: [{Environment.CommandLine}]");
-                //Console.WriteLine($"Client cmd line: [{Environment.CommandLine}]");
+                //twr.WriteLine($"Client cmd line: [{Environment.CommandLine}]");
 
                 // Clean up args and make them safe for server by quoting before concatenating.
-                // Corner case for accidental escaped quote.
                 List<string> cleanArgs = [];
+                // Fix corner case for accidental escaped quote.
                 args.ForEach(a => { cleanArgs.Add($"\"{a.Replace("\"", "")}\""); });
                 var cmdString = string.Join(" ", cleanArgs);
-                //Console.WriteLine($"Send: {cmdString}");
+                //twr.WriteLine($"Send: {cmdString}");
 
-                Ipc.Client ipcClient = new(Com.PIPE_NAME, Com.LogFileName);
+                Ephemera.NBagOfTricks.SimpleIpc.Client ipcClient = new(Common.Common.PIPE_NAME, Common.Common.LogFileName);
                 var res = ipcClient.Send(cmdString, 1000);
-                if (res != Ipc.ClientStatus.Ok)
+                if (res != Ephemera.NBagOfTricks.SimpleIpc.ClientStatus.Ok)
                 {
-                    Console.WriteLine($"Result: {res} {ipcClient.Error}");
+                    twr.WriteLine($"Result: {res} {ipcClient.Error}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Client failed: {ex.Message}");
+                twr.WriteLine($"Client failed: {ex.Message}");
             }
+        }
+    }
+
+    internal class Program
+    {
+        static void Main(string[] args)
+        {
+            new Client().Run(args, Console.Out);
         }
     }
 }
