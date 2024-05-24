@@ -17,8 +17,6 @@ using Com = Splunk.Common.Common;
 
 
 
-
-
 namespace Splunk
 {
     public partial class MainForm : Form
@@ -45,6 +43,9 @@ namespace Splunk
             ];
 
 
+        string _message = ""; // TODO1 remove this?
+
+
         #region Lifecycle
         /// <summary>
         ///Constructor.
@@ -67,7 +68,7 @@ namespace Splunk
 
             btnGo.Click += (_, __) => { Go(); };
 
-            // Run server
+            // Run server.
             _server = new(Com.PIPE_NAME, Com.LogFileName);
             _server.IpcReceive += Server_IpcReceive;
             _server.Start();
@@ -79,9 +80,8 @@ namespace Splunk
         /// <param name="e"></param>
         protected override void OnLoad(EventArgs e)
         {
-            // Current bin dir.
+            // Current bin dir. C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
             //CreateRegistryEntries(Environment.CurrentDirectory);
-            //C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
 
             base.OnLoad(e);
         }
@@ -102,28 +102,45 @@ namespace Splunk
         #endregion
 
 
+        // --- temp debug stuff ---
         private void Go()
         {
             tvInfo.AppendLine($"Go() {Environment.CurrentManagedThreadId}");
+            int _which = 1;
 
-            ProcessStartInfo startInfo = new()
+            if (_which == 0)
             {
-                UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                FileName = "cmd",
-                Arguments = $"/c echo Oscar {DateTime.Now.Millisecond} XYZ | clip",
-            };
+                ProcessStartInfo startInfo = new()
+                {
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    FileName = "cmd",
+                    Arguments = $"/c echo Oscar {DateTime.Now.Millisecond} XYZ | clip",
+                };
 
-            Process process = new();
-            process.StartInfo = startInfo;
-            process.Start();
+                Process process = new() { StartInfo = startInfo };
+                process.Start();
 
-            //process.WaitForExit(1000);
-            // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
-            // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
-            // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
-            // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
+                //process.WaitForExit(1000);
+                // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
+                // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
+                // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
+                // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
+            }
+            else
+            {
+                // Fake message.
+                _message = "\"cmder\" \"dir\" \"C:\\Dev\\repos\\Apps\\Splunk\\Splunk\\obj\"";
+                ProcessMessage();
+            }
+
         }
+        // --- temp debug stuff ---
+
+
+
+
+
 
         /// <summary>
         /// Client has something to say.
@@ -134,114 +151,248 @@ namespace Splunk
         {
             tvInfo.AppendLine($"Server_IpcReceive() {Environment.CurrentManagedThreadId}");
 
-            //int copy = 999;
-            //this.BeginInvoke(new Action(() => DoWork(e))); //, System.Windows.Threading.DispatcherPriority.Background, null);
-
-            //this.EventHandler temp = MyEvent;
-            //if (temp != null)
-            //{
-            //    temp();
-            //}
-
-            //BeginInvoke(Go);
-            //return;
-
-
-            this.InvokeIfRequired(_ =>
+            if (e.Error)
             {
-                try
-                {
-                    string cmd;
-                    string path;
-                    string tag;
-                    string dir;
-
-                    tvInfo.AppendLine($"Server_IpcReceive()2 {Environment.CurrentManagedThreadId}");
-
-                    if (e.Error)
-                    {
-                        throw new($"ipc server error: {e.Message}");
-                    }
-
-                    // Process the command string. Should be like "command" "args".
-                    // Split and remove spaces.
-                    var parts = StringUtils.SplitByToken(e.Message, "\"");
-                    parts.RemoveAll(string.IsNullOrWhiteSpace);
-                    if (parts.Count != 3) { throw new($"invalid command format"); }
-                    cmd = parts[0];
-                    tag = parts[1];
-                    path = parts[2];
-
-                    // Check for valid path arg.
-                    if (!Path.Exists(path)) { throw new($"invalid path: {path}"); }
-                    FileAttributes attr = File.GetAttributes(path);
-                    dir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
-
-                    // Check for valid command and execute it.
-                    ProcessStartInfo pinfo = new()
-                    {
-                        UseShellExecute = false, //true,
-                        CreateNoWindow = true,
-                        WorkingDirectory = dir,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        //RedirectStandardInput = true,
-                        //RedirectStandardOutput = true,
-                    };
-
-                    switch (cmd)
-                    {
-                        case "cmder":
-                            // Open a new explorer window at the dir selected in the first one.
-                            // Locate it on one side or other of the first, same size.
-                            // TODO option for full screen?
-                            pinfo.FileName = "cmd";
-                            pinfo.Arguments = $"/c echo >>>>>cmder!! | clip";
-                            break;
-
-                        case "newtab":
-                            // Open a new explorer tab in current window at the dir selected in the first one.
-                            // Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
-                            pinfo.FileName = "cmd";
-                            pinfo.Arguments = $"/c echo >>>>>newtab!! | clip";
-                            break;
-
-                        case "tree":
-                            pinfo.FileName = "cmd";
-                            pinfo.Arguments = $"/C tree \"{dir}\" /a /f | clip";
-                            break;
-
-                        case "openst":
-                            pinfo.FileName = "subl";
-                            pinfo.Arguments = $"-n \"{dir}\"";
-                            break;
-
-                        case "find":
-                            pinfo.FileName = "everything";
-                            pinfo.Arguments = $"-parent \"{dir}\"";
-                            pinfo.WorkingDirectory = @"C:\Program Files\Everything";
-                            break;
-
-                        default:
-                            throw new($"command verb: {cmd}");
-                    }
-
-                    var proc = new Process() { StartInfo = pinfo };
-                    proc.Start();
-                    //proc.WaitForExit();
-                    //if (proc.ExitCode != 0) { throw new($"process exit code: {proc.ExitCode}"); }
-                }
-                catch (Exception ex) // handle errors
-                {
-                    tvInfo.AppendLine("ERROR " + ex.Message);
-                    _log.Write("ERROR " + ex.Message);
-                }
-            });
+                _message = "";
+                tvInfo.AppendLine("ERROR " + e.Message);
+                _log.Write("ERROR " + e.Message);
+            }
+            else
+            {
+                _message = e.Message;
+                tvInfo.AppendLine("RCV " + e.Message);
+                BeginInvoke(ProcessMessage);
+            }
         }
 
+
+
+
+
+
+        /// <summary>
+        /// Do the work.
+        /// </summary>
+        /// <param name="_"></param>
+        /// <param name="e"></param>
+        void ProcessMessage()
+        {
+            tvInfo.AppendLine($"ProcessMessage() {Environment.CurrentManagedThreadId}");
+
+            try
+            {
+                string cmd;
+                string path;
+                string tag;
+                string dir;
+
+                // Process the command string. Should be like "command" "args".
+                // Split and remove spaces.
+
+                var parts = StringUtils.SplitByToken(_message, "\"");
+                parts.RemoveAll(string.IsNullOrWhiteSpace);
+                if (parts.Count != 3) { throw new($"invalid command format"); }
+                cmd = parts[0];
+                tag = parts[1];
+                path = parts[2];
+
+                // Check for valid path arg.
+                if (!Path.Exists(path)) { throw new($"invalid path: {path}"); }
+                FileAttributes attr = File.GetAttributes(path);
+                dir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
+
+                // Check for valid command and execute it.
+                ProcessStartInfo pinfo = new()
+                {
+                    UseShellExecute = false, //true,
+                    CreateNoWindow = true,
+                    WorkingDirectory = dir,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    //RedirectStandardInput = true,
+                    //RedirectStandardOutput = true,
+                };
+
+                switch (cmd)
+                {
+                    case "cmder":
+                        // Open a new explorer window at the dir selected in the first one.
+                        // Locate it on one side or other of the first, same size.
+                        // TODO option for full screen?
+
+
+
+                        pinfo.FileName = "explorer";
+                        pinfo.Arguments = $"{dir}";
+                        break;
+
+                    case "newtab":
+                        // Open a new explorer tab in current window at the dir selected in the first one.
+                        // Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+                        pinfo.FileName = "cmd";
+                        pinfo.Arguments = $"/c echo !!newtab!! {DateTime.Now.Millisecond} | clip";
+                        break;
+
+                    case "tree": // direct
+                        pinfo.FileName = "cmd";
+                        pinfo.Arguments = $"/C tree \"{dir}\" /a /f | clip";
+                        break;
+
+                    case "openst": // direct
+                        pinfo.FileName = "subl";
+                        pinfo.Arguments = $"-n \"{dir}\"";
+                        break;
+
+                    case "find": // direct
+                        pinfo.FileName = "everything";
+                        pinfo.Arguments = $"-parent \"{dir}\"";
+                        pinfo.WorkingDirectory = @"C:\Program Files\Everything";
+                        break;
+
+                    default:
+                        throw new($"command verb: {cmd}");
+                }
+
+
+                //_proc.StartInfo = pinfo;
+                //_proc.Start();
+                //_proc.WaitForExit();
+                //_proc.Close();
+
+                var proc = new Process() { StartInfo = pinfo };
+                proc.Start();
+                //proc.WaitForExit();
+                //if (proc.ExitCode != 0) { throw new($"process exit code: {proc.ExitCode}"); }
+
+
+
+            }
+            catch (Exception ex) // handle errors
+            {
+                tvInfo.AppendLine("ERROR " + ex.Message);
+                _log.Write("ERROR " + ex.Message);
+            }
+        }
+
+
+        // /// <summary>
+        // /// Client has something to say.
+        // /// </summary>
+        // /// <param name="_"></param>
+        // /// <param name="e"></param>
+        // void Server_IpcReceive(object? _, Ipc.IpcReceiveEventArgs e)
+        // {
+        //     tvInfo.AppendLine($"Server_IpcReceive() {Environment.CurrentManagedThreadId}");
+
+        //     //int copy = 999;
+        //     //this.BeginInvoke(new Action(() => DoWork(e))); //, System.Windows.Threading.DispatcherPriority.Background, null);
+
+        //     //this.EventHandler temp = MyEvent;
+        //     //if (temp != null)
+        //     //{
+        //     //    temp();
+        //     //}
+
+        //     //BeginInvoke(Go);
+        //     //return;
+
+
+        //     this.InvokeIfRequired(_ =>
+        //     {
+        //         try
+        //         {
+        //             string cmd;
+        //             string path;
+        //             string tag;
+        //             string dir;
+
+        //             tvInfo.AppendLine($"Server_IpcReceive()2 {Environment.CurrentManagedThreadId}");
+
+        //             if (e.Error)
+        //             {
+        //                 throw new($"ipc server error: {e.Message}");
+        //             }
+
+        //             // Process the command string. Should be like "command" "args".
+        //             // Split and remove spaces.
+        //             var parts = StringUtils.SplitByToken(e.Message, "\"");
+        //             parts.RemoveAll(string.IsNullOrWhiteSpace);
+        //             if (parts.Count != 3) { throw new($"invalid command format"); }
+        //             cmd = parts[0];
+        //             tag = parts[1];
+        //             path = parts[2];
+
+        //             // Check for valid path arg.
+        //             if (!Path.Exists(path)) { throw new($"invalid path: {path}"); }
+        //             FileAttributes attr = File.GetAttributes(path);
+        //             dir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
+
+        //             // Check for valid command and execute it.
+        //             ProcessStartInfo pinfo = new()
+        //             {
+        //                 UseShellExecute = false, //true,
+        //                 CreateNoWindow = true,
+        //                 WorkingDirectory = dir,
+        //                 WindowStyle = ProcessWindowStyle.Hidden,
+        //                 //RedirectStandardInput = true,
+        //                 //RedirectStandardOutput = true,
+        //             };
+
+        //             switch (cmd)
+        //             {
+        //                 case "cmder":
+        //                     // Open a new explorer window at the dir selected in the first one.
+        //                     // Locate it on one side or other of the first, same size.
+        //                     // TODO option for full screen?
+        //                     pinfo.FileName = "cmd";
+        //                     pinfo.Arguments = $"/c echo !!cmder!! | clip";
+        //                     break;
+
+        //                 case "newtab":
+        //                     // Open a new explorer tab in current window at the dir selected in the first one.
+        //                     // Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+        //                     pinfo.FileName = "cmd";
+        //                     pinfo.Arguments = $"/c echo !!newtab!! | clip";
+        //                     break;
+
+        //                 case "tree":
+        //                     pinfo.FileName = "cmd";
+        //                     pinfo.Arguments = $"/C tree \"{dir}\" /a /f | clip";
+        //                     break;
+
+        //                 case "openst":
+        //                     pinfo.FileName = "subl";
+        //                     pinfo.Arguments = $"-n \"{dir}\"";
+        //                     break;
+
+        //                 case "find":
+        //                     pinfo.FileName = "everything";
+        //                     pinfo.Arguments = $"-parent \"{dir}\"";
+        //                     pinfo.WorkingDirectory = @"C:\Program Files\Everything";
+        //                     break;
+
+        //                 default:
+        //                     throw new($"command verb: {cmd}");
+        //             }
+
+        //             var proc = new Process() { StartInfo = pinfo };
+        //             proc.Start();
+        //             //proc.WaitForExit();
+        //             //if (proc.ExitCode != 0) { throw new($"process exit code: {proc.ExitCode}"); }
+        //         }
+        //         catch (Exception ex) // handle errors
+        //         {
+        //             tvInfo.AppendLine("ERROR " + ex.Message);
+        //             _log.Write("ERROR " + ex.Message);
+        //         }
+        //     });
+        // }
+
+
+        #region Manipulate registry
         /// <summary>
         /// 
         /// </summary>
-        void RemoveRegistryEntries()
+        void RemoveRegistryEntries() //TODO1
         {
             //public void DeleteSubKeyTree(string subkey);
 
@@ -278,5 +429,6 @@ namespace Splunk
                 }
             }
         }
+        #endregion
     }
 }

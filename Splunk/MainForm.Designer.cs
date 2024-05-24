@@ -19,6 +19,7 @@ namespace Splunk
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             tvInfo = new Ephemera.NBagOfUis.TextViewer();
             btnGo = new Button();
             SuspendLayout();

@@ -11,11 +11,29 @@ using System.Text.Json.Serialization;
 using System.Drawing;
 
 
+//The Shell allows you to enumerate all open Shell Views. It is more efficient and more robust than
+//checking the process name of every process in the system:
+
+//https://stackoverflow.com/questions/1190423/using-setwindowpos-in-c-sharp-to-move-windows-around
+
+
+
+// WindowsMover: https://www.codeproject.com/Tips/1057230/Windows-Resize-and-Move
+
+
+// C version: https://devblogs.microsoft.com/oldnewthing/20130610-00/?p=4133
+
+
+
+
+
+
 /*
 
 https://learn.microsoft.com/en-us/windows/win32/shell/launch
 
 shell.dll contains the basics:
+--------------------------------
 ShellExecute
 ShellExecuteEx
 ShellExecuteExW
@@ -43,11 +61,11 @@ SHGetPropertyStoreFromParsingNamehtml   SHGetRealIDL   SHGetSetSettings   SHGetS
 SHIsFileAvailableOffline   SHLoadInProc   SHLoadNonloadedIconOverlayIdentifiers   SHObjectProperties   SHOpenFolderAndSelectItems   
 SHOpenWithDialog   SHParseDisplayName   SHParseDisplayName   SHPathPrepareForWrite   SHQueryRecycleBin
 SHQueryUserNotificationState   SHRunFileDialog   SHSetUnreadMailCount   StartInfo   THUMBBUTTON   ultimate   virt girl hd
-*/
 
 
-/*
-shlwapi.dll contains a collection of functions that provide support for various shell operations, such as 
+shlwapi.dll contains
+-----------------------
+a collection of functions that provide support for various shell operations, such as 
 file and folder manipulation, user interface elements, and internet-related tasks.
 
 AssocCreate  AssocGetPerceivedType  AssocQueryString  ColorHLSToRGB  ColorRGBToHLS  HashData  IPreviewHandler  IsOS
@@ -63,42 +81,10 @@ StrFormatByteSize  StrFormatByteSizeA  StrFromTimeInterval  UrlCreateFromPath
 
 
 
-namespace Splunk.Test
+namespace ShellUtils
 {
     public class ShellStuff
     {
-        public string ExecInNewProcess1()
-        {
-            string ret = "Nada";
-
-            // https://stackoverflow.com/questions/1469764/run-command-prompt-commands
-
-            // One:
-            Process process = new();
-            ProcessStartInfo startInfo = new()
-            {
-                UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden,
-                FileName = "cmd",
-
-                Arguments = "/c echo 123 Oscar 456 | clip",
-                //Arguments = "echo 123 Oscar 456 | clip & exit",
-
-                //Arguments = "echo >>>>>>Oscar"  //"/C copy /b Image1.jpg + Archive.rar Image2.jpg"
-            };
-            process.StartInfo = startInfo;
-            process.Start();
-
-             process.WaitForExit(1000);
-            // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
-            // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
-            // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
-            // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
-
-            return ret;
-        }
-
-
         public string ExecInNewProcess2()
         {
             string ret = "Nada";
@@ -110,7 +96,7 @@ namespace Splunk.Test
             cmd.StartInfo.CreateNoWindow = true;
             cmd.StartInfo.UseShellExecute = false;
             cmd.Start();
-            cmd.StandardInput.WriteLine("echo >>>>>>Oscar");
+            cmd.StandardInput.WriteLine("echo !!Oscar");
             cmd.StandardInput.Flush();
             cmd.StandardInput.Close();
             cmd.WaitForExit(); // wait for the process to complete before continuing and process.ExitCode
@@ -189,28 +175,30 @@ namespace Splunk.Test
         }
 
 
-        public Icon GetSmallFolderIcon()
-        {
-            return GetIcon("folder", NativeMethods.SHGFI.SmallIcon | NativeMethods.SHGFI.UseFileAttributes, true);
-        }
+        //////////  These need .forms
 
-        public Icon GetSmallIcon(string fileName)
-        {
-            return GetIcon(fileName, NativeMethods.SHGFI.SmallIcon);
-        }
+        //public Icon GetSmallFolderIcon()
+        //{
+        //    return GetIcon("folder", NativeMethods.SHGFI.SmallIcon | NativeMethods.SHGFI.UseFileAttributes, true);
+        //}
 
-        public Icon GetSmallIconFromExtension(string extension)
-        {
-            return GetIcon(extension, NativeMethods.SHGFI.SmallIcon | NativeMethods.SHGFI.UseFileAttributes);
-        }
+        //public Icon GetSmallIcon(string fileName)
+        //{
+        //    return GetIcon(fileName, NativeMethods.SHGFI.SmallIcon);
+        //}
 
-        private Icon GetIcon(string fileName, NativeMethods.SHGFI flags, bool isFolder = false)
-        {
-            NativeMethods.SHFILEINFO shinfo = new();
-            NativeMethods.SHGetFileInfo(fileName, isFolder ? NativeMethods.FILE_ATTRIBUTE_DIRECTORY : NativeMethods.FILE_ATTRIBUTE_NORMAL, ref shinfo, (uint)Marshal.SizeOf(shinfo), (uint)(NativeMethods.SHGFI.Icon | flags));
-            Icon icon = (Icon)Icon.FromHandle(shinfo.hIcon).Clone();
-            NativeMethods.DestroyIcon(shinfo.hIcon);
-            return icon;
-        }
+        //public Icon GetSmallIconFromExtension(string extension)
+        //{
+        //    return GetIcon(extension, NativeMethods.SHGFI.SmallIcon | NativeMethods.SHGFI.UseFileAttributes);
+        //}
+
+        //private Icon GetIcon(string fileName, NativeMethods.SHGFI flags, bool isFolder = false)
+        //{
+        //    NativeMethods.SHFILEINFO shinfo = new();
+        //    NativeMethods.SHGetFileInfo(fileName, isFolder ? NativeMethods.FILE_ATTRIBUTE_DIRECTORY : NativeMethods.FILE_ATTRIBUTE_NORMAL, ref shinfo, (uint)Marshal.SizeOf(shinfo), (uint)(NativeMethods.SHGFI.Icon | flags));
+        //    Icon icon = (Icon)Icon.FromHandle(shinfo.hIcon).Clone();
+        //    NativeMethods.DestroyIcon(shinfo.hIcon);
+        //    return icon;
+        //}
     }
 }

@@ -1,3 +1,7 @@
+using System;
+using System.Windows.Forms;
+
+
 namespace Splunk.Test
 {
     internal static class Program

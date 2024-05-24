@@ -2,8 +2,10 @@
 
 //https://gist.github.com/vbfox/551626
 
+// =============== Probably not useful.
+
 // namespace SHOpenFolderAndSelectItems
-namespace Splunk.Test
+namespace ShellUtils
 {
     using System;
     using System.Collections.Generic;

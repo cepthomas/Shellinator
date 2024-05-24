@@ -7,7 +7,31 @@ rem https://stackoverflow.com/questions/1073353/c-how-to-open-windows-explorer-w
 
 rem This opens a new window
 explorer.exe /select,"C:\Dev\SplunkStuff\test_dir\"
-rem explorer.exe /select,Z:\Music\Thursday Blues\01. I wish it was friday.mp3
+
+
+rem /e   
+rem /idlist,:handle:process
+rem     specifies object as ITEMIDLIST in shared memory block with given handle in context of given process
+rem
+rem /n
+rem     redundant in Windows Vista
+rem 
+rem /root,/idlist,:handle:process
+rem /root,clsid
+rem /root,clsid,path
+rem /root,path
+rem     specifies object as root
+rem
+rem /select
+rem     show object as selected item in parent folder
+rem
+rem /separate
+rem     show in separate EXPLORER process
+rem
+rem path
+rem     specifies object;
+rem     ignored if object already specified;
+rem     overridden by specification in later /idlist or /root argument
 
 
 
