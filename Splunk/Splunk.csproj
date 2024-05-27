@@ -1,12 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
-    <RunPostBuildEvent>Always</RunPostBuildEvent>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -18,7 +16,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="MainForm - Copy.cs" />
+    <Compile Remove="lib\**" />
+    <Compile Remove="Common\**" />
+    <Compile Remove="Test\**" />
+    <Compile Remove="Ui\**" />
+    <EmbeddedResource Remove="lib\**" />
+    <EmbeddedResource Remove="Common\**" />
+    <EmbeddedResource Remove="Test\**" />
+    <EmbeddedResource Remove="Ui\**" />
+    <None Remove="lib\**" />
+    <None Remove="Common\**" />
+    <None Remove="Test\**" />
+    <None Remove="Ui\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,15 +39,5 @@
       <HintPath>..\lib\Ephemera.NBagOfTricks.dll</HintPath>
     </Reference>
   </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="Ephemera.NBagOfUis">
-      <HintPath>..\lib\Ephemera.NBagOfUis.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="pushd ..\&#xD;&#xA;call post_build.cmd&#xD;&#xA;popd" />
-  </Target>
 
 </Project>

@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
-    <AssemblyName>SplunkClient</AssemblyName>
-    <RootNamespace>Splunk.Client</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Splunk.Ui</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -18,6 +18,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="MainFormLeftovers.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
 
@@ -27,8 +31,10 @@
     </Reference>
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="pushd ..\&#xD;&#xA;call post_build.cmd&#xD;&#xA;popd" />
-  </Target>
+  <ItemGroup>
+    <Reference Include="Ephemera.NBagOfUis">
+      <HintPath>..\lib\Ephemera.NBagOfUis.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
 </Project>

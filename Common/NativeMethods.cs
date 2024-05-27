@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 
 
-namespace ShellUtils
+namespace Splunk.Common
 {
     /// <summary>Interop.</summary>
     public static class NativeMethods

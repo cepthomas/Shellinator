@@ -1,8 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Windows.Forms;
-
-namespace Splunk
+﻿namespace Splunk.Ui
 {
     partial class MainForm
     {
@@ -10,6 +6,7 @@ namespace Splunk
         ///  Required designer variable.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
+
 
         #region Windows Form Designer generated code
 
@@ -19,7 +16,6 @@ namespace Splunk
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
             tvInfo = new Ephemera.NBagOfUis.TextViewer();
             btnGo = new Button();
             SuspendLayout();
@@ -27,11 +23,11 @@ namespace Splunk
             // tvInfo
             // 
             tvInfo.BorderStyle = BorderStyle.FixedSingle;
-            tvInfo.Location = new Point(59, 74);
+            tvInfo.Location = new Point(12, 64);
             tvInfo.MaxText = 50000;
             tvInfo.Name = "tvInfo";
             tvInfo.Prompt = "";
-            tvInfo.Size = new Size(800, 500);
+            tvInfo.Size = new Size(1196, 450);
             tvInfo.TabIndex = 1;
             tvInfo.WordWrap = true;
             // 
@@ -48,7 +44,7 @@ namespace Splunk
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1196, 608);
+            ClientSize = new Size(1220, 552);
             Controls.Add(btnGo);
             Controls.Add(tvInfo);
             Name = "MainForm";
