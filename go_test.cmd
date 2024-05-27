@@ -6,9 +6,8 @@ cls
 rem https://stackoverflow.com/questions/1073353/c-how-to-open-windows-explorer-windows-with-a-number-of-files-selected
 
 rem This opens a new window
-explorer.exe /select,"C:\Dev\SplunkStuff\test_dir\"
-
-
+rem explorer.exe /select,"C:\Dev\SplunkStuff\test_dir\"
+rem
 rem /e   
 rem /idlist,:handle:process
 rem     specifies object as ITEMIDLIST in shared memory block with given handle in context of given process

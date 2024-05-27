@@ -16,7 +16,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShellUtils", "ShellUtils\ShellUtils.csproj", "{F4700ACA-963F-46FB-AE55-9742FA99C99D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShellUtils", "ShellUtils\ShellUtils.csproj", "{F4700ACA-963F-46FB-AE55-9742FA99C99D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplunkXXX", "SplunkXXX\SplunkXXX.csproj", "{601C0265-C7F6-4444-AD8B-344353C906A3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SplunkUi", "SplunkUi\SplunkUi.csproj", "{D63C3B89-D498-45B3-93F5-7A6C7951E207}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,6 +48,14 @@ Global
 		{F4700ACA-963F-46FB-AE55-9742FA99C99D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F4700ACA-963F-46FB-AE55-9742FA99C99D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F4700ACA-963F-46FB-AE55-9742FA99C99D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{601C0265-C7F6-4444-AD8B-344353C906A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{601C0265-C7F6-4444-AD8B-344353C906A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{601C0265-C7F6-4444-AD8B-344353C906A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{601C0265-C7F6-4444-AD8B-344353C906A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D63C3B89-D498-45B3-93F5-7A6C7951E207}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D63C3B89-D498-45B3-93F5-7A6C7951E207}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D63C3B89-D498-45B3-93F5-7A6C7951E207}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D63C3B89-D498-45B3-93F5-7A6C7951E207}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

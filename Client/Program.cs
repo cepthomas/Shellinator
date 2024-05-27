@@ -13,12 +13,9 @@ namespace Splunk.Client
         {
             try
             {
-                //Ipc.MpLog _log = new(Com.LogFileName, "SPLCLI");
-                //_log.Write($"Client cmd line: [{Environment.CommandLine}]");
-                //twr.WriteLine($"Client cmd line: [{Environment.CommandLine}]");
-
                 // Clean up args and make them safe for server by quoting before concatenating.
                 List<string> cleanArgs = [];
+                
                 // Fix corner case for accidental escaped quote.
                 args.ForEach(a => { cleanArgs.Add($"\"{a.Replace("\"", "")}\""); });
                 var cmdString = string.Join(" ", cleanArgs);

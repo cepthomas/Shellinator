@@ -64,9 +64,6 @@ namespace Splunk.Test
 //     overridden by specification in later /idlist or /root argument
 //
 // The overall aim of the command line is to specify a shell namespace object and a way in which EXPLORER is to show that object.
-
-
-
     
     public class ExplorerStuff
     {
@@ -76,10 +73,7 @@ namespace Splunk.Test
             int m = (int)MouseButtons.Middle; // 0x00400000
             int r = (int)MouseButtons.Right; // 0x00200000
 
-
             // (explorer middle button?) ctrl-T opens selected in new tab
-
-
         }
 
         public void DoThisMaybe()
