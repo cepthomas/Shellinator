@@ -17,9 +17,8 @@ namespace Splunk.Common
         /// <summary>Client/server comm id.</summary>
         public static string PIPE_NAME = "BD7A5E0A-DA11-40AC-AF94-950674716136";
 
-        //TODO1 Need path to client?
-        public static string CL_PATH = @"C:\Dev\repos\Apps\Splunk\Client\bin\Debug\net8.0";
-
+        // TODO2 Need path to client?
+        //public static string CL_PATH = @"C:\Dev\repos\Apps\Splunk\Client\bin\Debug\net8.0";
 
         /// <summary>Current global user settings.</summary>
         public static UserSettings Settings { get; set; } = new UserSettings();

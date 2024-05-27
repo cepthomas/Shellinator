@@ -48,6 +48,8 @@ namespace Splunk.Ui
         readonly Ipc.MpLog _log;
 
 
+//Things like these?:
+//"Position"="Bottom"
 
         readonly RU.RegCommand[] _regCommands =
         [
@@ -101,20 +103,6 @@ namespace Splunk.Ui
             _server = new(Com.PIPE_NAME, Com.LogFileName);
             _server.IpcReceive += Server_IpcReceive;
             _server.Start();
-        }
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnLoad(EventArgs e)
-        {
-            //Hide();
-
-            // Current bin dir. C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
-            // ==== CreateRegistryEntries(Environment.CurrentDirectory);
-
-            base.OnLoad(e);
         }
 
         /// <summary>
@@ -191,17 +179,18 @@ namespace Splunk.Ui
         // }
         // // --- temp debug stuff ---
 
-
-
+        /// <summary>
+        /// Debug.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void BtnGo_Click(object? sender, EventArgs e)
         {
             SU.GetExplorerWindows();
         }
 
-
-
         /// <summary>
-        /// Handle the hooked shell messages: shell window lifetime and hotkeys.
+        /// Handle the hooked shell messages: shell window lifetime and hotkeys. TODO2
         /// </summary>
         /// <param name="message"></param>
         protected override void WndProc(ref Message message)
@@ -249,9 +238,8 @@ namespace Splunk.Ui
             base.WndProc(ref message);
         }
 
-
         /// <summary>
-        /// Client has something to say.
+        /// Client has something to say. TODO2
         /// </summary>
         /// <param name="_"></param>
         /// <param name="e"></param>
@@ -273,6 +261,13 @@ namespace Splunk.Ui
             }
         }
 
-
+        /// <summary>
+        /// Install commands in registry.
+        /// </summary>
+        void RegCommands()
+        {
+            // Current bin dir. C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
+            RU.CreateRegistryEntries(_regCommands, Environment.CurrentDirectory);
+        }
     }
 }

@@ -14,55 +14,46 @@ namespace Splunk.Common
     /// <summary>Interop.</summary>
     public static class NativeMethods
     {
-        // TODO1 https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
+        // TODO2 https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
 
         #region Interop constants
         public const uint FILE_ATTRIBUTE_NORMAL = 0x80;
         public const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
-        public const int WM_HOTKEY_MESSAGE_ID = 0x0312;
         public const int ALT = 0x0001;
         public const int CTRL = 0x0002;
         public const int SHIFT = 0x0004;
         public const int WIN = 0x0008;
         public const short SWP_NOMOVE = 0X2;
-        public const short SWP_NOSIZE = 1;
-        public const short SWP_NOZORDER = 0X4;
+        public const short SWP_NOSIZE = 0X01;
+        public const short SWP_NOZORDER = 0X04;
         public const int SWP_SHOWWINDOW = 0x0040;
+        public const int WM_HOTKEY_MESSAGE_ID = 0x0312;
+        public const uint WM_GETTEXT = 0x000D;
         #endregion
 
         #region Types
         /// <summary>
         /// Contains window information.
-        /// cbSize          :   The size of the structure, in bytes.The caller must set this member to sizeof(WINDOWINFO).
-        /// rcWindow        :   The coordinates of the window.
-        /// rcClient        :   The coordinates of the client area.
-        /// dwStyle         :   The window styles.For a table of window styles, see Window Styles.
-        /// dwExStyle       :   The extended window styles. For a table of extended window styles, see Extended Window Styles.
-        /// dwWindowStatus  :   The window status.If this member is WS_ACTIVECAPTION (0x0001), the window is active.Otherwise, this member is zero.
-        /// cxWindowBorders :   The width of the window border, in pixels.
-        /// cyWindowBorders :   The height of the window border, in pixels.
-        /// atomWindowType  :   The window class atom (see RegisterClass).
-        /// wCreatorVersion :   The Windows version of the application that created the window.        
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         public struct WINDOWINFO
         {
-            public uint cbSize;
-            public RECT rcWindow;
-            public RECT rcClient;
-            public uint dwStyle;
-            public uint dwExStyle;
-            public uint dwWindowStatus;
-            public uint cxWindowBorders;
-            public uint cyWindowBorders;
-            public ushort atomWindowType;
-            public ushort wCreatorVersion;
-            public static WINDOWINFO GetNewWindoInfo()
-            {
-                WINDOWINFO result = new WINDOWINFO();
-                result.cbSize = (UInt32)(Marshal.SizeOf(typeof(WINDOWINFO)));
-                return result;
-            }
+            public uint cbSize;             // The size of the structure, in bytes.The caller must set this member to sizeof(WINDOWINFO).
+            public RECT rcWindow;           // The coordinates of the window.
+            public RECT rcClient;           // The coordinates of the client area.
+            public uint dwStyle;            // The window styles.For a table of window styles, see Window Styles.
+            public uint dwExStyle;          // The extended window styles. For a table of extended window styles, see Extended Window Styles.
+            public uint dwWindowStatus;     // The window status.If this member is WS_ACTIVECAPTION (0x0001), the window is active.Otherwise, this member is zero.
+            public uint cxWindowBorders;    // The width of the window border, in pixels.
+            public uint cyWindowBorders;    // The height of the window border, in pixels.
+            public ushort atomWindowType;   // The window class atom (see RegisterClass).
+            public ushort wCreatorVersion;  // The Windows version of the application that created the window.
+            // public static WINDOWINFO GetNewWindoInfo()
+            // {
+            //     WINDOWINFO result = new WINDOWINFO();
+            //     result.cbSize = (UInt32)(Marshal.SizeOf(typeof(WINDOWINFO)));
+            //     return result;
+            // }
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -100,11 +91,11 @@ namespace Splunk.Common
         [Flags]
         public enum AssocF
         {
-            Init_NoRemapCLSID = 0x1,
-            Init_ByExeName = 0x2,
-            Open_ByExeName = 0x2,
-            Init_DefaultToStar = 0x4,
-            Init_DefaultToFolder = 0x8,
+            Init_NoRemapCLSID = 0x01,
+            Init_ByExeName = 0x02,
+            Open_ByExeName = 0x02,
+            Init_DefaultToStar = 0x04,
+            Init_DefaultToFolder = 0x08,
             NoUserSettings = 0x10,
             NoTruncate = 0x20,
             Verify = 0x40,
@@ -292,8 +283,6 @@ namespace Splunk.Common
         ///// <returns></returns>
         //[DllImport("user32.dll", SetLastError = true)]
         //public static extern IntPtr GetWindow(IntPtr hWnd, uint wCmd);
-
-        // private const uint WM_GETTEXT = 0x000D;
 
         //[DllImport("user32.dll", CharSet = CharSet.Auto)]
         //static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, System.Text.StringBuilder lParam);

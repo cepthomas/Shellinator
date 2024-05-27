@@ -10,8 +10,14 @@ namespace Splunk.Common
 
     public class RegistryUtils
     {
+        /// <summary>
+        /// Command descriptor.
+        /// </summary>
+        /// <param name="RegPath"></param>
+        /// <param name="Command"></param>
+        /// <param name="Name"></param>
+        /// <param name="Tag"></param>
         public record struct RegCommand(string RegPath, string Command, string Name, string Tag);
-
 
         /// <summary>
         /// 
@@ -48,7 +54,7 @@ namespace Splunk.Common
         /// <summary>
         /// 
         /// </summary>
-        public static void RemoveRegistryEntries() //TODO1
+        public static void RemoveRegistryEntries(RegCommand[] regCommands) //TODO1
         {
             //public void DeleteSubKeyTree(string subkey);
 

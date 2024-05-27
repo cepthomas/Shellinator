@@ -36,13 +36,10 @@ rem     overridden by specification in later /idlist or /root argument
 
 
 rem "C:\Dev\repos\Apps\Splunk\Client\bin\Debug\net8.0\SplunkClient.exe" "cmder" "yyy"
-rem TODO1  option for full screen?
 
 rem "C:\Dev\repos\Apps\Splunk\Client\bin\Debug\net8.0\SplunkClient.exe" "tree" "C:\Dev\SplunkStuff\test_dir\"
 
 rem "C:\Dev\repos\Apps\Splunk\Client\bin\Debug\net8.0\SplunkClient.exe" "newtab" "yyy"
-rem (explorer middle button?)
-rem TODO1 open arg[2].GetDir() in new tab / window. Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
 
 rem "C:\Dev\repos\Apps\Splunk\Client\bin\Debug\net8.0\SplunkClient.exe" "stdir" "C:\Dev\SplunkStuff\test_dir"
 
