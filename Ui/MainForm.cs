@@ -6,11 +6,12 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Text;
 using Ephemera.NBagOfTricks;
-using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
-using Com = Splunk.Common.Common;
-using NM = Splunk.Common.NativeMethods;
-using SU = Splunk.Common.ShellUtils;
-using RU = Splunk.Common.RegistryUtils;
+//using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
+using Splunk.Common.Common;
+// using Com = Splunk.Common.Common;
+// using NM = Splunk.Common.NativeMethods;
+// using SU = Splunk.Common.ShellUtils;
+// using RU = Splunk.Common.RegistryUtils;
 
 
 namespace Splunk.Ui
@@ -41,11 +42,11 @@ namespace Splunk.Ui
         // //whf.KeypressArrangeAllEvent += Whf_KeypressArrangeAllEvent;
         // #endregion
 
-        /// <summary>The boilerplate.</summary>
-        readonly Ipc.Server _server;
+        // /// <summary>The boilerplate.</summary>
+        // readonly Ipc.Server _server;
 
-        /// <summary>The multiprocess log.</summary>
-        readonly Ipc.MpLog _log;
+        // /// <summary>The multiprocess log.</summary>
+        // readonly Ipc.MpLog _log;
 
 
 //Things like these?:
@@ -65,6 +66,11 @@ namespace Splunk.Ui
         ];
 
 
+        void Log(string msg)
+        {
+            tvInfo.AppendLine(msg);            
+        }
+
         #region Lifecycle
         /// <summary>Constructor.</summary>
         public MainForm()
@@ -73,14 +79,14 @@ namespace Splunk.Ui
 
             InitializeComponent();
 
-            _log = new(Com.LogFileName, "SPLUNK");
-            _log.Write("Hello from UI");
+            // _log = new(Com.LogFileName, "SPLUNK");
+            // _log.Write("Hello from UI");
 
             // Info display.
             tvInfo.MatchColors.Add("ERROR ", Color.LightPink);
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
-            tvInfo.AppendLine($"MainForm() {Environment.CurrentManagedThreadId}");
+            Log($"MainForm() {Environment.CurrentManagedThreadId}");
 
             btnGo.Click += BtnGo_Click;
 
@@ -99,10 +105,10 @@ namespace Splunk.Ui
             }
 
 
-            // Run server.
-            _server = new(Com.PIPE_NAME, Com.LogFileName);
-            _server.IpcReceive += Server_IpcReceive;
-            _server.Start();
+            // // Run server.
+            // _server = new(Com.PIPE_NAME, Com.LogFileName);
+            // _server.IpcReceive += Server_IpcReceive;
+            // _server.Start();
         }
 
         /// <summary>
@@ -113,7 +119,7 @@ namespace Splunk.Ui
         {
             _sw.Stop();
 
-            tvInfo.AppendLine($"dur::::{_sw.ElapsedMilliseconds}"); // 147 msec
+            Log($"dur::::{_sw.ElapsedMilliseconds}"); // 147 msec
 
             base.OnShown(e);
         }
@@ -124,7 +130,6 @@ namespace Splunk.Ui
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            /////////////// from WindowsHookForm //////////////////////
             if (disposing)
             {
                 NM.DeregisterShellHookWindow(Handle);
@@ -135,7 +140,7 @@ namespace Splunk.Ui
                     return NM.UnregisterHotKey(form.Handle, mod ^ key ^ form.Handle.ToInt32());
                 }
                 
-                _server.Dispose();
+                // _server.Dispose();
 
                 components?.Dispose();
             }
@@ -147,7 +152,7 @@ namespace Splunk.Ui
         // // --- temp debug stuff ---
         // private void Go()
         // {
-        //     tvInfo.AppendLine($"Go() {Environment.CurrentManagedThreadId}");
+        //     Log($"Go() {Environment.CurrentManagedThreadId}");
         //     int _which = 1;
 
         //     if (_which == 0)
@@ -186,6 +191,10 @@ namespace Splunk.Ui
         /// <param name="e"></param>
         private void BtnGo_Click(object? sender, EventArgs e)
         {
+            //                string dir;
+            // Current bin dir. C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
+            // ==== CreateRegistryEntries(Environment.CurrentDirectory);
+            
             SU.GetExplorerWindows();
         }
 
@@ -238,27 +247,27 @@ namespace Splunk.Ui
             base.WndProc(ref message);
         }
 
-        /// <summary>
-        /// Client has something to say. TODO2
-        /// </summary>
-        /// <param name="_"></param>
-        /// <param name="e"></param>
-        void Server_IpcReceive(object? _, Ipc.IpcReceiveEventArgs e)
-        {
-            tvInfo.AppendLine($"Server_IpcReceive() {Environment.CurrentManagedThreadId}");
+        // /// <summary>
+        // /// Client has something to say. TODO2
+        // /// </summary>
+        // /// <param name="_"></param>
+        // /// <param name="e"></param>
+        // void Server_IpcReceive(object? _, Ipc.IpcReceiveEventArgs e)
+        // {
+        //     Log($"Server_IpcReceive() {Environment.CurrentManagedThreadId}");
 
-            if (e.Error)
-            {
-                //_message = "";
-                tvInfo.AppendLine("ERROR " + e.Message);
-                _log.Write("ERROR " + e.Message);
-            }
-            else
-            {
-                //_message = e.Message;
-                tvInfo.AppendLine("RCV " + e.Message);
-                //BeginInvoke(ProcessMessage);
-            }
+        //     if (e.Error)
+        //     {
+        //         //_message = "";
+        //         Log("ERROR " + e.Message);
+        //         _log.Write("ERROR " + e.Message);
+        //     }
+        //     else
+        //     {
+        //         //_message = e.Message;
+        //         Log("RCV " + e.Message);
+        //         //BeginInvoke(ProcessMessage);
+        //     }
         }
 
         /// <summary>
