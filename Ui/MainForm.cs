@@ -6,12 +6,12 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Text;
 using Ephemera.NBagOfTricks;
-//using Ipc = Ephemera.NBagOfTricks.SimpleIpc;
-using Splunk.Common.Common;
-// using Com = Splunk.Common.Common;
-// using NM = Splunk.Common.NativeMethods;
-// using SU = Splunk.Common.ShellUtils;
-// using RU = Splunk.Common.RegistryUtils;
+using Ephemera.NBagOfTricks.Slog;
+
+using Com = Splunk.Common.Common;
+using NM = Splunk.Common.NativeMethods;
+using SU = Splunk.Common.ShellUtils;
+using RU = Splunk.Common.RegistryUtils;
 
 
 namespace Splunk.Ui
@@ -26,6 +26,9 @@ namespace Splunk.Ui
         readonly Stopwatch _sw = new();
 
         readonly int _shellHookMsg;
+
+        /// <summary>My logger.</summary>
+        readonly Logger _logger = LogManager.CreateLogger("Splunk.Ui");
 
         // #region Events
         // public event Action<IntPtr> WindowCreatedEvent;
@@ -42,34 +45,93 @@ namespace Splunk.Ui
         // //whf.KeypressArrangeAllEvent += Whf_KeypressArrangeAllEvent;
         // #endregion
 
-        // /// <summary>The boilerplate.</summary>
-        // readonly Ipc.Server _server;
 
-        // /// <summary>The multiprocess log.</summary>
-        // readonly Ipc.MpLog _log;
+        //Things like these?:
+        //"Position"="Bottom"
+
+        //readonly RU.RegCommand[] _regCommands =
+        //[
+        //    new("Directory", "cmder", "Two Pane", "dir"),
+        //    new("Directory", "tree", "Tree", "dir"),
+        //    new("Directory", "openst", "Open in Sublime", "dir"),
+        //    new("Directory", "find", "Open in Everything", "dir"),
+        //    new("Directory", "newtab", "Open in New Tab", "dir"),
+        //    new("Directory\\Background", "tree", "Tree", "dirbg"),
+        //    new("Directory\\Background", "openst", "Open in Sublime", "dirbg"),
+        //    new("Directory\\Background", "find", "Open in Everything", "dirbg"),
+        //    new("DesktopBackground", "newtab", "Open in New Tab", "deskbg"),
+        //];
 
 
-//Things like these?:
-//"Position"="Bottom"
+        //%l – Long file name form of the first parameter. Note that Win32/64 applications will be passed the long file name, whereas Win16 applications get the short file name.Specifying %l is preferred as it avoids the need to probe for the application type.
+
+        //%d – Desktop absolute parsing name of the first parameter (for items that don't have file system paths).
+
+        //%v – For verbs that are none implies all.If there is no parameter passed this is the working directory.
+        //%V should be used if you want directory name, ie.when you want to add your command on context menu when
+        //  you click on background, not on a single file or a directory name. %L won't work in that case.
+
+        //%w – The working directory.
+        //A warning about %W: It is not always available and will throw a cryptic error message if used in your command value.For example, calling your context menu item on a drive's or a library folder's context menu will not initialize this variable.Avoid its use outside of a file handler's context menu entry.
+
+
+        //%* – Replace with all parameters.
+        //%~ – Replace with all parameters starting with and following the second parameter.
+        //%0 or %1 – The first file parameter.For example "C:\Users\Eric\Desktop\New Text Document.txt". Generally this should be in quotes and the applications command line parsing should accept quotes to disambiguate files with spaces in the name and different command line parameters (this is a security best practice and I believe mentioned in MSDN).
+        //%<n> (where<n> is 2-9) – Replace with the nth parameter.
+        //%s – Show command.
+        //%h – Hotkey value.
+        //%i – IDList stored in a shared memory handle is passed here.
+
+
+        //"C:\Dev\repos\Apps\Splunk\SplunkXXX\bin\Debug\net8.0\SplunkXXX.exe" cmder xyz "%V"
+        //public record struct RegCommand(string RegPath, string Name, string Command);
 
         readonly RU.RegCommand[] _regCommands =
         [
-            new("Directory", "cmder", "Two Pane", "dir"),
-            new("Directory", "tree", "Tree", "dir"),
-            new("Directory", "openst", "Open in Sublime", "dir"),
-            new("Directory", "find", "Open in Everything", "dir"),
-            new("Directory", "newtab", "Open in New Tab", "dir"),
-            new("Directory\\Background", "tree", "Tree", "dirbg"),
-            new("Directory\\Background", "openst", "Open in Sublime", "dirbg"),
-            new("Directory\\Background", "find", "Open in Everything", "dirbg"),
-            new("DesktopBackground", "newtab", "Open in New Tab", "deskbg"),
+            new("Directory", "Two Pane", "%SPLUNK cmder dir \"%V\""),
+            new("Directory", "Tree", "cmd /c tree /a /f \"%V\" | clip"),
+            new("Directory", "Open in Sublime", "subl -n \"%V\""),
+            new("Directory", "Open in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""),
+            new("Directory", "Open in New Tab", "%SPLUNK newtab dir \"%V\""),
+            new("Directory\\Background", "Tree", "cmd /c tree /a /f \"%V\" | clip"),
+            new("Directory\\Background", "Open in Sublime", "subl -n \"%V\""),
+            new("Directory\\Background", "Open in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""),
+            new("DesktopBackground", "Open in New Tab", "%SPLUNK newtab deskbg \"%V\""),
         ];
 
+        //Command = "%SPLUNK_PATH cmder dir \"%V\""
 
-        void Log(string msg)
-        {
-            tvInfo.AppendLine(msg);            
-        }
+        //case "tree": // direct => cmd /c tree /a /f \"%V\" | clip
+        //case "openst": // direct "subl -n \"%V\"";
+        //case "find": // direct "C:\Program Files\Everything\everything -parent \"%V\"";
+
+
+
+
+        //var strsubkey = $"{rc.RegPath}\\shell\\{rc.Command}";
+        //using (var k = splunk_root!.CreateSubKey(strsubkey))
+        //{
+        //    Debug.WriteLine($"MUIVerb={rc.Name}");
+        //    k.SetValue("MUIVerb", rc.Name);
+        //}
+
+        //strsubkey += "\\command";
+        //using (var k = splunk_root!.CreateSubKey(strsubkey))
+        //{
+        //    //cmd.exe /s /k pushd "%V"
+        //    //"C:\Program Files (x86)\Common Files\Microsoft Shared\MSEnv\VSLauncher.exe" "%1" source:Explorer
+
+        //    var scmd = $"\"{exePath}\" {rc.Command} {rc.Tag} \"%V\"";
+        //    Debug.WriteLine($"@={scmd}");
+        //    k.SetValue("", scmd);
+        //}
+
+
+
+
+
+
 
         #region Lifecycle
         /// <summary>Constructor.</summary>
@@ -79,6 +141,14 @@ namespace Splunk.Ui
 
             InitializeComponent();
 
+            // Init logging.
+            string appDir = MiscUtils.GetAppDataDir("Splunk", "Ephemera");
+            LogManager.MinLevelFile = LogLevel.Debug;
+            LogManager.MinLevelNotif = LogLevel.Debug;
+            LogManager.LogMessage += (_, e) => { tvInfo.AppendLine($"{e.Message}"); };
+            LogManager.Run(Path.Join(appDir, "log.txt"), 100000);
+
+
             // _log = new(Com.LogFileName, "SPLUNK");
             // _log.Write("Hello from UI");
 
@@ -86,9 +156,30 @@ namespace Splunk.Ui
             tvInfo.MatchColors.Add("ERROR ", Color.LightPink);
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
-            Log($"MainForm() {Environment.CurrentManagedThreadId}");
+            _logger.Debug($"MainForm() {Environment.CurrentManagedThreadId}");
 
+            // Cotrols.
             btnGo.Click += BtnGo_Click;
+            // Install commands in registry.
+            btnInitReg.Click += (sender, e) =>
+            {
+                // Current bin dir. C:\Dev\repos\Apps\Splunk\Ui\bin\Debug\net8.0-windows
+                string sdir = Environment.CurrentDirectory;
+                //RU.CreateRegistryEntries(_regCommands, Environment.CurrentDirectory);
+            };
+            // Remove commands from registry.
+            btnClearReg.Click += (sender, e) =>
+            {
+                RU.RemoveRegistryEntries(_regCommands);
+            };
+
+
+            ///// <summary>
+            ///// Install commands in registry.
+            ///// </summary>
+            //void RegCommands()
+            //{
+            //}
 
             // windows handler - WindowsHookForm
             // https://stackoverflow.com/questions/4544468/why-my-wndproc-doesnt-receive-shell-hook-messages-if-the-app-is-set-as-default
@@ -119,7 +210,7 @@ namespace Splunk.Ui
         {
             _sw.Stop();
 
-            Log($"dur::::{_sw.ElapsedMilliseconds}"); // 147 msec
+            _logger.Debug($"Startup msec: {_sw.ElapsedMilliseconds}"); // 147 msec
 
             base.OnShown(e);
         }
@@ -191,7 +282,6 @@ namespace Splunk.Ui
         /// <param name="e"></param>
         private void BtnGo_Click(object? sender, EventArgs e)
         {
-            //                string dir;
             // Current bin dir. C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
             // ==== CreateRegistryEntries(Environment.CurrentDirectory);
             
@@ -268,15 +358,6 @@ namespace Splunk.Ui
         //         Log("RCV " + e.Message);
         //         //BeginInvoke(ProcessMessage);
         //     }
-        }
-
-        /// <summary>
-        /// Install commands in registry.
-        /// </summary>
-        void RegCommands()
-        {
-            // Current bin dir. C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
-            RU.CreateRegistryEntries(_regCommands, Environment.CurrentDirectory);
-        }
+        //}
     }
 }

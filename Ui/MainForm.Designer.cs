@@ -18,6 +18,8 @@
         {
             tvInfo = new Ephemera.NBagOfUis.TextViewer();
             btnGo = new Button();
+            btnInitReg = new Button();
+            btnClearReg = new Button();
             SuspendLayout();
             // 
             // tvInfo
@@ -40,11 +42,31 @@
             btnGo.Text = "GO!!";
             btnGo.UseVisualStyleBackColor = true;
             // 
+            // btnInitReg
+            // 
+            btnInitReg.Location = new Point(222, 24);
+            btnInitReg.Name = "btnInitReg";
+            btnInitReg.Size = new Size(94, 29);
+            btnInitReg.TabIndex = 3;
+            btnInitReg.Text = "Init Reg";
+            btnInitReg.UseVisualStyleBackColor = true;
+            // 
+            // btnClearReg
+            // 
+            btnClearReg.Location = new Point(343, 24);
+            btnClearReg.Name = "btnClearReg";
+            btnClearReg.Size = new Size(94, 29);
+            btnClearReg.TabIndex = 4;
+            btnClearReg.Text = "Clear Reg";
+            btnClearReg.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1220, 552);
+            Controls.Add(btnClearReg);
+            Controls.Add(btnInitReg);
             Controls.Add(btnGo);
             Controls.Add(tvInfo);
             Name = "MainForm";
@@ -56,5 +78,7 @@
 
         private Ephemera.NBagOfUis.TextViewer tvInfo;
         private Button btnGo;
+        private Button btnInitReg;
+        private Button btnClearReg;
     }
 }
