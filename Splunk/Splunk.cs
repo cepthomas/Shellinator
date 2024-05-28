@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Ephemera.NBagOfTricks;
+using Ephemera.NBagOfTricks.Slog;
 
 
 namespace Splunk
@@ -10,9 +11,18 @@ namespace Splunk
     /// <summary>The worker.</summary>
     public class Splunk
     {
-        public int Run(string[] args, TextWriter twr)
+        /// <summary>My logger.</summary>
+        readonly Logger _logger = LogManager.CreateLogger("Splunk");
+
+        /// <summary>
+        /// Do the work.
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public int Run(string[] args)
         {
             int ret = 0;
+            _logger.Info($"Run: {string.Join("|", args)}");
 
             // TODO1 still gotta figure out the cmd <> without terminal. See what python does.
             // case "tree": // direct => cmd /c tree /a /f "%V" | clip
@@ -95,7 +105,7 @@ namespace Splunk
             }
             catch (Exception ex) // handle errors
             {
-                twr.WriteLine("ERROR " + ex.Message);
+                _logger.Error(ex.Message);
                 ret = 1;
             }
 
