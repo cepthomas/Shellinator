@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
+using SC = Splunk.Common.Common;
 
 
 
@@ -12,21 +13,21 @@ namespace Splunk
     internal class Program
     {
         /// <summary>My logger.</summary>
-        static Logger _logger = LogManager.CreateLogger("Splunk");
+        static readonly Logger _logger = LogManager.CreateLogger("Splunk");
 
         static void Main(string[] args)
         {
             int ret = 0;
 
-            Stopwatch sw = new Stopwatch();
+            Stopwatch sw = new();
             sw.Start();
 
-            // Init logging.
+            // Init logging for standalone application.
             string appDir = MiscUtils.GetAppDataDir("Splunk", "Ephemera");
             LogManager.MinLevelFile = LogLevel.Debug;
             LogManager.MinLevelNotif = LogLevel.Debug;
             LogManager.LogMessage += (object? _, LogMessageEventArgs e) => { Console.WriteLine($"{e.Message}"); };
-            LogManager.Run(Path.Join(appDir, "log.txt"), 100000);
+            LogManager.Run($"{appDir}\\log.txt", 100000);
 
             ret = Run(args);
 
@@ -56,10 +57,9 @@ namespace Splunk
             try
             {
                 // Process the command string.
-                if (args.Length != 3) { throw new($"invalid command format"); }
+                if (args.Length != 2) { throw new($"invalid command format"); }
                 var cmd = args[0];
-                var tag = args[1];
-                var path = args[2];
+                var path = args[1];
 
                 // Check for valid path arg.
                 if (!Path.Exists(path)) { throw new($"invalid path: {path}"); }
@@ -85,16 +85,20 @@ namespace Splunk
                         // TODO2 option for full screen?
 
                         //https://stackoverflow.com/questions/1190423/using-setwindowpos-in-c-sharp-to-move-windows-around
-                        // WindowsMover: https://www.codeproject.com/Tips/1057230/Windows-Resize-and-Move
-                        // C version: https://devblogs.microsoft.com/oldnewthing/20130610-00/?p=4133
 
                         pinfo.FileName = "explorer";
                         pinfo.Arguments = $"{dir}";
                         break;
 
                     case "newtab":
-                        // Open a new explorer tab in current window at the dir selected in the first one. explorer middle button?
-                        // Something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+                        // Open a new explorer tab in current window at the dir selected in the first one.
+                        // (explorer middle button?) ctrl-T opens selected in new tab
+                        //int l = (int)MouseButtons.Left; // 0x00100000
+                        //int m = (int)MouseButtons.Middle; // 0x00400000
+                        //int r = (int)MouseButtons.Right; // 0x00200000
+
+                        // Or something like https://github.com/tariibaba/WinENFET/blob/main/src (autohotkey)./win-e.ahk
+
                         pinfo.FileName = "cmd";
                         pinfo.Arguments = $"/c echo !!newtab!! {DateTime.Now.Millisecond} | clip";
                         break;
@@ -117,14 +121,13 @@ namespace Splunk
                     //    break;
 
                     default:
-                        throw new($"command verb: {cmd}");
+                        throw new ArgumentException($"Invalid command: {cmd}");
                 }
 
                 var proc = new Process() { StartInfo = pinfo };
                 proc.Start();
                 //proc.WaitForExit();
                 //if (proc.ExitCode != 0) { throw new($"process exit code: {proc.ExitCode}"); }
-
             }
             catch (Exception ex) // handle errors
             {

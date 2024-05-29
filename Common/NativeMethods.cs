@@ -9,6 +9,51 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 
 
+// shell.dll contains the basics:
+// --------------------------------
+// ShellExecute  ShellExecuteEx  ShellExecuteExW
+// SHGetInstanceExplorer
+// 
+// DllGetVersion  DLLGETVERSIONINFO  ExtendedFileInfo  ExtractAssociatedIcon  ExtractIcon  ExtractIconEx  FileIconInit
+// EnumFontFamExProc  FindExecutable  IShellIcon  IsNetDrive  ITaskbarList  ITaskbarList2  ITaskbarList3  ITaskbarList4
+// KNOWNFOLDERID  SHAddToRecentDocs  SHAppBarMessage  SHBrowseForFolder  ShellAbout
+// ShellExecute  ShellExecuteEx  ShellExecuteExW
+// Shell_GetImageLists  Shell_NotifyIcon  Shell_NotifyIconGetRect  SHGetDesktopFolder
+// SHGetFolderLocation  SHGetFolderPath  SHGetKnownFolderPath  SHGetImageList  SHGetSpecialFolderLocation
+// SHGetSpecialFolderPath  SHGetSpecialFolderPathA  SHGetStockIconInfo  SHSetKnownFolderPath
+// 
+// api:   APPBARDATA   APPBARDATA   BatchExec   CharSet   CommandLineToArgvW   CSIDL   CSIDL   dll ILCLONEFULL   DoEnvironmentSubst   
+// DragAcceptFiles   DragFinish   DragQueryFile   DragQueryPoint   DuplicateIcon   ERazMA   FileSystemWatcher   FZ79pQ   
+// GetFinalPathNameByHandle   HChangeNotifyEventID   HChangeNotifyFlags   ILClone   ILCombine   ILCreateFromPath   ILFindLastID   
+// ILFree   ILIsEqual   ILIsParent   ILRemoveLastID   IsUserAnAdmin   ljlsjsf   PathCleanupSpec   PathIsExe   PathMakeUniqueName   
+// PathYetAnotherMakeUniqueName   PickIconDlg   Run   SetCurrentProcessExplicitAppUserModelID   SHBindToParent   SHChangeNotify   
+// SHChangeNotifyRegister   SHChangeNotifyUnregister   SHCNRF   SHCreateDirectoryEx   SHCreateItemFromIDList   // SHCreateItemFromParsingName
+// SHCreateItemWithParent   SHCreateProcessAsUserW   SHEmptyRecycleBin   SHFileOperation   SHFormatDrive   SHFreeNameMappings   
+// SHGetDataFromIDList   SHGetDiskFreeSpace   SHGetFileInfo   SHGetFileInfoA   SHGetIconOverlayIndex   SHGetIDListFromObject   
+// SHGetInstanceExplorer   SHGetMalloc   SHGetNameFromIDList   SHGetNewLinkInfo   SHGetPathFromIDList   
+// SHGetPropertyStoreFromParsingNamehtml   SHGetRealIDL   SHGetSetSettings   SHGetSettings   SHInvokePrinterCommand   
+// SHIsFileAvailableOffline   SHLoadInProc   SHLoadNonloadedIconOverlayIdentifiers   SHObjectProperties   SHOpenFolderAndSelectItems   
+// SHOpenWithDialog   SHParseDisplayName   SHParseDisplayName   SHPathPrepareForWrite   SHQueryRecycleBin
+// SHQueryUserNotificationState   SHRunFileDialog   SHSetUnreadMailCount   StartInfo   THUMBBUTTON   ultimate   virt girl hd
+// 
+// 
+// shlwapi.dll contains
+// -----------------------
+// a collection of functions that provide support for various shell operations, such as 
+// file and folder manipulation, user interface elements, and internet-related tasks.
+// 
+// AssocCreate  AssocGetPerceivedType  AssocQueryString  ColorHLSToRGB  ColorRGBToHLS  HashData  IPreviewHandler  IsOS
+// PathAddBackslash  PathAppend  PathBuildRoot  PathCanonicalize  PathCombine  PathCommonPrefix  PathCompactPath
+// PathCompactPathEx  PathCreateFromUrl  PathFileExists  PathFindNextComponent  PathFindOnPath  PathGetArgs
+// PathIsDirectory  PathIsFileSpec  PathIsHTMLFile  PathIsNetworkPath  PathIsRelative  PathIsRoot  PathIsSameRoot
+// PathIsUNC  PathIsUNCServer  PathIsUNCServerShare  PathIsURL  PathMatchSpec  PathQuoteSpaces  PathRelativePathTo
+// PathRemoveArgs  PathRemoveBackslash  PathRemoveBlanks  PathRemoveExtension  PathRemoveFileSpec  PathRenameExtension
+// PathStripPath  PathStripToRoot  PathUndecorate  PathUnExpandEnvStrings  PathUnQuoteSpaces  SHAutoComplete
+// SHCreateStreamOnFile  SHCreateStreamOnFileEx  SHLoadIndirectString  SHMessageBoxCheck  StrCmpLogicalW
+// StrFormatByteSize  StrFormatByteSizeA  StrFromTimeInterval  UrlCreateFromPath
+
+
+
 namespace Splunk.Common
 {
     /// <summary>Interop.</summary>

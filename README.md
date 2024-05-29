@@ -2,10 +2,9 @@
 Games with shell extensions to provide some custom context menus.
 
 Consists of two parts:
-- A server (Splunk) that performs the actual work. It's out-of-process from the client
-  so as to not inadvertently compromise the entire shell.
-- A simple command line client that is called from registry commands. It talks to the
-  server via a named pipe.
+- A simple command line client that is called from registry commands. It executes the
+  requested operation.
+- A UI companion that can configure registry commands, and some other stuff.
 
 Built with VS2022 and .NET8.
 
@@ -54,7 +53,7 @@ All client commands are of the form:
 | find    | Open dir in Everything.                               | HKEY_XX\Directory, HKEY_XX\Directory\Background |
 
 
-## Registry Keys Of Interest
+## Registry Keys Of Interest TODO1 generate from Settings
 
 Not shown are attributes like icon, extended, ...
 

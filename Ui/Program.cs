@@ -1,3 +1,6 @@
+using Ephemera.NBagOfTricks;
+using Ephemera.NBagOfTricks.Slog;
+
 namespace Splunk.Ui
 {
     internal static class Program
@@ -12,7 +15,7 @@ namespace Splunk.Ui
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
 
-            // Ensure only one playing at a time. TODO1 or don't care? See also Splunk program.cs.
+            // Ensure only one playing at a time. TODO2 or don't care? See also Splunk program.cs.
             using (Mutex mutex = new(false, "Splunk_Ui_instance"))
             {
                 if (mutex.WaitOne(300))
@@ -34,36 +37,9 @@ namespace Splunk.Ui
                 }
                 else
                 {
-                    //if (MessageBox.Show("WindowsMover is already running\nDo you wish to terminate it?", "WindowsMover", MessageBoxButtons.YesNo) == DialogResult.Yes)
-                    //{
-                    //    RemoveAllInstancesFromMemory();
-                    //}
+                    // Already running, send args to resident.
                 }
             }
-
-
-            // /// <summary>
-            // /// Installs a hook to intercept the creation of all windows
-            // /// </summary>
-            // // public static void ArrangeOnOpen()
-            // // {
-            // //conf.Log("WindowsMover: installing Windows hook");
-            // WindowsHookForm whf = new WindowsHookForm();
-            // whf.WindowCreatedEvent += (data) => { ArrangeOneWindow(data); };
-            // // if (conf.enableKeyboardShortcutsToArrangeWindows)
-            // // {
-            // //     whf.KeypressArrangeVisibleEvent += Whf_KeypressArrangeVisibleEvent;
-            // //     whf.KeypressArrangeAllEvent += Whf_KeypressArrangeAllEvent;
-            // // }
-            // while (true)
-            // {
-            //     Application.DoEvents();
-            //     Thread.Sleep(200);
-            //     GC.Collect();
-            //     GC.WaitForPendingFinalizers();
-            //     GC.Collect();
-            // }
-            // // }
         }
     }
 }
