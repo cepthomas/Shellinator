@@ -12,7 +12,7 @@ TODO2 publishing and packaging: https://stackoverflow.com/questions/58994946/how
 
 # Commands
 
-## General
+## Registry Conventions
 
 Registry sections of interest:
 - `HKEY_LOCAL_MACHINE` (HKLM): defaults for all users using a machine (administrator)
@@ -23,120 +23,94 @@ Registry sections of interest:
 always redirected to `HKEY_LOCAL_MACHINE`\Software\Classes. In general, write directly to 
 `HKEY_LOCAL_MACHINE\Software\Classes` or `HKEY_CURRENT_USER\Software\Classes` and read from `HKEY_CLASSES_ROOT`.
 
-In subsequent sections, `HKEY_XX` is `HKEY_CURRENT_USER\Software\Classes`.
-
-Arguments available in commands executed by registry handlers:
-
-| Main | Description |
-| ---- | ----------- |
-| %L   | Long file name form of the command. |
-| %D   | Desktop absolute parsing name of the command (for items that don't have file system paths). |
-| %V   | For verbs that are none implies all. If there is no parameter passed this is the working directory. |
-| %W   | The working directory. |
-| %N   | The positional args. |
+Splunk bases all registry accesses (R/W) at `HKEY_CURRENT_USER\Software\Classes` aka `REG_ROOT`.
 
 
 ## Splunk Commands
 
-All client commands are of the form:
-```
-"CL_PATH\SplunkClient.exe" "command" "%V"
-```
+Splunk command specifications contain these properties:
+
+| Property      | Description |
+| --------      | ----------- |
+| Id            | Short name for internal id and registry key.|
+| RegPath       | Where to install in `REG_ROOT`.|
+| Text          | As it appears in the context menu.|
+| CommandLine   | Full command string to execute.|
 
 
-| Command | Description | Applies To |
-| -----   | ------      | -----      |
-| cmder   | Open a second explorer in dir - aligned with first.   | HKEY_XX\Directory |
-| tree    | Cmd line to clipboard for current or sel dir.         | HKEY_XX\Directory, HKEY_XX\Directory\Background |
-| newtab  | Open dir in new tab in current explorer.              | HKEY_XX\Directory, HKEY_XX\DesktopBackground |
-| openst  | Open dir in Sublime Text.                             | HKEY_XX\Directory, HKEY_XX\Directory\Background |
-| find    | Open dir in Everything.                               | HKEY_XX\Directory, HKEY_XX\Directory\Background |
+Supported `RegPath`s are:
+
+| RegPath               | Description |
+| -------               | ----------- |
+| Directory             | Right click in explorer right pane or windows desktop with a directory selected.|
+| Directory\Background  | Right click in explorer right pane with nothing selected (background).|
+| DesktopBackground     | Right click in windows desktop with nothing selected (background).|
+| Folder                | Right click in explorer left pane (navigation) with a folder selected.|
+| ext                   | Right click in explorer right pane or windows desktop with file.ext selected (\* for all exts).|
 
 
-## Registry Keys Of Interest TODO1 generate from Settings
-
-Not shown are attributes like icon, extended, ...
-
+This generates registry entries that look like:
 ```ini
-; => Right click in explorer-right-pane or windows-desktop with a directory selected.
-[HKEY_XX\Directory\shell\menu_item]
+[REG_ROOT\RegPath\shell\Id]
 @=""
-"MUIVerb"="Menu Item"
-;The command to execute - arg is the directory.
-[HKEY_XX\Directory\shell\menu_item\command]
-@="my_command.exe" "%V"
+"MUIVerb"=Text
+[REG_ROOT\RegPath\shell\Id\command]
+@=CommandLine
 ```
 
-```ini
-; => Right click in explorer-right-pane with nothing selected (background)
-[HKEY_XX\Directory\Background\shell\menu_item]
-@=""
-"MUIVerb"="Menu Item"
-;The command to execute - arg is not used.
-[HKEY_XX\Directory\Background\shell\menu_item\command]
-@="my_command.exe" "%V"
-```
+`CommandLine` is a free-form string that is executed as if entered at the command line.
+There are some macros available. The internally supported ones:
 
-```ini
-; => Right click in windows-desktop with nothing selected (background).
-[HKEY_XX\DesktopBackground\shell\menu_item]
-@=""
-"MUIVerb"="Menu Item"
-;The command to execute - arg is not used.
-[HKEY_XX\DesktopBackground\shell\menu_item\command]
-@="my_command.exe" "%V"
-```
+| Macro     | Description |
+| ----      | ----------- |
+| %L        | Selected file or directory name. |
+| %D        | Desktop absolute parsing name of the selection for items that don't have file system paths. |
+| %V        | The directory of the selection. |
+| %W        | The working directory. |
+| %<0-9>    | Positional Nth arg. |
+| %*        | Replace with all parameters. |
+| %~        | Replace with all parameters starting with the second parameter. |
+| %S        | Show command. |
 
-```ini
-; => Right click in explorer-left-pane (navigation) with a folder selected.
-[HKEY_XX\Folder\shell\menu_item]
-@=""
-"MUIVerb"="Menu Item"
-;The command to execute - arg is the folder.
-[HKEY_XX\Folder\shell\menu_item\command]
-@="my_command.exe" "%V"
-```
+Additional Splunk-specific macros:
 
-```ini
-; => Right click in explorer-right-pane or windows-desktop with a file selected (* for all exts).
-[HKEY_XX\*\shell\menu_item]
-@=""
-"MUIVerb"="Menu Item"
-;The command to execute - arg is the file name.
-[HKEY_XX\*\shell\menu_item\command]
-@="my_command.exe" "%V"
-```
+| Macro     | Description |
+| ----      | ----------- |
+| %ID       | The Id property value. |
+| %SPLUNK   | Path to the Splunk executable. |
+
+Note that all paths must be wrapped in double quotes.
 
 ## Submenus
 
-Typical structure of submenu entries.
+Not used currently in Splunk but could be useful later.
 
-Note!! Human names must use `MUIVerb`, not default value `@="text"`. A hard learn.
+Note!! Must use `MUIVerb`, not default value `@="text"`. A hard learn.
 
 ```ini
-[HKEY_XX\Directory]
+[HKCU\Directory]
 
-[HKEY_XX\Directory\shell]
+[HKCU\Directory\shell]
 
-[HKEY_XX\Directory\shell\top_menu]
+[HKCU\Directory\shell\top_menu]
 @=""
 "MUIVerb"="Top Menu"
 "subcommands"=""
 
-[HKEY_XX\Directory\shell\top_menu\shell]
+[HKCU\Directory\shell\top_menu\shell]
 
-[HKEY_XX\Directory\shell\top_menu\shell\sub_menu_1]
+[HKCU\Directory\shell\top_menu\shell\sub_menu_1]
 @=""
 "MUIVerb"="Sub Menu 1"
 
-[HKEY_XX\Directory\shell\top_menu\shell\sub_menu_1\command]
+[HKCU\Directory\shell\top_menu\shell\sub_menu_1\command]
 @="my_command.exe"
 
-[HKEY_XX\Directory\shell\top_menu\shell\sub_menu_2]
+[HKCU\Directory\shell\top_menu\shell\sub_menu_2]
 @=""
 "MUIVerb"="Sub Menu 2"
 
-[HKEY_XX\Directory\shell\top_menu\shell\sub_menu_2\command]
+[HKCU\Directory\shell\top_menu\shell\sub_menu_2\command]
 @="my_command.exe"
 ```
 

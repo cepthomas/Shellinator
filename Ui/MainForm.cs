@@ -7,62 +7,31 @@ using System.Diagnostics;
 using System.Text;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
-using SC = Splunk.Common.Common;
+using Ephemera.NBagOfUis;
+using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
-using SU = Splunk.Common.ShellUtils;
-using RU = Splunk.Common.RegistryUtils;
 
 
 namespace Splunk.Ui
 {
-
     public partial class MainForm : Form
     {
+        #region Definitions
         const int VIS_WINDOWS_KEY = (int)Keys.W;
-
         const int ALL_WINDOWS_KEY = (int)Keys.A;
+        #endregion
+
+        #region Fields
+        /// <summary>My logger.</summary>
+        readonly Logger _logger = LogManager.CreateLogger("Splunk.Ui");
+
+        /// <summary>App settings.</summary>
+        readonly UserSettings _settings;
 
         readonly Stopwatch _sw = new();
 
         readonly int _shellHookMsg;
-
-        /// <summary>My logger.</summary>
-        readonly Logger _logger = LogManager.CreateLogger("Splunk.Ui");
-
-
-        // Temp func.
-        //void InitCommands()
-        //{
-        //    var rc = SC.Settings.RegistryCommands;
-        //    rc.Clear();
-
-        //    rc.Add(new() { RegPath = "Directory", Text = "Two Pane", Command = "%SPLUNK cmder dir \"%V\"" });
-        //    rc.Add(new() { RegPath = "Directory", Text = "Tree", Command = "cmd /c tree /a /f \"%V\" | clip" });
-        //    rc.Add(new() { RegPath = "Directory", Text = "Open in Sublime", Command = "subl -n \"%V\"" });
-        //    rc.Add(new() { RegPath = "Directory", Text = "Open in Everything", Command = "C:\\Program Files\\Everything\\everything -parent \"%V\"" });
-        //    rc.Add(new() { RegPath = "Directory", Text = "Open in New Tab", Command = "%SPLUNK newtab dir \"%V\"" });
-        //    rc.Add(new() { RegPath = "Directory\\Background", Text = "Tree", Command = "cmd /c tree /a /f \"%V\" | clip" });
-        //    rc.Add(new() { RegPath = "Directory\\Background", Text = "Open in Sublime", Command = "subl -n \"%V\"" });
-        //    rc.Add(new() { RegPath = "Directory\\Background", Text = "Open in Everything", Command = "C:\\Program Files\\Everything\\everything -parent \"%V\"" });
-        //    rc.Add(new() { RegPath = "DesktopBackground", Text = "Open in New Tab", Command = "%SPLUNK newtab deskbg \"%V\"" });
-        //}
-
-        void InitCommands()
-        {
-            var rc = SC.Settings.RegistryCommands; // alias
-            rc.Clear();
-
-            rc.Add(new("cmder", "Directory", "Two Pane", "%SPLUNK %ID \"%V\""));
-            rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%V\" | clip"));
-            rc.Add(new("subl", "Directory", "Open in Sublime", "subl -n \"%V\""));
-            rc.Add(new("everything", "Directory", "Open in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
-            rc.Add(new("newtab", "Directory", "Open in New Tab", "%SPLUNK %ID \"%V\""));
-            rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%V\" | clip"));
-            rc.Add(new("subl", "Directory\\Background", "Open in Sublime", "subl -n \"%V\""));
-            rc.Add(new("everything", "Directory\\Background", "Open in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
-            rc.Add(new("newtab", "DesktopBackground", "Open in New Tab", "%SPLUNK %ID \"%V\""));
-        }
-
+        #endregion
 
         #region Lifecycle
         /// <summary>Constructor.</summary>
@@ -70,49 +39,49 @@ namespace Splunk.Ui
         {
             _sw.Start();
 
+            // Must do this first before initializing.
+            string appDir = MiscUtils.GetAppDataDir("Splunk", "Ephemera");
+            _settings = (UserSettings)SettingsCore.Load(appDir, typeof(UserSettings));
+
             InitializeComponent();
 
-InitCommands();
-
             // Init logging.
-            string appDir = MiscUtils.GetAppDataDir("Splunk", "Ephemera");
-            LogManager.MinLevelFile = LogLevel.Debug;
-            LogManager.MinLevelNotif = LogLevel.Debug;
+            LogManager.MinLevelFile = _settings.FileLogLevel;
+            LogManager.MinLevelNotif = _settings.NotifLogLevel;
             LogManager.LogMessage += (_, e) => { tvInfo.AppendLine($"{e.Message}"); };
             LogManager.Run($"{appDir}\\log.txt", 100000);
+
+            // Main form.
+            Location = _settings.FormGeometry.Location;
+            Size = _settings.FormGeometry.Size;
+            WindowState = FormWindowState.Normal;
+            //BackColor = _settings.BackColor;
 
             // Info display.
             tvInfo.MatchColors.Add("ERROR ", Color.LightPink);
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
-            //_logger.Debug($"MainForm() {Environment.CurrentManagedThreadId}");
+
+            btnEdit.Click += (sender, e) => { EditSettings(); };
+
+            // Install commands in registry.
+            btnInitReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.CreateRegistryEntry(c, Environment.CurrentDirectory)); };
+
+            // Remove commands from registry.
+            btnClearReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.RemoveRegistryEntry(c)); };
+
+            // Shell hook handler.
+            // https://stackoverflow.com/questions/4544468/why-my-wndproc-doesnt-receive-shell-hook-messages-if-the-app-is-set-as-default
+            //https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registershellhookwindow
+            _shellHookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
+            _ = NM.RegisterShellHookWindow(Handle);
+
+            // Hot key handlers.
+            NM.RegisterHotKey(Handle, MakeKeyId(VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, VIS_WINDOWS_KEY);
+            NM.RegisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, ALL_WINDOWS_KEY);
 
             // Debug stuff.
             btnGo.Click += BtnGo_Click;
-
-            // Install commands in registry.
-            btnInitReg.Click += (sender, e) =>
-            {
-                // Current bin dir. C:\Dev\repos\Apps\Splunk\Ui\bin\Debug\net8.0-windows
-                string sdir = Environment.CurrentDirectory;
-                SC.Settings.RegistryCommands.ForEach(c => RU.CreateRegistryEntry(c, sdir));
-            };
-
-            // Remove commands from registry.
-            btnClearReg.Click += (sender, e) =>
-            {
-                SC.Settings.RegistryCommands.ForEach(c => RU.RemoveRegistryEntry(c));
-            };
-
-            // windows handler - WindowsHookForm
-            // https://stackoverflow.com/questions/4544468/why-my-wndproc-doesnt-receive-shell-hook-messages-if-the-app-is-set-as-default
-            _shellHookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
-            //https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registershellhookwindow
-            _ = NM.RegisterShellHookWindow(Handle);
-
-            // keys handler - WindowsHookForm
-            NM.RegisterHotKey(Handle, MakeKeyId(this, VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, VIS_WINDOWS_KEY);
-            NM.RegisterHotKey(Handle, MakeKeyId(this, ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, ALL_WINDOWS_KEY);
         }
 
         /// <summary>
@@ -127,6 +96,28 @@ InitCommands();
         }
 
         /// <summary>
+        /// Clean up on shutdown.
+        /// </summary>
+        /// <param name="e"></param>
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            LogManager.Stop();
+
+            // Save user settings.
+            _settings.FormGeometry = new()
+            {
+                X = Location.X,
+                Y = Location.Y,
+                Width = Width,
+                Height = Height
+            };
+
+            _settings.Save();
+
+            base.OnFormClosing(e);
+        }
+
+        /// <summary>
         ///  Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
@@ -135,8 +126,8 @@ InitCommands();
             if (disposing)
             {
                 NM.DeregisterShellHookWindow(Handle);
-                NM.UnregisterHotKey(Handle, MakeKeyId(this, VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
-                NM.UnregisterHotKey(Handle, MakeKeyId(this, ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
+                NM.UnregisterHotKey(Handle, MakeKeyId(VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
+                NM.UnregisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
 
                 components?.Dispose();
             }
@@ -145,19 +136,102 @@ InitCommands();
         }
         #endregion
 
+        /// <summary>
+        /// Edit the common options in a property grid.
+        /// </summary>
+        void EditSettings()
+        {
+            var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
+
+            // Detect changes of interest.
+            bool restart = false;
+
+            foreach (var (name, cat) in changes)
+            {
+                switch (name)
+                {
+                    case "TODO2":
+                        restart = true;
+                        break;
+                }
+            }
+
+            if (restart)
+            {
+                MessageBox.Show("Restart required for device changes to take effect");
+            }
+        }
 
         /// <summary>
-        /// Debug.
+        /// Handle the hooked shell messages: shell window lifetime and hotkeys. TODO2 do something with them?
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        /// <param name="message"></param>
+        protected override void WndProc(ref Message message)
+        {
+            if (message.Msg == _shellHookMsg) // Window lifecycle.
+            {
+                NM.ShellEvents shellEvent = (NM.ShellEvents)message.WParam.ToInt32();
+                IntPtr handle = message.LParam;
+
+                switch (shellEvent)
+                {
+                    case NM.ShellEvents.HSHELL_WINDOWCREATED:
+                        //WindowCreatedEvent?.Invoke(this, handle);
+                        break;
+
+                    case NM.ShellEvents.HSHELL_WINDOWACTIVATED:
+                        //WindowActivatedEvent?.Invoke(this, handle);
+                        break;
+
+                    case NM.ShellEvents.HSHELL_WINDOWDESTROYED:
+                        //WindowDestroyedEvent?.Invoke(this, handle);
+                        break;
+                }
+            }
+            else if (message.Msg == NM.WM_HOTKEY_MESSAGE_ID) // Decode key.
+            {
+                int key = (int)((long)message.LParam >> 16);
+                int mod = (int)((long)message.LParam & 0xFFFF);
+
+                if (mod == NM.ALT + NM.CTRL + NM.SHIFT)
+                {
+                    if (key == VIS_WINDOWS_KEY)
+                    {
+                        //do something KeypressArrangeVisibleEvent?.Invoke();
+                    }
+                    else if (key == ALL_WINDOWS_KEY)
+                    {
+                        //do something KeypressArrangeAllEvent?.Invoke();
+                    }
+                }
+            }
+
+            base.WndProc(ref message);
+        }
+
+        /// <summary>
+        /// Helper.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="mod"></param>
+        /// <returns></returns>
+        int MakeKeyId(int key, int mod = 0)
+        {
+            return mod ^ key ^ Handle.ToInt32();
+        }
+
+
+        /////////////////// Temp debug stuff ///////////////////
+
+
         void BtnGo_Click(object? sender, EventArgs e)
         {
             // Current bin dir. C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
             // ==== CreateRegistryEntries(Environment.CurrentDirectory);
 
+            InitCommands();
 
-            var wins = SU.GetAppWindows("explorer");
+            var wins = ShellUtils.GetAppWindows("explorer");
 
 
             // public static string ExecInNewProcess2()
@@ -212,63 +286,33 @@ InitCommands();
             //}
         }
 
-        /// <summary>
-        /// Handle the hooked shell messages: shell window lifetime and hotkeys. TODO2 do something with them?
-        /// </summary>
-        /// <param name="message"></param>
-        protected override void WndProc(ref Message message)
+
+
+        void InitCommands()
         {
-            if (message.Msg == _shellHookMsg) // Window lifecycle.
-            {
-                NM.ShellEvents shellEvent = (NM.ShellEvents)message.WParam.ToInt32();
-                IntPtr handle = message.LParam;
+            var rc = _settings.RegistryCommands; // alias
+            rc.Clear();
 
-                switch (shellEvent)
-                {
-                    case NM.ShellEvents.HSHELL_WINDOWCREATED:
-                        //WindowCreatedEvent?.Invoke(this, handle);
-                        break;
+            rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%V\""));
+            rc.Add(new("cmder", "Directory", "Two Pane", "%SPLUNK %ID \"%V\""));
+            rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%V\" | clip"));
+            rc.Add(new("openst", "Directory", "Open in Sublime", "subl -n \"%V\""));
+            rc.Add(new("find", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
+            rc.Add(new("newtab", "Directory", "Open in New Tab", "%SPLUNK %ID \"%V\""));
+            rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%V\" | clip"));
+            rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "subl -n \"%V\""));
+            rc.Add(new("find", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
+            rc.Add(new("newtab", "DesktopBackground", "Open in New Tab", "%SPLUNK %ID \"%V\""));
 
-                    case NM.ShellEvents.HSHELL_WINDOWACTIVATED:
-                        //WindowActivatedEvent?.Invoke(this, handle);
-                        break;
+            // | Id      | Description | RegPath |
+            // | -----   | ----------- | ------- |
+            // | cmder   | Open a second explorer in dir - aligned with first.   | Directory |
+            // | tree    | Cmd line to clipboard for current or sel dir.         | Directory, Directory\Background |
+            // | newtab  | Open dir in new tab in current explorer.              | Directory, DesktopBackground |
+            // | openst  | Open dir in Sublime Text.                             | Directory, Directory\Background |
+            // | find    | Open dir in Everything.                               | Directory, Directory\Background |
 
-                    case NM.ShellEvents.HSHELL_WINDOWDESTROYED:
-                        //WindowDestroyedEvent?.Invoke(this, handle);
-                        break;
-                }
-            }
-            else if (message.Msg == NM.WM_HOTKEY_MESSAGE_ID) // Decode key.
-            {
-                int key = (int)((long)message.LParam >> 16);
-                int mod = (int)((long)message.LParam & 0xFFFF);
-
-                if (mod == NM.ALT + NM.CTRL + NM.SHIFT)
-                {
-                    if (key == VIS_WINDOWS_KEY)
-                    {
-                        //do something KeypressArrangeVisibleEvent?.Invoke();
-                    }
-                    else if (key == ALL_WINDOWS_KEY)
-                    {
-                        //do something KeypressArrangeAllEvent?.Invoke();
-                    }
-                }
-            }
-
-            base.WndProc(ref message);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="form"></param>
-        /// <param name="key"></param>
-        /// <param name="mod"></param>
-        /// <returns></returns>
-        int MakeKeyId(Form form, int key, int mod = 0)
-        {
-            return mod ^ key ^ form.Handle.ToInt32();
-        }
     }
 }

@@ -53,7 +53,7 @@ namespace Splunk.Test
             btnGo.TabIndex = 1;
             btnGo.Text = "GO!!!";
             btnGo.UseVisualStyleBackColor = true;
-            btnGo.Click += btnGo_Click;
+            btnGo.Click += Go_Click;
             // 
             // TestForm
             // 

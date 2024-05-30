@@ -20,16 +20,18 @@
             btnGo = new Button();
             btnInitReg = new Button();
             btnClearReg = new Button();
+            btnEdit = new Button();
             SuspendLayout();
             // 
             // tvInfo
             // 
+            tvInfo.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tvInfo.BorderStyle = BorderStyle.FixedSingle;
             tvInfo.Location = new Point(12, 64);
             tvInfo.MaxText = 50000;
             tvInfo.Name = "tvInfo";
             tvInfo.Prompt = "";
-            tvInfo.Size = new Size(1196, 450);
+            tvInfo.Size = new Size(1196, 469);
             tvInfo.TabIndex = 1;
             tvInfo.WordWrap = true;
             // 
@@ -60,11 +62,21 @@
             btnClearReg.Text = "Clear Reg";
             btnClearReg.UseVisualStyleBackColor = true;
             // 
+            // btnEdit
+            // 
+            btnEdit.Location = new Point(498, 23);
+            btnEdit.Name = "btnEdit";
+            btnEdit.Size = new Size(94, 29);
+            btnEdit.TabIndex = 5;
+            btnEdit.Text = "Edit";
+            btnEdit.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1220, 552);
+            ClientSize = new Size(1220, 545);
+            Controls.Add(btnEdit);
             Controls.Add(btnClearReg);
             Controls.Add(btnInitReg);
             Controls.Add(btnGo);
@@ -80,5 +92,6 @@
         private Button btnGo;
         private Button btnInitReg;
         private Button btnClearReg;
+        private Button btnEdit;
     }
 }

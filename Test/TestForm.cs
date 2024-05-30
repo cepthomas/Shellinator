@@ -1,6 +1,6 @@
 using System;
 using System.Windows.Forms;
-using Com = Splunk.Common.Common;
+using Com = Splunk.Common;
 
 
 namespace Splunk.Test
@@ -21,7 +21,7 @@ namespace Splunk.Test
             base.OnLoad(e);
         }
 
-        private void btnGo_Click(object sender, EventArgs e)
+        private void Go_Click(object sender, EventArgs e)
         {
             // ShellStuff ss = new ShellStuff();
             // ss.ExecInNewProcess1();
