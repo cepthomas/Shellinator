@@ -21,7 +21,7 @@ namespace Splunk.Common
     // }
 
     //[Serializable]
-    //public class UserSettings : SettingsCore //TODO1 put in Ui?
+    //public class UserSettings : SettingsCore
     //{
     //    #region Properties - persisted editable
     //    [DisplayName("File Log Level")]

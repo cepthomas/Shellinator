@@ -48,11 +48,7 @@ namespace Splunk
             int ret = 0;
             _logger.Info($"Run: {string.Join("|", args)}");
 
-            // TODO1 still gotta figure out the cmd <> without terminal. See what python does.
-            // case "tree": // direct => cmd /c tree /a /f "%V" | clip
-            // still flashes, ? Try ShellExecuteEx, setting nShow=SW_HIDE. https://learn.microsoft.com/en-us/windows/win32/shell/launch
-
-            // TODO1 ? generic script runner - Use for all? ps, cmd, lua, py, ... or Default/builtin
+            // TODO2 ? generic script runner - Use for all? ps, cmd, lua, py, ... or Default/builtin
 
             try
             {
@@ -104,7 +100,6 @@ namespace Splunk
                         break;
 
                     //case "tree": // direct => cmd /c tree /a /f "%V" | clip
-                    //             // still flashes, ? Try ShellExecuteEx, setting nShow=SW_HIDE.
                     //    pinfo.FileName = "cmd";
                     //    pinfo.Arguments = $"/C tree \"{dir}\" /a /f | clip";
                     //    break;

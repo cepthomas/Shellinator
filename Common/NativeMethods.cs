@@ -9,49 +9,7 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 
 
-// shell.dll contains the basics:
-// --------------------------------
-// ShellExecute  ShellExecuteEx  ShellExecuteExW
-// SHGetInstanceExplorer
-// 
-// DllGetVersion  DLLGETVERSIONINFO  ExtendedFileInfo  ExtractAssociatedIcon  ExtractIcon  ExtractIconEx  FileIconInit
-// EnumFontFamExProc  FindExecutable  IShellIcon  IsNetDrive  ITaskbarList  ITaskbarList2  ITaskbarList3  ITaskbarList4
-// KNOWNFOLDERID  SHAddToRecentDocs  SHAppBarMessage  SHBrowseForFolder  ShellAbout
-// ShellExecute  ShellExecuteEx  ShellExecuteExW
-// Shell_GetImageLists  Shell_NotifyIcon  Shell_NotifyIconGetRect  SHGetDesktopFolder
-// SHGetFolderLocation  SHGetFolderPath  SHGetKnownFolderPath  SHGetImageList  SHGetSpecialFolderLocation
-// SHGetSpecialFolderPath  SHGetSpecialFolderPathA  SHGetStockIconInfo  SHSetKnownFolderPath
-// 
-// api:   APPBARDATA   APPBARDATA   BatchExec   CharSet   CommandLineToArgvW   CSIDL   CSIDL   dll ILCLONEFULL   DoEnvironmentSubst   
-// DragAcceptFiles   DragFinish   DragQueryFile   DragQueryPoint   DuplicateIcon   ERazMA   FileSystemWatcher   FZ79pQ   
-// GetFinalPathNameByHandle   HChangeNotifyEventID   HChangeNotifyFlags   ILClone   ILCombine   ILCreateFromPath   ILFindLastID   
-// ILFree   ILIsEqual   ILIsParent   ILRemoveLastID   IsUserAnAdmin   ljlsjsf   PathCleanupSpec   PathIsExe   PathMakeUniqueName   
-// PathYetAnotherMakeUniqueName   PickIconDlg   Run   SetCurrentProcessExplicitAppUserModelID   SHBindToParent   SHChangeNotify   
-// SHChangeNotifyRegister   SHChangeNotifyUnregister   SHCNRF   SHCreateDirectoryEx   SHCreateItemFromIDList   // SHCreateItemFromParsingName
-// SHCreateItemWithParent   SHCreateProcessAsUserW   SHEmptyRecycleBin   SHFileOperation   SHFormatDrive   SHFreeNameMappings   
-// SHGetDataFromIDList   SHGetDiskFreeSpace   SHGetFileInfo   SHGetFileInfoA   SHGetIconOverlayIndex   SHGetIDListFromObject   
-// SHGetInstanceExplorer   SHGetMalloc   SHGetNameFromIDList   SHGetNewLinkInfo   SHGetPathFromIDList   
-// SHGetPropertyStoreFromParsingNamehtml   SHGetRealIDL   SHGetSetSettings   SHGetSettings   SHInvokePrinterCommand   
-// SHIsFileAvailableOffline   SHLoadInProc   SHLoadNonloadedIconOverlayIdentifiers   SHObjectProperties   SHOpenFolderAndSelectItems   
-// SHOpenWithDialog   SHParseDisplayName   SHParseDisplayName   SHPathPrepareForWrite   SHQueryRecycleBin
-// SHQueryUserNotificationState   SHRunFileDialog   SHSetUnreadMailCount   StartInfo   THUMBBUTTON   ultimate   virt girl hd
-// 
-// 
-// shlwapi.dll contains
-// -----------------------
-// a collection of functions that provide support for various shell operations, such as 
-// file and folder manipulation, user interface elements, and internet-related tasks.
-// 
-// AssocCreate  AssocGetPerceivedType  AssocQueryString  ColorHLSToRGB  ColorRGBToHLS  HashData  IPreviewHandler  IsOS
-// PathAddBackslash  PathAppend  PathBuildRoot  PathCanonicalize  PathCombine  PathCommonPrefix  PathCompactPath
-// PathCompactPathEx  PathCreateFromUrl  PathFileExists  PathFindNextComponent  PathFindOnPath  PathGetArgs
-// PathIsDirectory  PathIsFileSpec  PathIsHTMLFile  PathIsNetworkPath  PathIsRelative  PathIsRoot  PathIsSameRoot
-// PathIsUNC  PathIsUNCServer  PathIsUNCServerShare  PathIsURL  PathMatchSpec  PathQuoteSpaces  PathRelativePathTo
-// PathRemoveArgs  PathRemoveBackslash  PathRemoveBlanks  PathRemoveExtension  PathRemoveFileSpec  PathRenameExtension
-// PathStripPath  PathStripToRoot  PathUndecorate  PathUnExpandEnvStrings  PathUnQuoteSpaces  SHAutoComplete
-// SHCreateStreamOnFile  SHCreateStreamOnFileEx  SHLoadIndirectString  SHMessageBoxCheck  StrCmpLogicalW
-// StrFormatByteSize  StrFormatByteSizeA  StrFromTimeInterval  UrlCreateFromPath
-
+// TODO2 https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
 
 
 namespace Splunk.Common
@@ -59,9 +17,7 @@ namespace Splunk.Common
     /// <summary>Interop.</summary>
     public static class NativeMethods
     {
-        // TODO2 https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
-
-        #region Interop constants
+        #region Constants
         public const uint FILE_ATTRIBUTE_NORMAL = 0x80;
         public const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
         public const int ALT = 0x0001;
@@ -76,40 +32,49 @@ namespace Splunk.Common
         public const uint WM_GETTEXT = 0x000D;
         #endregion
 
-        #region Types
-        /// <summary>
-        /// Contains window information.
-        /// </summary>
-        [StructLayout(LayoutKind.Sequential)]
-        public struct WINDOWINFO
+        #region Enums
+        public enum ShowCommands : int
         {
-            public uint cbSize;             // The size of the structure, in bytes.The caller must set this member to sizeof(WINDOWINFO).
-            public RECT rcWindow;           // The coordinates of the window.
-            public RECT rcClient;           // The coordinates of the client area.
-            public uint dwStyle;            // The window styles.For a table of window styles, see Window Styles.
-            public uint dwExStyle;          // The extended window styles. For a table of extended window styles, see Extended Window Styles.
-            public uint dwWindowStatus;     // The window status.If this member is WS_ACTIVECAPTION (0x0001), the window is active.Otherwise, this member is zero.
-            public uint cxWindowBorders;    // The width of the window border, in pixels.
-            public uint cyWindowBorders;    // The height of the window border, in pixels.
-            public ushort atomWindowType;   // The window class atom (see RegisterClass).
-            public ushort wCreatorVersion;  // The Windows version of the application that created the window.
-            // public static WINDOWINFO GetNewWindoInfo()
-            // {
-            //     WINDOWINFO result = new WINDOWINFO();
-            //     result.cbSize = (UInt32)(Marshal.SizeOf(typeof(WINDOWINFO)));
-            //     return result;
-            // }
+            SW_HIDE = 0,
+            SW_SHOWNORMAL = 1,
+            SW_NORMAL = 1,
+            SW_SHOWMINIMIZED = 2,
+            SW_SHOWMAXIMIZED = 3,
+            SW_MAXIMIZE = 3,
+            SW_SHOWNOACTIVATE = 4,
+            SW_SHOW = 5,
+            SW_MINIMIZE = 6,
+            SW_SHOWMINNOACTIVE = 7,
+            SW_SHOWNA = 8,
+            SW_RESTORE = 9,
+            SW_SHOWDEFAULT = 10,
+            SW_FORCEMINIMIZE = 11,
+            SW_MAX = 11
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
+        [Flags]
+        public enum ShellExecuteMaskFlags : uint
         {
-            public int Left;        // x position of upper-left corner
-            public int Top;         // y position of upper-left corner
-            public int Right;       // x position of lower-right corner
-            public int Bottom;      // y position of lower-right corner
-            public int Width { get { return Right - Left; } }
-            public int Height { get { return Bottom - Top; } }
+            SEE_MASK_DEFAULT = 0x00000000,
+            SEE_MASK_CLASSNAME = 0x00000001,
+            SEE_MASK_CLASSKEY = 0x00000003,
+            SEE_MASK_IDLIST = 0x00000004,
+            SEE_MASK_INVOKEIDLIST = 0x0000000c,   // Note SEE_MASK_INVOKEIDLIST(0xC) implies SEE_MASK_IDLIST(0x04)
+            SEE_MASK_HOTKEY = 0x00000020,
+            SEE_MASK_NOCLOSEPROCESS = 0x00000040,
+            SEE_MASK_CONNECTNETDRV = 0x00000080,
+            SEE_MASK_NOASYNC = 0x00000100,
+            SEE_MASK_FLAG_DDEWAIT = SEE_MASK_NOASYNC,
+            SEE_MASK_DOENVSUBST = 0x00000200,
+            SEE_MASK_FLAG_NO_UI = 0x00000400,
+            SEE_MASK_UNICODE = 0x00004000,
+            SEE_MASK_NO_CONSOLE = 0x00008000,
+            SEE_MASK_ASYNCOK = 0x00100000,
+            SEE_MASK_HMONITOR = 0x00200000,
+            SEE_MASK_NOZONECHECKS = 0x00800000,
+            SEE_MASK_NOQUERYCLASSSTORE = 0x01000000,
+            SEE_MASK_WAITFORINPUTIDLE = 0x02000000,
+            SEE_MASK_FLAG_LOG_USAGE = 0x04000000,
         }
 
         public enum ShellEvents : int
@@ -163,18 +128,6 @@ namespace Splunk.Common
             DDETopic
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        public struct SHFILEINFO
-        {
-            public IntPtr hIcon;
-            public IntPtr iIcon;
-            public uint dwAttributes;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-            public string szDisplayName;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
-            public string szTypeName;
-        }
-
         [Flags]
         public enum SHGFI : int
         {
@@ -217,12 +170,139 @@ namespace Splunk.Common
         }
         #endregion
 
+        #region Structs
+        /// <summary>For ShellExecuteEx().</summary>
+        /// https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa
+        /// - TODO1 Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
+        ///   the first character will be recognized by the function. Use UnmanagedType.LPStr instead.
+        /// - lpVerb member can be used for a varity of actions like "properties", "find", "openas", "print"..etc depending
+        ///   on the file type you're dealing with. Actions available for a specific file type are stored in registry.
+        ///   Setting lpVerb to null results in the default action of that file type to be executed.
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SHELLEXECUTEINFO
+        {
+            // The size of this structure, in bytes.
+            public int cbSize;
 
+            // A combination of one or more ShellExecuteMaskFlags.
+            public uint fMask;
+
+            // Optional handle to the owner window.
+            public IntPtr hwnd;
+
+            // A string, referred to as a verb, that specifies the action to be performed.
+            // open - Opens a file or application.
+            // openas - Opens dialog when no program is associated to the extension.
+            // runas - Open the Run as... Dialog
+            // null - Specifies that the operation is the default for the selected file type.
+            // edit - Opens the default text editor for the file.
+            // explore - Opens the Windows Explorer in the folder specified in lpDirectory.
+            // properties - Opens the properties window of the file.
+            // pastelink - pastes a shortcut
+            // print - Start printing the file with the default application.
+            // find - Start a search
+            // Also opennew, copy, cut, paste, delete, printto - see MSDN.
+            [MarshalAs(UnmanagedType.LPTStr)]
+            public string lpVerb;
+
+            // null-terminated string that specifies the name of the file or object on which ShellExecuteEx will perform the action specified by the lpVerb parameter.
+            [MarshalAs(UnmanagedType.LPTStr)]
+            public string lpFile;
+
+            // Optional null-terminated string that contains the application parameters separated by spaces.
+            [MarshalAs(UnmanagedType.LPTStr)]
+            public string lpParameters;
+
+            // Optional null-terminated string that specifies the name of the working directory.
+            [MarshalAs(UnmanagedType.LPTStr)]
+            public string lpDirectory;
+
+            // Flags that specify how an application is to be shown when it is opened. See ShowCommands.
+            public int nShow;
+
+            // The rest are ?????
+            public IntPtr hInstApp;
+            public IntPtr lpIDList;
+            [MarshalAs(UnmanagedType.LPTStr)]
+            public string lpClass;
+            public IntPtr hkeyClass;
+            public uint dwHotKey;
+            public IntPtr hIcon;
+            public IntPtr hProcess;
+        }
+
+        /// <summary>Contains information about a window.</summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WINDOWINFO
+        {
+            public uint cbSize;             // The size of the structure, in bytes.The caller must set this member to sizeof(WINDOWINFO).
+            public RECT rcWindow;           // The coordinates of the window.
+            public RECT rcClient;           // The coordinates of the client area.
+            public uint dwStyle;            // The window styles.For a table of window styles, see Window Styles.
+            public uint dwExStyle;          // The extended window styles. For a table of extended window styles, see Extended Window Styles.
+            public uint dwWindowStatus;     // The window status.If this member is WS_ACTIVECAPTION (0x0001), the window is active.Otherwise, this member is zero.
+            public uint cxWindowBorders;    // The width of the window border, in pixels.
+            public uint cyWindowBorders;    // The height of the window border, in pixels.
+            public ushort atomWindowType;   // The window class atom (see RegisterClass).
+            public ushort wCreatorVersion;  // The Windows version of the application that created the window.
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RECT
+        {
+            public int Left;    // x position of upper-left corner
+            public int Top;     // y position of upper-left corner
+            public int Right;   // x position of lower-right corner
+            public int Bottom;  // y position of lower-right corner
+            public int Width    { get { return Right - Left; } }
+            public int Height   { get { return Bottom - Top; } }
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct SHFILEINFO
+        {
+            public IntPtr hIcon;
+            public IntPtr iIcon;
+            public uint dwAttributes;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szDisplayName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+            public string szTypeName;
+        }
+        #endregion
+
+        #region shell32.dll
+        /// <summary>General shell function execute. See SHELLEXECUTEINFO for programming.</summary>
+        /// Example of Property Dialog:
+        /// public static void ShowFileProperties(string Filename)
+        /// {
+        ///     SHELLEXECUTEINFO info = new SHELLEXECUTEINFO();
+        ///     info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
+        ///     info.lpVerb = "properties";
+        ///     info.lpFile = Filename;
+        ///     info.nShow = SW_SHOW;
+        ///     info.fMask = SEE_MASK_INVOKEIDLIST;
+        ///     ShellExecuteEx(ref info);
+        /// }
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        public static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
+
+        /// <summary>Performs an operation on a specified file. See ShellExecuteEx() for args.</summary>
+        /// Example opens a URL in the default browser:
+        /// IntPtr result = ShellExecute(IntPtr.Zero, "open", "http://www.google.com", null, null, SW_NORMAL);
+        [DllImport("Shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, string lpParameters, string lpDirectory, int nShow);
+
+        [DllImport("shell32.dll")]
+        public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbSizeFileInfo, uint uFlags);
+        #endregion
+
+        #region user32.dll
         [DllImport("user32.dll")]
         public static extern bool IsWindowVisible(IntPtr hWnd);
 
+        /// <summary>Retrieves a handle to the Shell's desktop window.</summary>
         [DllImport("user32.dll")]
-        // Retrieves a handle to the Shell's desktop window.
         public static extern IntPtr GetShellWindow();
 
         [DllImport("user32.dll")]
@@ -231,10 +311,7 @@ namespace Splunk.Common
         [DllImport("user32.dll")]
         public static extern bool GetWindowInfo(IntPtr hWnd, ref WINDOWINFO winfo);
 
-        /// <summary>
-        /// Retrieves the identifier of the thread that created the specified window and, optionally,
-        /// the identifier of the process that created the window. 
-        /// </summary>
+        /// <summary>Retrieves the thread and process ids that created the window.</summary>
         [DllImport("user32.dll")]
         public static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, out IntPtr ProcessId);
 
@@ -250,10 +327,9 @@ namespace Splunk.Common
         [DllImport("user32.dll")]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
 
-        public delegate bool EnumThreadWindowsCallback(IntPtr hWnd, IntPtr lParam);
-
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        public static extern bool EnumWindows(EnumThreadWindowsCallback callback, IntPtr extraData);
+        public static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr extraData);
+        public delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -263,14 +339,17 @@ namespace Splunk.Common
         /// If the specified window is a control, the text of the control is copied. However, GetWindowText
         /// cannot retrieve the text of a control in another application.
         /// </summary>
-        /// <param name="hwnd">An IntPtr handle to the window</param>
-        /// <param name="lpString">A StringBuilder to receive the result</param>
+        /// <param name="hwnd">handle to the window</param>
+        /// <param name="lpString">StringBuilder to receive the result</param>
         /// <param name="cch">Max number of characters to copy to the buffer, including the null character. If the text exceeds this limit, it is truncated</param>
         /// <returns>ErrorCode</returns>
         [DllImport("user32.dll", EntryPoint = "GetWindowTextA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern int GetWindowText(IntPtr hwnd, System.Text.StringBuilder lpString, int cch);
 
-        // Window hooks.
+        [DllImport("user32.dll", EntryPoint = "GetWindowTextLengthA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        public static extern int GetWindowTextLength(IntPtr hwnd);
+
+        #region Window and Keyboard hooks
         [DllImport("user32.dll", EntryPoint = "RegisterWindowMessageA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern int RegisterWindowMessage(string lpString);
 
@@ -286,6 +365,7 @@ namespace Splunk.Common
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        #endregion
 
         [DllImport("user32.dll")]
         public static extern IntPtr GetForegroundWindow();
@@ -295,81 +375,23 @@ namespace Splunk.Common
 
         [DllImport("user32.dll")]
         public static extern bool IsIconic(IntPtr hWnd);
-        
+
         [DllImport("user32.dll")]
         public static extern bool IsZoomed(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         public extern static bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
 
-        [DllImport("Shlwapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern uint AssocQueryString(AssocF flags, AssocStr str, string pszAssoc, string pszExtra,
-            [Out] StringBuilder pszOut, [In][Out] ref uint pcchOut);
-
-        [DllImport("shell32.dll")]
-        public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbSizeFileInfo, uint uFlags);
-
         [DllImport("User32.dll")]
         public static extern int DestroyIcon(IntPtr hIcon);
 
-        ///// <summary>
-        ///// Retrieves a handle to a window that has the specified relationship (Z-Order or owner) to the specified window. 
-        ///// </summary>
-        ///// <param name="hWnd">Window handle</param>
-        ///// <param name="wCmd">The relationship between the specified window and the window whose handle is to be retrieved:
-        ///// GW_CHILD (5): The retrieved handle identifies the child window at the top of the Z order, if the specified window is a parent window; otherwise, the retrieved handle is NULL.The function examines only child windows of the specified window.It does not examine descendant windows.
-        ///// GW_ENABLEDPOPUP (6): The retrieved handle identifies the enabled popup window owned by the specified window(the search uses the first such window found using GW_HWNDNEXT); otherwise, if there are no enabled popup windows, the retrieved handle is that of the specified window.
-        ///// GW_HWNDFIRST (0): The retrieved handle identifies the window of the same type that is highest in the Z order.If the specified window is a topmost window, the handle identifies a topmost window.If the specified window is a top-level window, the handle identifies a top-level window. If the specified window is a child window, the handle identifies a sibling window.
-        ///// GW_HWNDLAST (1): The retrieved handle identifies the window of the same type that is lowest in the Z order.If the specified window is a topmost window, the handle identifies a topmost window.If the specified window is a top-level window, the handle identifies a top-level window. If the specified window is a child window, the handle identifies a sibling window.
-        ///// GW_HWNDNEXT (2): The retrieved handle identifies the window below the specified window in the Z order.If the specified window is a topmost window, the handle identifies a topmost window.If the specified window is a top-level window, the handle identifies a top-level window. If the specified window is a child window, the handle identifies a sibling window.
-        ///// GW_HWNDPREV (3): The retrieved handle identifies the window above the specified window in the Z order.If the specified window is a topmost window, the handle identifies a topmost window.If the specified window is a top-level window, the handle identifies a top-level window. If the specified window is a child window, the handle identifies a sibling window.
-        ///// GW_OWNER (4): The retrieved handle identifies the specified window's owner window, if any. For more information, see Owned Windows.
-        ///// </param>
-        ///// <returns></returns>
-        //[DllImport("user32.dll", SetLastError = true)]
-        //public static extern IntPtr GetWindow(IntPtr hWnd, uint wCmd);
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, System.Text.StringBuilder lParam);
+        #endregion
 
-        //[DllImport("user32.dll", CharSet = CharSet.Auto)]
-        //static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, System.Text.StringBuilder lParam);
-
-        //[DllImport("user32.dll", EntryPoint = "GetWindowTextLengthA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        //public static extern int GetWindowTextLength(IntPtr hwnd);
-
-        //[DllImport("user32.dll")]
-        //static extern bool EnumThreadWindows(int dwThreadId, EnumThreadWindowsCallback lpfn, IntPtr lParam);
-
-        //[DllImport("user32.dll")]
-        //private static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
-
-        //[DllImport("user32.dll")]
-        //private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-        //private int key;
-        //private IntPtr hWnd;
-        //private int id;
-        //private int modifier;
-
-        //public KeyHandler(Form form, Keys key, int modifier = 0)
-        //{
-        //    this.key = (int)key;
-        //    this.hWnd = form.Handle;
-        //    this.modifier = modifier;
-        //    id = this.GetHashCode();
-        //}
-
-        //public override int GetHashCode()
-        //{
-        //    return modifier ^ key ^ hWnd.ToInt32();
-        //}
-
-        //public bool Register()
-        //{
-        //    return RegisterHotKey(hWnd, id, modifier, key);
-        //}
-
-        //public bool Unregiser()
-        //{
-        //    return UnregisterHotKey(hWnd, id);
-        //}
+        #region shlwapi.dll
+        [DllImport("shlwapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern uint AssocQueryString(AssocF flags, AssocStr str, string pszAssoc, string pszExtra, [Out] StringBuilder pszOut, [In][Out] ref uint pcchOut);
+        #endregion
     }
 }

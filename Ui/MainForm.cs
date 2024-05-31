@@ -226,12 +226,62 @@ namespace Splunk.Ui
 
         void BtnGo_Click(object? sender, EventArgs e)
         {
-            // Current bin dir. C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0-windows
-            // ==== CreateRegistryEntries(Environment.CurrentDirectory);
+            //InitCommands();
 
-            InitCommands();
 
-            var wins = ShellUtils.GetAppWindows("explorer");
+            //var wins = ShellUtils.GetAppWindows("explorer");
+
+
+            //This tool is a real quick and dirty program that I whipped up in about 5 minutes (took longer to set compiler options than write the code) which uses ShellExecuteEx to spawn a "detached" process. It is actually just a hidden process that doesn't appear on the task bar but it does appear in task manager or anything that enumerates processes. I wrote it because of a post in microsoft.public.win2000.cmdprompt.admin. Simply specify quiet "command" and it will run whatever it is hidden. If the program doesn't exist it will pop a dialog box which is annoying but if the program is in the path somewhere it will execute it. Please note that logging off will kill the process as it may be hidden from the user but it isn't hidden from the system.
+
+
+            // TODO1 still gotta figure out the cmd <> without terminal. See what python does.
+            // case "tree": // direct => cmd /c /q tree /a /f "%V" | clip
+            // still flashes, ? Try ShellExecuteEx, setting nShow=SW_HIDE. https://learn.microsoft.com/en-us/windows/win32/shell/launch
+
+            /// Example of Property Dialog:
+            /// public static void ShowFileProperties(string Filename)
+            /// {
+            ///     SHELLEXECUTEINFO info = new SHELLEXECUTEINFO();
+            ///     info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
+            ///     info.lpVerb = "properties";
+            ///     info.lpFile = Filename;
+            ///     info.nShow = SW_SHOW;
+            ///     info.fMask = SEE_MASK_INVOKEIDLIST;
+            ///     ShellExecuteEx(ref info);
+            /// }
+            /// 
+
+            //cmd /B tree /a /f "C:\Dev\SplunkStuff\test_dir" | clip
+
+            NM.SHELLEXECUTEINFO info = new();
+            info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
+            info.lpVerb = "open";
+
+            //info.lpFile = "cmd";
+            //info.lpParameters = "/B tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
+
+            info.lpFile = "tree";
+            info.lpParameters = "/a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
+
+            info.nShow = (int)NM.ShowCommands.SW_SHOW; //SW_HIDE
+
+            info.fMask = (int)NM.ShellExecuteMaskFlags.SEE_MASK_DEFAULT;
+            bool b = NM.ShellExecuteEx(ref info);
+
+
+            if (b == false || info.hInstApp < 32)
+            {
+                Debug.WriteLine("!!!");
+            }
+
+
+            //If the function succeeds, it sets the hInstApp member of the SHELLEXECUTEINFO structure to a value greater than 32.
+            //If the function fails, hInstApp is set to the SE_ERR_XXX error value that best indicates the cause of the failure.
+            //Although hInstApp is declared as an HINSTANCE for compatibility with 16 - bit Windows applications, it is not a
+            //true HINSTANCE. It can be cast only to an int and can be compared only to either the value 32 or the SE_ERR_XXX error codes.
+            //The SE_ERR_XXX error values are provided for compatibility with ShellExecute.To retrieve more accurate error information,
+            //use GetLastError. It may return one of the following values.
 
 
             // public static string ExecInNewProcess2()
