@@ -226,13 +226,22 @@ namespace Splunk.Ui
 
         void BtnGo_Click(object? sender, EventArgs e)
         {
+            ////////////////////////////////////////////////////////////
             //InitCommands();
 
-
+            ////////////////////////////////////////////////////////////
             //var wins = ShellUtils.GetAppWindows("explorer");
 
 
-            //This tool is a real quick and dirty program that I whipped up in about 5 minutes (took longer to set compiler options than write the code) which uses ShellExecuteEx to spawn a "detached" process. It is actually just a hidden process that doesn't appear on the task bar but it does appear in task manager or anything that enumerates processes. I wrote it because of a post in microsoft.public.win2000.cmdprompt.admin. Simply specify quiet "command" and it will run whatever it is hidden. If the program doesn't exist it will pop a dialog box which is annoying but if the program is in the path somewhere it will execute it. Please note that logging off will kill the process as it may be hidden from the user but it isn't hidden from the system.
+            ////////////////////////////////////////////////////////////
+            //This tool is a real quick and dirty program that I whipped up in about 5 minutes (took longer to
+            //set compiler options than write the code) which uses ShellExecuteEx to spawn a "detached" process.
+            //It is actually just a hidden process that doesn't appear on the task bar but it does appear in
+            //task manager or anything that enumerates processes. I wrote it because of a post in microsoft.public.
+            //win2000.cmdprompt.admin. Simply specify quiet "command" and it will run whatever it is hidden.
+            //If the program doesn't exist it will pop a dialog box which is annoying but if the program is in the
+            //path somewhere it will execute it. Please note that logging off will kill the process as it may be hidden
+            //from the user but it isn't hidden from the system.
 
 
             // TODO1 still gotta figure out the cmd <> without terminal. See what python does.
@@ -252,28 +261,31 @@ namespace Splunk.Ui
             /// }
             /// 
 
+
+
             //cmd /B tree /a /f "C:\Dev\SplunkStuff\test_dir" | clip
 
-            NM.SHELLEXECUTEINFO info = new();
-            info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
-            info.lpVerb = "open";
+            //NM.SHELLEXECUTEINFO info = new();
+            //info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
+            //info.lpVerb = "open";
 
-            //info.lpFile = "cmd";
-            //info.lpParameters = "/B tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
+            ////info.lpFile = "cmd";
+            ////info.lpParameters = "/B tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
 
-            info.lpFile = "tree";
-            info.lpParameters = "/a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
+            //info.lpFile = "cmd.exe";
+            ////info.lpParameters = "tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
+            ////info.lpParameters = "echo dooda > _dump.txt";
+            //info.lpParameters = "type Ui.deps.json";
 
-            info.nShow = (int)NM.ShowCommands.SW_SHOW; //SW_HIDE
+            //info.nShow = (int)NM.ShowCommands.SW_SHOW; //SW_HIDE SW_SHOW
 
-            info.fMask = (int)NM.ShellExecuteMaskFlags.SEE_MASK_DEFAULT;
-            bool b = NM.ShellExecuteEx(ref info);
+            //info.fMask = (int)NM.ShellExecuteMaskFlags.SEE_MASK_NO_CONSOLE; // SEE_MASK_DEFAULT;
+            //bool b = NM.ShellExecuteEx(ref info);
+            //if (b == false || info.hInstApp < 32)
+            //{
+            //    Debug.WriteLine("!!!");
+            //}
 
-
-            if (b == false || info.hInstApp < 32)
-            {
-                Debug.WriteLine("!!!");
-            }
 
 
             //If the function succeeds, it sets the hInstApp member of the SHELLEXECUTEINFO structure to a value greater than 32.
@@ -284,31 +296,36 @@ namespace Splunk.Ui
             //use GetLastError. It may return one of the following values.
 
 
-            // public static string ExecInNewProcess2()
-            // {
-            //     string ret = "Nada";
-            //     Process cmd = new();
-            //     cmd.StartInfo.FileName = "cmd.exe";
-            //     cmd.StartInfo.RedirectStandardInput = true;
-            //     cmd.StartInfo.RedirectStandardOutput = true;
-            //     cmd.StartInfo.CreateNoWindow = true;
-            //     cmd.StartInfo.UseShellExecute = false;
-            //     cmd.Start();
-            //     cmd.StandardInput.WriteLine("echo !!Oscar");
-            //     cmd.StandardInput.Flush();
-            //     cmd.StandardInput.Close();
-            //     cmd.WaitForExit(); // wait for the process to complete before continuing and process.ExitCode
-            //     ret = cmd.StandardOutput.ReadToEnd();
-            //     return ret;
-            // }
+            ProcessStartInfo sinfo = new()
+            {
+                FileName = "cmd.exe",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+                UseShellExecute = false
+            };
 
+            Process cmd = new()
+            {
+                StartInfo = sinfo
+            };
+
+            cmd.Start();
+            cmd.StandardInput.WriteLine("tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip");
+            //cmd.StandardInput.Flush();
+            //cmd.StandardInput.Close();
+            //cmd.WaitForExit(); // wait for the process to complete before continuing and process.ExitCode
+            //var ret = cmd.StandardOutput.ReadToEnd();
+
+
+
+            //https://github.com/myfreeer/hidrun
 
 
 
 
             //Log($"Go() {Environment.CurrentManagedThreadId}");
             //int _which = 1;
-
             //if (_which == 0)
             //{
             //    ProcessStartInfo startInfo = new()
@@ -318,10 +335,9 @@ namespace Splunk.Ui
             //        FileName = "cmd",
             //        Arguments = $"/c echo Oscar {DateTime.Now.Millisecond} XYZ | clip",
             //    };
-
+            //
             //    Process process = new() { StartInfo = startInfo };
             //    process.Start();
-
             //    //process.WaitForExit(1000);
             //    // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
             //    // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
@@ -363,6 +379,5 @@ namespace Splunk.Ui
             // | find    | Open dir in Everything.                               | Directory, Directory\Background |
 
         }
-
     }
 }

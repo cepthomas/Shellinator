@@ -7,13 +7,22 @@ using Ephemera.NBagOfTricks.Slog;
 //using SC = Splunk.Common.Common;
 
 
+//https://stackoverflow.com/questions/836427/how-to-run-a-c-sharp-console-application-with-the-console-hidden
+
+
+//powershell "start <path of batch file> -Args \"<batch file args>\" -WindowStyle Hidden"
+//This can be placed in a separate batch file which, when called, will terminate immediately while your batch file executes in the background.
+//From ' Args ' to ' \" ' can be excluded if your batch file has no arguments.
+//' -v runAs' can be added before the end quote to run your batch file as an administrator.
+
+
 
 namespace Splunk
 {
     internal class Program
     {
         /// <summary>My logger.</summary>
-        static readonly Logger _logger = LogManager.CreateLogger("Splunk");
+//        static readonly Logger _logger = LogManager.CreateLogger("Splunk");
 
         static void Main(string[] args)
         {
@@ -33,7 +42,7 @@ namespace Splunk
 
             sw.Stop();
 
-            _logger.Debug($"Elapsed msec: {sw.ElapsedMilliseconds}"); // 25
+//            _logger.Debug($"Elapsed msec: {sw.ElapsedMilliseconds}"); // 25
 
             Environment.ExitCode = ret;
         }
@@ -46,7 +55,7 @@ namespace Splunk
         static int Run(string[] args)
         {
             int ret = 0;
-            _logger.Info($"Run: {string.Join("|", args)}");
+//            _logger.Info($"Run: {string.Join("|", args)}");
 
             // TODO2 ? generic script runner - Use for all? ps, cmd, lua, py, ... or Default/builtin
 
@@ -126,7 +135,7 @@ namespace Splunk
             }
             catch (Exception ex) // handle errors
             {
-                _logger.Error(ex.Message);
+//                _logger.Error(ex.Message);
                 ret = 1;
             }
 
