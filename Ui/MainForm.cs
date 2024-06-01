@@ -28,8 +28,10 @@ namespace Splunk.Ui
         /// <summary>App settings.</summary>
         readonly UserSettings _settings;
 
+        /// <summary>Measure performance.</summary>
         readonly Stopwatch _sw = new();
 
+        /// <summary>Hook message processing.</summary>
         readonly int _shellHookMsg;
         #endregion
 
@@ -55,7 +57,6 @@ namespace Splunk.Ui
             Location = _settings.FormGeometry.Location;
             Size = _settings.FormGeometry.Size;
             WindowState = FormWindowState.Normal;
-            //BackColor = _settings.BackColor;
 
             // Info display.
             tvInfo.MatchColors.Add("ERROR ", Color.LightPink);
@@ -221,16 +222,68 @@ namespace Splunk.Ui
         }
 
 
-        /////////////////// Temp debug stuff ///////////////////
-
+        #region Temp debug stuff
 
         void BtnGo_Click(object? sender, EventArgs e)
         {
             ////////////////////////////////////////////////////////////
             //InitCommands();
 
+
             ////////////////////////////////////////////////////////////
             //var wins = ShellUtils.GetAppWindows("explorer");
+            /*
+            >>> With no explorers
+            VIS: Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 1020 W: 1920 H: 60] IsVisible[True] Handle[131326] Pid[5748]
+            VIS: Title[] Geometry[X:19 Y: 0 W: 1901 H: 4] IsVisible[True] Handle[65980] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65996] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65930] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65928] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65924] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65922] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65948] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[985800] Pid[5748]
+            
+            >>> With two explorers, 1 tab, 2 tab
+            VIS: Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
+            VIS: Title[C: \Users\cepth\OneDrive\OneDriveDocuments] Geometry[X: 501 Y: 0 W: 1258 H: 923] IsVisible[True] Handle[265196] Pid[5748]
+            VIS: Title[C:\Dev] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 1020 W: 1920 H: 60] IsVisible[True] Handle[131326] Pid[5748]
+            VIS: Title[] Geometry[X:19 Y: 0 W: 1901 H: 4] IsVisible[True] Handle[65980] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65996] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65930] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65928] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65924] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65922] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65948] Pid[5748]
+            VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[985800] Pid[5748]
+            */
+
+            ////////////////////////////////////////////////////////////
+            /* Uses Process with redirected io. This doesn't produce a console.
+            ProcessStartInfo sinfo = new()
+            {
+                FileName = "cmd.exe",
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                // WindowStyle = ProcessWindowStyle.Hidden,
+            };
+
+            Process cmd = new() { StartInfo = sinfo };
+            cmd.Start();
+            cmd.StandardInput.WriteLine("tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip");
+            //cmd.StandardInput.Flush();
+            //cmd.StandardInput.Close();
+            //cmd.WaitForExit(); // wait for the process to complete before continuing and process.ExitCode
+            //var ret = cmd.StandardOutput.ReadToEnd();
+            // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
+            // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
+            // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
+            // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
+            */
 
 
             ////////////////////////////////////////////////////////////
@@ -244,114 +297,35 @@ namespace Splunk.Ui
             //from the user but it isn't hidden from the system.
 
 
-            // TODO1 still gotta figure out the cmd <> without terminal. See what python does.
+            ////////////////////////////////////////////////////////////
+            // Run using direct shell command.
             // case "tree": // direct => cmd /c /q tree /a /f "%V" | clip
             // still flashes, ? Try ShellExecuteEx, setting nShow=SW_HIDE. https://learn.microsoft.com/en-us/windows/win32/shell/launch
-
-            /// Example of Property Dialog:
-            /// public static void ShowFileProperties(string Filename)
-            /// {
-            ///     SHELLEXECUTEINFO info = new SHELLEXECUTEINFO();
-            ///     info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
-            ///     info.lpVerb = "properties";
-            ///     info.lpFile = Filename;
-            ///     info.nShow = SW_SHOW;
-            ///     info.fMask = SEE_MASK_INVOKEIDLIST;
-            ///     ShellExecuteEx(ref info);
-            /// }
-            /// 
-
-
-
             //cmd /B tree /a /f "C:\Dev\SplunkStuff\test_dir" | clip
-
             //NM.SHELLEXECUTEINFO info = new();
             //info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
             //info.lpVerb = "open";
-
             ////info.lpFile = "cmd";
             ////info.lpParameters = "/B tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
-
             //info.lpFile = "cmd.exe";
             ////info.lpParameters = "tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
             ////info.lpParameters = "echo dooda > _dump.txt";
             //info.lpParameters = "type Ui.deps.json";
-
             //info.nShow = (int)NM.ShowCommands.SW_SHOW; //SW_HIDE SW_SHOW
-
             //info.fMask = (int)NM.ShellExecuteMaskFlags.SEE_MASK_NO_CONSOLE; // SEE_MASK_DEFAULT;
             //bool b = NM.ShellExecuteEx(ref info);
             //if (b == false || info.hInstApp < 32)
             //{
             //    Debug.WriteLine("!!!");
             //}
-
-
-
+            //
             //If the function succeeds, it sets the hInstApp member of the SHELLEXECUTEINFO structure to a value greater than 32.
             //If the function fails, hInstApp is set to the SE_ERR_XXX error value that best indicates the cause of the failure.
             //Although hInstApp is declared as an HINSTANCE for compatibility with 16 - bit Windows applications, it is not a
             //true HINSTANCE. It can be cast only to an int and can be compared only to either the value 32 or the SE_ERR_XXX error codes.
             //The SE_ERR_XXX error values are provided for compatibility with ShellExecute.To retrieve more accurate error information,
             //use GetLastError. It may return one of the following values.
-
-
-            ProcessStartInfo sinfo = new()
-            {
-                FileName = "cmd.exe",
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-
-            Process cmd = new()
-            {
-                StartInfo = sinfo
-            };
-
-            cmd.Start();
-            cmd.StandardInput.WriteLine("tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip");
-            //cmd.StandardInput.Flush();
-            //cmd.StandardInput.Close();
-            //cmd.WaitForExit(); // wait for the process to complete before continuing and process.ExitCode
-            //var ret = cmd.StandardOutput.ReadToEnd();
-
-
-
-            //https://github.com/myfreeer/hidrun
-
-
-
-
-            //Log($"Go() {Environment.CurrentManagedThreadId}");
-            //int _which = 1;
-            //if (_which == 0)
-            //{
-            //    ProcessStartInfo startInfo = new()
-            //    {
-            //        UseShellExecute = false,
-            //        WindowStyle = ProcessWindowStyle.Hidden,
-            //        FileName = "cmd",
-            //        Arguments = $"/c echo Oscar {DateTime.Now.Millisecond} XYZ | clip",
-            //    };
-            //
-            //    Process process = new() { StartInfo = startInfo };
-            //    process.Start();
-            //    //process.WaitForExit(1000);
-            //    // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
-            //    // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
-            //    // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
-            //    // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
-            //}
-            //else
-            //{
-            //    // Fake message.
-            //    _message = "\"cmder\" \"dir\" \"C:\\Dev\\repos\\Apps\\Splunk\\Splunk\\obj\"";
-            //    ProcessMessage();
-            //}
         }
-
 
 
         void InitCommands()
@@ -363,21 +337,13 @@ namespace Splunk.Ui
             rc.Add(new("cmder", "Directory", "Two Pane", "%SPLUNK %ID \"%V\""));
             rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%V\" | clip"));
             rc.Add(new("openst", "Directory", "Open in Sublime", "subl -n \"%V\""));
-            rc.Add(new("find", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
+            rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
             rc.Add(new("newtab", "Directory", "Open in New Tab", "%SPLUNK %ID \"%V\""));
             rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%V\" | clip"));
             rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "subl -n \"%V\""));
-            rc.Add(new("find", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
+            rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
             rc.Add(new("newtab", "DesktopBackground", "Open in New Tab", "%SPLUNK %ID \"%V\""));
-
-            // | Id      | Description | RegPath |
-            // | -----   | ----------- | ------- |
-            // | cmder   | Open a second explorer in dir - aligned with first.   | Directory |
-            // | tree    | Cmd line to clipboard for current or sel dir.         | Directory, Directory\Background |
-            // | newtab  | Open dir in new tab in current explorer.              | Directory, DesktopBackground |
-            // | openst  | Open dir in Sublime Text.                             | Directory, Directory\Background |
-            // | find    | Open dir in Everything.                               | Directory, Directory\Background |
-
         }
+        #endregion
     }
 }

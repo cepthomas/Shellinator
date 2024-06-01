@@ -68,46 +68,22 @@ namespace Splunk.Common
                 }
             }
 
-            // >>> With no explorers
-            //VIS: Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 1020 W: 1920 H: 60] IsVisible[True] Handle[131326] Pid[5748]
-            //VIS: Title[] Geometry[X:19 Y: 0 W: 1901 H: 4] IsVisible[True] Handle[65980] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65996] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65930] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65928] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65924] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65922] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65948] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[985800] Pid[5748]
-            // >>> With two explorers, 1 tab, 2 tab
-            //VIS: Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
-            //VIS: Title[C: \Users\cepth\OneDrive\OneDriveDocuments] Geometry[X: 501 Y: 0 W: 1258 H: 923] IsVisible[True] Handle[265196] Pid[5748]
-            //VIS: Title[C:\Dev] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 1020 W: 1920 H: 60] IsVisible[True] Handle[131326] Pid[5748]
-            //VIS: Title[] Geometry[X:19 Y: 0 W: 1901 H: 4] IsVisible[True] Handle[65980] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65996] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65930] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65928] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65924] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65922] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65948] Pid[5748]
-            //VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[985800] Pid[5748]
-
             return winfos;
         }
 
         /// <summary>
         /// Get main window(s) for the application. Could be multiple if more than one process.
         /// </summary>
-        /// <param name="appName"></param>
+        /// <param name="appName">The app name</param>
         /// <returns>List of window handles.</returns>
         public static List<IntPtr> GetAppMainWindows(string appName)
         {
             List<IntPtr> handles = [];
 
-            // Get all processes. There is one entry per separate process (I think):
+            // Get all processes. There is one entry per separate process.
             // XPL: Title[] Geometry[X:0 Y: 1020 W: 1920 H: 60] IsVisible[True] Handle[131326] Pid[5748]
             Process[] procs = Process.GetProcessesByName(appName);
+            // Get each main window.
             procs.ForEach(p => handles.Add(p.MainWindowHandle));
             return handles;
         }

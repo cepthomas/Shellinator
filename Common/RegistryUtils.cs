@@ -7,9 +7,64 @@ using System.Text.RegularExpressions;
 using System.ComponentModel;
 
 
-
 namespace Splunk.Common
 {
+    public class RegistryUtils
+    {
+        static readonly bool _fake = true;
+
+        /// <summary>
+        /// Write one command to the registry.
+        /// </summary>
+        /// <param name="splunkPath"></param>
+        public static void CreateRegistryEntry(RegistryCommand rc, string splunkPath)
+        {
+            using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
+            using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+
+            // Key names etc.
+            var ssubkey1 = $"{rc.RegPath}\\shell\\{rc.Id}";
+            var ssubkey2 = $"{ssubkey1}\\command";
+            var expCmd = rc.CommandLine.Replace("%SPLUNK", $"\"{splunkPath}\"").Replace("%ID", rc.Id);
+
+            if (_fake)
+            {
+                Debug.WriteLine($"Create [{ssubkey1}]  MUIVerb={rc.Text}");
+                Debug.WriteLine($"Create [{ssubkey2}]  @={expCmd}");
+            }
+            else
+            {
+                using var k1 = regRoot!.CreateSubKey(ssubkey1);
+                k1.SetValue("MUIVerb", rc.Text);
+
+                using var k2 = regRoot!.CreateSubKey(ssubkey2);
+                k2.SetValue("", expCmd);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public static void RemoveRegistryEntry(RegistryCommand rc)
+        {
+            //public void DeleteSubKeyTree(string subkey);
+            using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
+            using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+
+            // Key name.
+            var ssubkey = $"{rc.RegPath}\\shell\\{rc.Id}";
+
+            if (_fake)
+            {
+                Debug.WriteLine($"Delete [{ssubkey}]");
+            }
+            else
+            {
+                regRoot!.DeleteSubKeyTree(ssubkey);
+            }
+        }
+    }
+    
     [Serializable]
     public class RegistryCommand
     {
@@ -66,65 +121,12 @@ namespace Splunk.Common
             Description = desc;
         }
 
+        /// <summary>
+        /// Readable version for property grid label.
+        /// </summary>
         public override string ToString()
         {
             return $"{Id}: {Text}";
-        }
-    }
-
-    public class RegistryUtils
-    {
-        static readonly bool _fake = true;
-
-        /// <summary>
-        /// Write one command to the registry.
-        /// </summary>
-        /// <param name="splunkPath"></param>
-        public static void CreateRegistryEntry(RegistryCommand rc, string splunkPath)
-        {
-            using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
-            using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
-
-            // Key names etc.
-            var ssubkey1 = $"{rc.RegPath}\\shell\\{rc.Id}";
-            var ssubkey2 = $"{ssubkey1}\\command";
-            var expCmd = rc.CommandLine.Replace("%SPLUNK", $"\"{splunkPath}\"").Replace("%ID", rc.Id);
-
-            if (_fake)
-            {
-                Debug.WriteLine($"Create [{ssubkey1}]  MUIVerb={rc.Text}");
-                Debug.WriteLine($"Create [{ssubkey2}]  @={expCmd}");
-            }
-            else
-            {
-                using var k1 = regRoot!.CreateSubKey(ssubkey1);
-                k1.SetValue("MUIVerb", rc.Text);
-
-                using var k2 = regRoot!.CreateSubKey(ssubkey2);
-                k2.SetValue("", expCmd);
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public static void RemoveRegistryEntry(RegistryCommand rc)
-        {
-            //public void DeleteSubKeyTree(string subkey);
-            using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
-            using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
-
-            // Key name.
-            var ssubkey = $"{rc.RegPath}\\shell\\{rc.Id}";
-
-            if (_fake)
-            {
-                Debug.WriteLine($"Delete [{ssubkey}]");
-            }
-            else
-            {
-                regRoot!.DeleteSubKeyTree(ssubkey);
-            }
         }
     }
 }

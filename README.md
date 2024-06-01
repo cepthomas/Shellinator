@@ -51,15 +51,17 @@ Supported `RegPath`s are:
 
 This generates registry entries that look like:
 ```ini
-[REG_ROOT\RegPath\shell\Id]
+[REG_ROOT\spec.RegPath\shell\spec.Id]
 @=""
-"MUIVerb"=Text
-[REG_ROOT\RegPath\shell\Id\command]
-@=CommandLine
+"MUIVerb"=spec.Text
+[REG_ROOT\spec.RegPath\shell\Id\command]
+@=spec.CommandLine
 ```
 
 `CommandLine` is a free-form string that is executed as if entered at the command line.
-There are some macros available. The internally supported ones:
+There are some macros available.
+
+Built in macros:
 
 | Macro     | Description |
 | ----      | ----------- |
@@ -67,19 +69,19 @@ There are some macros available. The internally supported ones:
 | %D        | Desktop absolute parsing name of the selection for items that don't have file system paths. |
 | %V        | The directory of the selection. |
 | %W        | The working directory. |
-| %<0-9>    | Positional Nth arg. |
+| %<0-9>    | Positional arg. |
 | %*        | Replace with all parameters. |
 | %~        | Replace with all parameters starting with the second parameter. |
 | %S        | Show command. |
 
-Additional Splunk-specific macros:
+Splunk-specific macros:
 
 | Macro     | Description |
 | ----      | ----------- |
 | %ID       | The Id property value. |
 | %SPLUNK   | Path to the Splunk executable. |
 
-Note that all paths must be wrapped in double quotes.
+!! Note that all paths and macros that expand to paths must be wrapped in double quotes.
 
 ## Submenus
 
