@@ -1,3 +1,14 @@
+
+command OK, but does flash console: TODO2 add to README
+C:\Dev\repos\Apps\Splunk\go.cmd
+C:\Lua\lua.exe "C:\Dev\repos\Apps\Splunk\go.lua"
+"C:\Program Files\Everything\everything" -parent "%D"
+"C:\Program Files\Sublime Text\subl" -n "%D"
+cmd /c dir "???" | clip
+cmd /c tree /a /f "C:\Dev\repos\Misc\WPFPlayground" | clip
+
+
+
 # Splunk
 Games with shell extensions to provide some custom context menus.
 

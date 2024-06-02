@@ -10,6 +10,11 @@ using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
+using SU = Splunk.Common.ShellUtils;
+
+// case "newtab": TODO2 Open a desktop dir in a new explorer tab.
+//rc.Add(new("newtab", "Directory", "Open in New Tab", "%SPLUNK %ID \"%D\""));
+//rc.Add(new("newtab", "DesktopBackground", "Open in New Tab", "%SPLUNK %ID \"%D\""));
 
 
 namespace Splunk.Ui
@@ -32,7 +37,7 @@ namespace Splunk.Ui
         readonly Stopwatch _sw = new();
 
         /// <summary>Hook message processing.</summary>
-        readonly int _shellHookMsg;
+        readonly int _hookMsg;
         #endregion
 
         #region Lifecycle
@@ -59,7 +64,7 @@ namespace Splunk.Ui
             WindowState = FormWindowState.Normal;
 
             // Info display.
-            tvInfo.MatchColors.Add("ERROR ", Color.LightPink);
+            tvInfo.MatchColors.Add("ERR", Color.LightPink);
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
 
@@ -74,7 +79,7 @@ namespace Splunk.Ui
             // Shell hook handler.
             // https://stackoverflow.com/questions/4544468/why-my-wndproc-doesnt-receive-shell-hook-messages-if-the-app-is-set-as-default
             //https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registershellhookwindow
-            _shellHookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
+            _hookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
             _ = NM.RegisterShellHookWindow(Handle);
 
             // Hot key handlers.
@@ -169,7 +174,7 @@ namespace Splunk.Ui
         /// <param name="message"></param>
         protected override void WndProc(ref Message message)
         {
-            if (message.Msg == _shellHookMsg) // Window lifecycle.
+            if (message.Msg == _hookMsg) // Window lifecycle.
             {
                 NM.ShellEvents shellEvent = (NM.ShellEvents)message.WParam.ToInt32();
                 IntPtr handle = message.LParam;
@@ -222,79 +227,54 @@ namespace Splunk.Ui
         }
 
 
-        #region Temp debug stuff
+        #region Debug stuff
 
         void BtnGo_Click(object? sender, EventArgs e)
         {
-            ////////////////////////////////////////////////////////////
             //InitCommands();
 
 
-            ////////////////////////////////////////////////////////////
-            //var wins = ShellUtils.GetAppWindows("explorer");
+            // case "cmder": // Put in Splunk when working.
+            // TODO1 Open a new explorer window at the dir selected in the first one.
+            // Locate it on one side or other of the first, same size.
+            // Option for full screen?
+            //https://stackoverflow.com/questions/1190423/using-setwindowpos-in-c-sharp-to-move-windows-around
+            // "CommandLine": "%SPLUNK %ID \u0022%V\u0022",
+            // arg1:cmder  arg2:dir-where-clicked
+
+
+            // Open in new window = Use the keyboard shortcut "Ctrl" + "N" when in File Explorer
+            //Ctrl+T to open a new/empty(Home) tab instead.
+            // explorer middle button (MouseButtons.Middle) opens selected dir in new tab
+
+            var wins = SU.GetAppWindows("explorer");
+            foreach (var win in wins)
+            {
+                // Title is the selected tab contents aka dir shown in right pane.
+                tvInfo.AppendLine($"EXPL:{win.Title}");
+            }
             /*
             >>> With no explorers
-            VIS: Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 1020 W: 1920 H: 60] IsVisible[True] Handle[131326] Pid[5748]
-            VIS: Title[] Geometry[X:19 Y: 0 W: 1901 H: 4] IsVisible[True] Handle[65980] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65996] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65930] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65928] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65924] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65922] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65948] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[985800] Pid[5748]
+            Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
             
             >>> With two explorers, 1 tab, 2 tab
-            VIS: Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
-            VIS: Title[C: \Users\cepth\OneDrive\OneDriveDocuments] Geometry[X: 501 Y: 0 W: 1258 H: 923] IsVisible[True] Handle[265196] Pid[5748]
-            VIS: Title[C:\Dev] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 1020 W: 1920 H: 60] IsVisible[True] Handle[131326] Pid[5748]
-            VIS: Title[] Geometry[X:19 Y: 0 W: 1901 H: 4] IsVisible[True] Handle[65980] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65996] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65930] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65928] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65924] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 0 H: 0] IsVisible[True] Handle[65922] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65948] Pid[5748]
-            VIS: Title[] Geometry[X:0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[985800] Pid[5748]
+            Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
+            Title[C:\Users\cepth\OneDrive\OneDriveDocuments] Geometry[X: 501 Y: 0 W: 1258 H: 923] IsVisible[True] Handle[265196] Pid[5748]
+            Title[C:\Dev] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
+            or  this:
+            Title[Home] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
             */
 
-            ////////////////////////////////////////////////////////////
-            /* Uses Process with redirected io. This doesn't produce a console.
-            ProcessStartInfo sinfo = new()
+
+            if (wins.Count == 0)
             {
-                FileName = "cmd.exe",
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                // WindowStyle = ProcessWindowStyle.Hidden,
-            };
+                // No visible explorers.
 
-            Process cmd = new() { StartInfo = sinfo };
-            cmd.Start();
-            cmd.StandardInput.WriteLine("tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip");
-            //cmd.StandardInput.Flush();
-            //cmd.StandardInput.Close();
-            //cmd.WaitForExit(); // wait for the process to complete before continuing and process.ExitCode
-            //var ret = cmd.StandardOutput.ReadToEnd();
-            // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
-            // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
-            // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
-            // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
-            */
+            }
+            else
+            {
 
-
-            ////////////////////////////////////////////////////////////
-            //This tool is a real quick and dirty program that I whipped up in about 5 minutes (took longer to
-            //set compiler options than write the code) which uses ShellExecuteEx to spawn a "detached" process.
-            //It is actually just a hidden process that doesn't appear on the task bar but it does appear in
-            //task manager or anything that enumerates processes. I wrote it because of a post in microsoft.public.
-            //win2000.cmdprompt.admin. Simply specify quiet "command" and it will run whatever it is hidden.
-            //If the program doesn't exist it will pop a dialog box which is annoying but if the program is in the
-            //path somewhere it will execute it. Please note that logging off will kill the process as it may be hidden
-            //from the user but it isn't hidden from the system.
+            }
 
 
             ////////////////////////////////////////////////////////////
@@ -333,16 +313,27 @@ namespace Splunk.Ui
             var rc = _settings.RegistryCommands; // alias
             rc.Clear();
 
-            rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%V\""));
-            rc.Add(new("cmder", "Directory", "Two Pane", "%SPLUNK %ID \"%V\""));
-            rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%V\" | clip"));
-            rc.Add(new("openst", "Directory", "Open in Sublime", "subl -n \"%V\""));
-            rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
-            rc.Add(new("newtab", "Directory", "Open in New Tab", "%SPLUNK %ID \"%V\""));
-            rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%V\" | clip"));
-            rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "subl -n \"%V\""));
-            rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%V\""));
-            rc.Add(new("newtab", "DesktopBackground", "Open in New Tab", "%SPLUNK %ID \"%V\""));
+            //command OK, but does flash console:
+            //%SPLUNK cmder "%D"
+            //C:\Dev\repos\Apps\Splunk\go.cmd
+            //C:\Lua\lua.exe "C:\Dev\repos\Apps\Splunk\go.lua"
+            //"C:\Program Files\Everything\everything" -parent "%D"
+            //"C:\Program Files\Sublime Text\subl" -n "%D"
+            //cmd / c dir "???" | clip
+            //cmd / c tree / a / f "C:\Dev\repos\Misc\WPFPlayground" | clip
+
+
+            //rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\""));
+            rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\""));
+            //rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"")); TODO1 try this?
+            rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%D\" | clip"));
+            rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" -n \"%D\""));
+
+            rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\""));
+            //rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%D\""));
+            rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%D\" | clip"));
+            rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" - n \"%D\""));
+            rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\""));
         }
         #endregion
     }

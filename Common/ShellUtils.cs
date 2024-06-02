@@ -13,17 +13,36 @@ namespace Splunk.Common
     /// <summary>Useful info about a window.</summary>
     public class WindowInfo
     {
+        /// <summary>Native window handle.</summary>
         public IntPtr Handle { get; init; }
+
+        /// <summary>Owner process.</summary>
         public int Pid { get; init; }
+
+        /// <summary>Running on this thread.</summary>
         public IntPtr ThreadId { get; init; }
+
+        /// <summary>Who's your daddy?</summary>
         public IntPtr Parent { get; init; }
+
+        /// <summary>The coordinates of the window.</summary>
+        public NM.RECT DisplayRectangle {  get { return NativeInfo.rcWindow; } }
+
+        /// <summary>The coordinates of the client area.</summary>
+        public NM.RECT ClientRectangle { get { return NativeInfo.rcClient; } }
+
+        /// <summary>Internals if needed.</summary>
         public NM.WINDOWINFO NativeInfo { get; init; }
+
+        /// <summary>Window Text.</summary>
         public string Title { get; init; } = "";
+
+        /// <summary>This is not trustworthy as it is true for some unseen windows.</summary>
         public bool IsVisible { get; set; }
 
         public override string ToString()
         {
-            var g = $"X:{NativeInfo.rcWindow.Left} Y:{NativeInfo.rcWindow.Top} W:{NativeInfo.rcWindow.Width} H:{NativeInfo.rcWindow.Height}";
+            var g = $"X:{DisplayRectangle.Left} Y:{DisplayRectangle.Top} W:{DisplayRectangle.Width} H:{DisplayRectangle.Height}";
             var s = $"Title[{Title}] Geometry[{g}] IsVisible[{IsVisible}] Handle[{Handle}] Pid[{Pid}]";
             return s;
         }
@@ -35,9 +54,10 @@ namespace Splunk.Common
         /// Get all pertinent/visible windows for the application. Ignores non-visible or non-titled (internal).
         /// Note that new explorers may be in the same process or separate ones. Depends on explorer user options.
         /// </summary>
-        /// <param name="appName"></param>
+        /// <param name="appName">Application name.</param>
+        /// <param name="includeAnonymous">Include those without titles or base "Program Manager".</param>
         /// <returns>List of window infos.</returns>
-        public static List<WindowInfo> GetAppWindows(string appName)
+        public static List<WindowInfo> GetAppWindows(string appName, bool includeAnonymous = false)
         {
             List<WindowInfo> winfos = [];
             List<IntPtr> procids = [];
@@ -62,7 +82,9 @@ namespace Splunk.Common
             foreach (var vh in visHandles)
             {
                 var wi = GetWindowInfo(vh);
-                if (procids.Contains(wi.Pid) && wi.Title.Length > 0)
+
+                var realWin = wi.Title != "" && wi.Title != "Program Manager";
+                if (procids.Contains(wi.Pid) && (includeAnonymous || realWin))
                 {
                     winfos.Add(wi);
                 }

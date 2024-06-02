@@ -173,7 +173,7 @@ namespace Splunk.Common
         #region Structs
         /// <summary>For ShellExecuteEx().</summary>
         /// https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa
-        /// - TODO1 Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
+        /// - TODO2 Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
         ///   the first character will be recognized by the function. Use UnmanagedType.LPStr instead.
         /// - lpVerb member can be used for a varity of actions like "properties", "find", "openas", "print"..etc depending
         ///   on the file type you're dealing with. Actions available for a specific file type are stored in registry.
