@@ -11,7 +11,7 @@ namespace Splunk.Common
 {
     public class RegistryUtils
     {
-        static readonly bool _fake = true;
+        static readonly bool _fake = false;//true;
 
         /// <summary>
         /// Write one command to the registry.

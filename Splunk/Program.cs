@@ -63,33 +63,55 @@ namespace Splunk
             try
             {
                 // Process the args.
-                if (args.Length != 2) { throw new($"invalid command format"); }
+                if (args.Length != 2) { throw new($"Invalid command format"); }
                 var cmd = args[0];
                 var path = args[1];
 
                 // Check for valid path arg.
-                if (!Path.Exists(path)) { throw new($"invalid path: {path}"); }
+                if (!Path.Exists(path)) { throw new($"Invalid path: {path}"); }
                 FileAttributes attr = File.GetAttributes(path);
                 var dir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
 
-                // // Check for valid command and execute it.
-                // ProcessStartInfo pinfo = new()
-                // {
-                //     UseShellExecute = false, //true,
-                //     CreateNoWindow = true,
-                //     WorkingDirectory = dir,
-                //     WindowStyle = ProcessWindowStyle.Hidden,
-                //     //RedirectStandardInput = true,
-                //     //RedirectStandardOutput = true,
-                // };
+                // This uses Process with redirected IO so doesn't produce a console.
+                ProcessStartInfo sinfo = new()
+                {
+                    UseShellExecute = false, //true,
+                    CreateNoWindow = true,
+                    WorkingDirectory = dir,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                };
 
                 switch (cmd)
                 {
                     case "cmder":
                         break;
 
+                    case "test":
+                        _logger.Info($"Got test!!!!!!!");
+                        break;
+
+                    case "tree":
+                        Process proc = new() { StartInfo = sinfo };
+                        proc.Start();
+                        proc.StandardInput.WriteLine($"tree /a /f \"{dir}\" | clip");
+
+                        //check for error code
+                        //proc.StandardInput.Flush();
+                        //proc.StandardInput.Close();
+                        // wait for the process to complete before continuing and process.ExitCode
+                        proc.WaitForExit();
+                        //var ret = proc.StandardOutput.ReadToEnd();
+                        if (proc.ExitCode != 0 ) throw new($"Process failed: {proc.ExitCode}");
+                        // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
+                        // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
+                        // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
+                        // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
+                        break;
+
                     /* case "tree": TODO1
-                    Uses Process with redirected io. This doesn't produce a console.
+                    // Uses Process with redirected io. This doesn't produce a console.
                     ProcessStartInfo sinfo = new()
                     {
                         FileName = "cmd.exe",

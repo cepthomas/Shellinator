@@ -1,14 +1,4 @@
 
-command OK, but does flash console: TODO2 add to README
-C:\Dev\repos\Apps\Splunk\go.cmd
-C:\Lua\lua.exe "C:\Dev\repos\Apps\Splunk\go.lua"
-"C:\Program Files\Everything\everything" -parent "%D"
-"C:\Program Files\Sublime Text\subl" -n "%D"
-cmd /c dir "???" | clip
-cmd /c tree /a /f "C:\Dev\repos\Misc\WPFPlayground" | clip
-
-
-
 # Splunk
 Games with shell extensions to provide some custom context menus.
 
@@ -74,16 +64,38 @@ There are some macros available.
 
 Built in macros:
 
-| Macro     | Description |
-| ----      | ----------- |
-| %L        | Selected file or directory name. |
-| %D        | Desktop absolute parsing name of the selection for items that don't have file system paths. |
-| %V        | The directory of the selection. |
-| %W        | The working directory. |
-| %<0-9>    | Positional arg. |
-| %*        | Replace with all parameters. |
-| %~        | Replace with all parameters starting with the second parameter. |
-| %S        | Show command. |
+| Macro     | Description | Notes |
+| ----      | ----------- | ----- |
+| %L        | Selected file or directory name. | All except folder. | 
+| %D        | Selected file or directory with expanded named folders. | Dir, file, folder |
+| %V        | The directory of the selection, maybe but unreliable. | All except folder. | 
+| %W        | The working directory. | All except folder. |
+| %<0-9>    | Positional arg. |  |
+| %*        | Replace with all parameters. |  |
+| %~        | Replace with all parameters starting with the second parameter. |  |
+
+
+TODO2 clean this up.
+
+
+See: https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context
+
+
+cmd.exe /k "echo DIR %L %D %V %W"  test103
+cmd.exe /k "echo DIRBG %V %W"   D->crash L->ignored  test102
+cmd.exe /k "echo DESKBG %V %W"  test104
+cmd.exe /k "echo FILE %L %D %V %W"  test105
+cmd.exe /k "echo FOLDER %D"  test101
+>>>
+in C:\Dev:
+DIR %L=C:\Dev\repos %D=C:\Dev\repos %V=C:\Dev\repos %W=C:\Dev -- use %D
+DIRBG %V=C:\Dev %W=C:\Dev -- use %W
+DESKBG %V=C:\Users\cepth\Desktop %W=C:\Users\cepth\Desktop -- use %W
+FILE %L=C:\Dev\_cmd_out.txt %D=C:\Dev\_cmd_out.txt %V=C:\Dev\_cmd_out.txt %W=C:\Dev -- use %L
+FOLDER C:\Users\cepth\Desktop (rt pane) -- TODO2 don't use folder for now, strange behavior
+  or FOLDER ::{F874310E-B6B7-47DC-BC84-B9E6B38F5903} (left pane -> Home)
+  when left pane is a folder (default home) click on a right pane selected dir shows both 103 and 101. 103 gives an error.
+
 
 Splunk-specific macros:
 
@@ -130,4 +142,3 @@ Note!! Must use `MUIVerb`, not default value `@="text"`. A hard learn.
 # Refs
 
 - Detailed registry editing: https://mrlixm.github.io/blog/windows-explorer-context-menu/
-- Args: https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context

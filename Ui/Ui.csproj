@@ -7,6 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Splunk.Ui</RootNamespace>
+    <ApplicationIcon>Marco.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -25,6 +26,10 @@
 
   <ItemGroup>
     <Compile Remove="MainFormLeftovers.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Marco.ico" />
   </ItemGroup>
 
   <ItemGroup>

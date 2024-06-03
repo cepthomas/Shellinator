@@ -11,10 +11,7 @@ using Ephemera.NBagOfUis;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
-
-// case "newtab": TODO2 Open a desktop dir in a new explorer tab.
-//rc.Add(new("newtab", "Directory", "Open in New Tab", "%SPLUNK %ID \"%D\""));
-//rc.Add(new("newtab", "DesktopBackground", "Open in New Tab", "%SPLUNK %ID \"%D\""));
+using System.Reflection;
 
 
 namespace Splunk.Ui
@@ -62,6 +59,8 @@ namespace Splunk.Ui
             Location = _settings.FormGeometry.Location;
             Size = _settings.FormGeometry.Size;
             WindowState = FormWindowState.Normal;
+            // Gets the icon associated with the currently executing assembly.
+            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 
             // Info display.
             tvInfo.MatchColors.Add("ERR", Color.LightPink);
@@ -71,7 +70,7 @@ namespace Splunk.Ui
             btnEdit.Click += (sender, e) => { EditSettings(); };
 
             // Install commands in registry.
-            btnInitReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.CreateRegistryEntry(c, Environment.CurrentDirectory)); };
+            btnInitReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.CreateRegistryEntry(c, Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
 
             // Remove commands from registry.
             btnClearReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.RemoveRegistryEntry(c)); };
@@ -149,7 +148,7 @@ namespace Splunk.Ui
         {
             var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
 
-            // Detect changes of interest.
+            // Detect changes of interest. TODO2
             bool restart = false;
 
             foreach (var (name, cat) in changes)
@@ -169,28 +168,28 @@ namespace Splunk.Ui
         }
 
         /// <summary>
-        /// Handle the hooked shell messages: shell window lifetime and hotkeys. TODO2 do something with them?
+        /// Handle the hooked shell messages: shell window lifetime and hotkeys. Not used currently.
         /// </summary>
         /// <param name="message"></param>
         protected override void WndProc(ref Message message)
         {
+            IntPtr handle = message.LParam;
             if (message.Msg == _hookMsg) // Window lifecycle.
             {
                 NM.ShellEvents shellEvent = (NM.ShellEvents)message.WParam.ToInt32();
-                IntPtr handle = message.LParam;
 
                 switch (shellEvent)
                 {
                     case NM.ShellEvents.HSHELL_WINDOWCREATED:
-                        //WindowCreatedEvent?.Invoke(this, handle);
+                        _logger.Debug($"WindowCreatedEvent:{handle}");
                         break;
 
                     case NM.ShellEvents.HSHELL_WINDOWACTIVATED:
-                        //WindowActivatedEvent?.Invoke(this, handle);
+                        _logger.Debug($"WindowActivatedEvent:{handle}");
                         break;
 
                     case NM.ShellEvents.HSHELL_WINDOWDESTROYED:
-                        //WindowDestroyedEvent?.Invoke(this, handle);
+                        _logger.Debug($"WindowDestroyedEvent:{handle}");
                         break;
                 }
             }
@@ -203,11 +202,11 @@ namespace Splunk.Ui
                 {
                     if (key == VIS_WINDOWS_KEY)
                     {
-                        //do something KeypressArrangeVisibleEvent?.Invoke();
+                        _logger.Debug($"VIS_WINDOWS_KEY:{handle}");
                     }
                     else if (key == ALL_WINDOWS_KEY)
                     {
-                        //do something KeypressArrangeAllEvent?.Invoke();
+                        _logger.Debug($"ALL_WINDOWS_KEY:{handle}");
                     }
                 }
             }
@@ -233,48 +232,135 @@ namespace Splunk.Ui
         {
             //InitCommands();
 
-
-            // case "cmder": // Put in Splunk when working.
-            // TODO1 Open a new explorer window at the dir selected in the first one.
-            // Locate it on one side or other of the first, same size.
-            // Option for full screen?
-            //https://stackoverflow.com/questions/1190423/using-setwindowpos-in-c-sharp-to-move-windows-around
-            // "CommandLine": "%SPLUNK %ID \u0022%V\u0022",
-            // arg1:cmder  arg2:dir-where-clicked
+            DoTree();
 
 
-            // Open in new window = Use the keyboard shortcut "Ctrl" + "N" when in File Explorer
-            //Ctrl+T to open a new/empty(Home) tab instead.
-            // explorer middle button (MouseButtons.Middle) opens selected dir in new tab
-
-            var wins = SU.GetAppWindows("explorer");
-            foreach (var win in wins)
+            void InitCommands()
             {
-                // Title is the selected tab contents aka dir shown in right pane.
-                tvInfo.AppendLine($"EXPL:{win.Title}");
+                var rc = _settings.RegistryCommands; // alias
+                rc.Clear();
+
+                //command OK, but does flash console:
+                //%SPLUNK cmder "%D"
+                //C:\Dev\repos\Apps\Splunk\go.cmd
+                //C:\Lua\lua.exe "C:\Dev\repos\Apps\Splunk\go.lua"
+                //"C:\Program Files\Everything\everything" -parent "%D"
+                //"C:\Program Files\Sublime Text\subl" -n "%D"
+                //cmd / c dir "???" | clip
+                //cmd / c tree / a / f "C:\Dev\repos\Misc\WPFPlayground" | clip
+
+                // DIR - use %D
+                // DIRBG - use %W
+                // DESKBG - use %W
+                // FILE - use %L
+                // FOLDER - TODO2 don't use folder for now, strange behavior
+
+
+                rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\""));
+                rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\""));
+                rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\""));
+                //rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%D\" | clip"));
+                rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" -n \"%D\""));
+
+                rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\""));
+                rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\""));
+                // rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%D\" | clip"));
+                rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" - n \"%W\""));
+                rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\""));
             }
-            /*
-            >>> With no explorers
-            Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
-            
-            >>> With two explorers, 1 tab, 2 tab
-            Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
-            Title[C:\Users\cepth\OneDrive\OneDriveDocuments] Geometry[X: 501 Y: 0 W: 1258 H: 923] IsVisible[True] Handle[265196] Pid[5748]
-            Title[C:\Dev] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
-            or  this:
-            Title[Home] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
-            */
 
 
-            if (wins.Count == 0)
+
+            void DoCmder()
             {
-                // No visible explorers.
+                // case "cmder": // Put in Splunk.exe when working.
+                // TODO1 Open a new explorer window at the dir selected in the first one.
+                // Locate it on one side or other of the first, same size.
+                // Option for full screen?
+                //https://stackoverflow.com/questions/1190423/using-setwindowpos-in-c-sharp-to-move-windows-around
+
+
+
+                /*
+                >>> With no explorers
+                Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
+
+                >>> With two explorers, 1 tab, 2 tab
+                Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
+                Title[C:\Users\cepth\OneDrive\OneDriveDocuments] Geometry[X: 501 Y: 0 W: 1258 H: 923] IsVisible[True] Handle[265196] Pid[5748]
+                Title[C:\Dev] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
+                or  this:
+                Title[Home] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
+                */
+
+                // "CommandLine": "%SPLUNK %ID \u0022%V\u0022",
+                // arg1:cmder  arg2:dir-where-clicked
+
+                string srcDir = "aaaaa";
+
+
+
+                // Open folder in new window: Ctrl+N
+                // Open a new tab (in Home): Ctrl+T
+                // Open selected dir in new tab: MouseButtons.Middle
+
+
+                // Locate the source dir.
+                var wins = SU.GetAppWindows("explorer");
+
+                if (wins.Count == 0)
+                {
+                    // No visible explorers.
+
+                }
+                else
+                {
+                    foreach (var win in wins)
+                    {
+                        // Title is the selected tab contents aka dir shown in right pane.
+                        // tvInfo.AppendLine($"EXPL:{win.Title}");
+                    }
+                }
 
             }
-            else
+
+
+
+            void DoTree()
             {
+                // This uses Process with redirected IO so doesn't produce a console. This works!!!
+                var dir = @"C:\Dev\SplunkStuff\test_dir";
 
+                ProcessStartInfo sinfo = new()
+                {
+                    FileName = "cmd",
+                    UseShellExecute = false, //true,
+                    CreateNoWindow = true,
+                    WorkingDirectory = dir,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                };
+                Process proc = new() { StartInfo = sinfo };
+                proc.Start();
+                proc.StandardInput.WriteLine($"tree /a /f \"{dir}\" | clip");
+
+                //check for error code
+                //proc.StandardInput.Flush();
+                //proc.StandardInput.Close();
+                // wait for the process to complete before continuing and process.ExitCode
+                proc.WaitForExit();
+                //var ret = proc.StandardOutput.ReadToEnd();
+                if (proc.ExitCode != 0) throw new($"Process failed: {proc.ExitCode}");
+                // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
+                // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
+                // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
+                // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
             }
+
+
+
+
 
 
             ////////////////////////////////////////////////////////////
@@ -305,35 +391,6 @@ namespace Splunk.Ui
             //true HINSTANCE. It can be cast only to an int and can be compared only to either the value 32 or the SE_ERR_XXX error codes.
             //The SE_ERR_XXX error values are provided for compatibility with ShellExecute.To retrieve more accurate error information,
             //use GetLastError. It may return one of the following values.
-        }
-
-
-        void InitCommands()
-        {
-            var rc = _settings.RegistryCommands; // alias
-            rc.Clear();
-
-            //command OK, but does flash console:
-            //%SPLUNK cmder "%D"
-            //C:\Dev\repos\Apps\Splunk\go.cmd
-            //C:\Lua\lua.exe "C:\Dev\repos\Apps\Splunk\go.lua"
-            //"C:\Program Files\Everything\everything" -parent "%D"
-            //"C:\Program Files\Sublime Text\subl" -n "%D"
-            //cmd / c dir "???" | clip
-            //cmd / c tree / a / f "C:\Dev\repos\Misc\WPFPlayground" | clip
-
-
-            //rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\""));
-            rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\""));
-            //rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"")); TODO1 try this?
-            rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%D\" | clip"));
-            rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" -n \"%D\""));
-
-            rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\""));
-            //rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%D\""));
-            rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%D\" | clip"));
-            rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" - n \"%D\""));
-            rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\""));
         }
         #endregion
     }
