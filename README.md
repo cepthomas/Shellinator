@@ -47,7 +47,7 @@ Supported `RegPath`s are:
 | Directory\Background  | Right click in explorer right pane with nothing selected (background).|
 | DesktopBackground     | Right click in windows desktop with nothing selected (background).|
 | Folder                | Right click in explorer left pane (navigation) with a folder selected.|
-| ext                   | Right click in explorer right pane or windows desktop with file.ext selected (\* for all exts).|
+| .ext (File)           | Right click in explorer right pane or windows desktop with file.ext selected (\* for all exts).|
 
 
 This generates registry entries that look like:
@@ -66,35 +66,14 @@ Built in macros:
 
 | Macro     | Description | Notes |
 | ----      | ----------- | ----- |
-| %L        | Selected file or directory name. | All except folder. | 
-| %D        | Selected file or directory with expanded named folders. | Dir, file, folder |
-| %V        | The directory of the selection, maybe but unreliable. | All except folder. | 
-| %W        | The working directory. | All except folder. |
+| %L        | Selected file or directory name. | Only Directory, File. | 
+| %D        | Selected file or directory with expanded named folders. | Only Directory, File, Folder |
+| %V        | The directory of the selection, maybe but unreliable. | All except Folder. | 
+| %W        | The working directory. | All except Folder. |
 | %<0-9>    | Positional arg. |  |
 | %*        | Replace with all parameters. |  |
 | %~        | Replace with all parameters starting with the second parameter. |  |
 
-
-TODO2 clean this up.
-
-
-See: https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context
-
-
-cmd.exe /k "echo DIR %L %D %V %W"  test103
-cmd.exe /k "echo DIRBG %V %W"   D->crash L->ignored  test102
-cmd.exe /k "echo DESKBG %V %W"  test104
-cmd.exe /k "echo FILE %L %D %V %W"  test105
-cmd.exe /k "echo FOLDER %D"  test101
->>>
-in C:\Dev:
-DIR %L=C:\Dev\repos %D=C:\Dev\repos %V=C:\Dev\repos %W=C:\Dev -- use %D
-DIRBG %V=C:\Dev %W=C:\Dev -- use %W
-DESKBG %V=C:\Users\cepth\Desktop %W=C:\Users\cepth\Desktop -- use %W
-FILE %L=C:\Dev\_cmd_out.txt %D=C:\Dev\_cmd_out.txt %V=C:\Dev\_cmd_out.txt %W=C:\Dev -- use %L
-FOLDER C:\Users\cepth\Desktop (rt pane) -- TODO2 don't use folder for now, strange behavior
-  or FOLDER ::{F874310E-B6B7-47DC-BC84-B9E6B38F5903} (left pane -> Home)
-  when left pane is a folder (default home) click on a right pane selected dir shows both 103 and 101. 103 gives an error.
 
 
 Splunk-specific macros:
@@ -141,4 +120,6 @@ Note!! Must use `MUIVerb`, not default value `@="text"`. A hard learn.
 
 # Refs
 
+- How to: https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers
 - Detailed registry editing: https://mrlixm.github.io/blog/windows-explorer-context-menu/
+- Shell command vars: https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context

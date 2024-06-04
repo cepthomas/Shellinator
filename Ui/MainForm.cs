@@ -5,13 +5,13 @@ using System.IO;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Text;
+using System.Reflection;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
-using System.Reflection;
 
 
 namespace Splunk.Ui
@@ -141,12 +141,87 @@ namespace Splunk.Ui
         }
         #endregion
 
+
+
+
+
+        public List<(string name, string cat)> Edit(object settings, string title, int height, bool expand = false)
+        {
+            //// Make a copy for possible restoration.
+            //Type t = settings.GetType();
+            //JsonSerializerOptions opts = new();
+            //string original = JsonSerializer.Serialize(settings, t, opts);
+
+            PropertyGrid pg = new()
+            {
+                Dock = DockStyle.Fill,
+                PropertySort = PropertySort.Categorized,
+                SelectedObject = settings
+            };
+
+            //if (settings is SettingsCore)
+            //{
+            //    pg.AddButton("Clear recent", null, "Clear recent file list", (_, __) => (settings as SettingsCore)!.RecentFiles.Clear());
+            //}
+
+            using Form f = new()
+            {
+                Text = title,
+                AutoScaleMode = AutoScaleMode.None,
+                Location = Cursor.Position,
+                StartPosition = FormStartPosition.Manual,
+                FormBorderStyle = FormBorderStyle.SizableToolWindow,
+                ShowIcon = false,
+                ShowInTaskbar = false
+            };
+            f.ClientSize = new(450, height); // do after construction
+
+            // Detect changes of interest.
+            List<(string name, string cat)> changes = new();
+
+            //pg.PropertyGridExChange += Pg_PropertyGridExChange;
+
+            pg.PropertyValueChanged += Pg_PropertyValueChanged;
+
+            //{
+            //    changes.Add((args.ChangedItem!.PropertyDescriptor!.Name, args.ChangedItem.PropertyDescriptor.Category));
+            //};
+
+            if (expand)
+            {
+                pg.ExpandAllGridItems();
+            }
+
+            f.Controls.Add(pg);
+
+            f.ShowDialog();
+
+            return changes;
+        }
+
+        private void Pg_PropertyValueChanged(object? s, PropertyValueChangedEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void Pg_PropertyGridExChange(object? sender, PropertyGridEx.PropertyGridExEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+
+
+
+
         /// <summary>
         /// Edit the common options in a property grid.
         /// </summary>
         void EditSettings()
         {
-            var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
+            //var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
+            var changes = Edit(_settings, "User Settings", 500);
 
             // Detect changes of interest. TODO2
             bool restart = false;
@@ -230,9 +305,9 @@ namespace Splunk.Ui
 
         void BtnGo_Click(object? sender, EventArgs e)
         {
-            //InitCommands();
+            InitCommands();
 
-            DoTree();
+            // DoTree();
 
 
             void InitCommands()
@@ -240,33 +315,16 @@ namespace Splunk.Ui
                 var rc = _settings.RegistryCommands; // alias
                 rc.Clear();
 
-                //command OK, but does flash console:
-                //%SPLUNK cmder "%D"
-                //C:\Dev\repos\Apps\Splunk\go.cmd
-                //C:\Lua\lua.exe "C:\Dev\repos\Apps\Splunk\go.lua"
-                //"C:\Program Files\Everything\everything" -parent "%D"
-                //"C:\Program Files\Sublime Text\subl" -n "%D"
-                //cmd / c dir "???" | clip
-                //cmd / c tree / a / f "C:\Dev\repos\Misc\WPFPlayground" | clip
-
-                // DIR - use %D
-                // DIRBG - use %W
-                // DESKBG - use %W
-                // FILE - use %L
-                // FOLDER - TODO2 don't use folder for now, strange behavior
-
-
-                rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\""));
-                rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\""));
-                rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\""));
-                //rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%D\" | clip"));
-                rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" -n \"%D\""));
-
-                rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\""));
-                rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\""));
-                // rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%D\" | clip"));
-                rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" - n \"%W\""));
-                rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\""));
+                rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\"", "Debug stuff."));
+                rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
+                rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"));
+                //rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%D\" | clip", "???"));
+                rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" -n \"%D\"", "Open selected directory in Sublime Text."));
+                rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."));
+                rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
+                // rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%D\" | clip", "???"));
+                rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" - n \"%W\"", "Open here in Sublime Text."));
+                rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
             }
 
 
@@ -299,7 +357,7 @@ namespace Splunk.Ui
                 string srcDir = "aaaaa";
 
 
-
+                // Builtin keys:
                 // Open folder in new window: Ctrl+N
                 // Open a new tab (in Home): Ctrl+T
                 // Open selected dir in new tab: MouseButtons.Middle
@@ -323,43 +381,6 @@ namespace Splunk.Ui
                 }
 
             }
-
-
-
-            void DoTree()
-            {
-                // This uses Process with redirected IO so doesn't produce a console. This works!!!
-                var dir = @"C:\Dev\SplunkStuff\test_dir";
-
-                ProcessStartInfo sinfo = new()
-                {
-                    FileName = "cmd",
-                    UseShellExecute = false, //true,
-                    CreateNoWindow = true,
-                    WorkingDirectory = dir,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                };
-                Process proc = new() { StartInfo = sinfo };
-                proc.Start();
-                proc.StandardInput.WriteLine($"tree /a /f \"{dir}\" | clip");
-
-                //check for error code
-                //proc.StandardInput.Flush();
-                //proc.StandardInput.Close();
-                // wait for the process to complete before continuing and process.ExitCode
-                proc.WaitForExit();
-                //var ret = proc.StandardOutput.ReadToEnd();
-                if (proc.ExitCode != 0) throw new($"Process failed: {proc.ExitCode}");
-                // There is a fundamental difference when you call WaitForExit() without a time -out, it ensures that the redirected
-                // stdout/ err have returned EOF.This makes sure that you've read all the output that was produced by the process.
-                // We can't see what "onOutput" does, but high odds that it deadlocks your program because it does something nasty
-                // like assuming that your main thread is idle when it is actually stuck in WaitForExit().
-            }
-
-
-
 
 
 

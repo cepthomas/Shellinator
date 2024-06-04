@@ -1,21 +1,21 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-using Ephemera.NBagOfTricks;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 using System.ComponentModel;
+
+
+// TODO2 Attributes like icon, position, extended, ...
 
 
 namespace Splunk.Common
 {
     public class RegistryUtils
     {
-        static readonly bool _fake = false;//true;
+        /// <summary>Dry run the registry entries.</summary>
+        static readonly bool _fake = false;
 
-        /// <summary>
-        /// Write one command to the registry.
-        /// </summary>
+        /// <summary>Write one command to the registry.</summary>
         /// <param name="splunkPath"></param>
         public static void CreateRegistryEntry(RegistryCommand rc, string splunkPath)
         {
@@ -84,7 +84,7 @@ namespace Splunk.Common
         [Browsable(true)]
         public string Text { get; set; } = "";
 
-        [DisplayName("Command")]
+        [DisplayName("Command Line")]
         [Description("Full command string to execute.")]
         [Browsable(true)]
         public string CommandLine { get; set; } = "";
@@ -93,8 +93,6 @@ namespace Splunk.Common
         [Description("Info about this command. TODO2 add values")]
         [Browsable(true)]
         public string Description { get; set; } = "";
-
-        // TODO2 Attributes like icon, position, extended, ...
         #endregion
 
         /// <summary>
@@ -112,7 +110,7 @@ namespace Splunk.Common
         /// <param name="text"></param>
         /// <param name="cmdLine"></param>
         /// <param name="desc"></param>
-        public RegistryCommand(string id, string regPath, string text, string cmdLine, string desc = "")
+        public RegistryCommand(string id, string regPath, string text, string cmdLine, string desc)
         {
             Id = id;
             RegPath = regPath;
