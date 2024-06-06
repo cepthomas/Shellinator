@@ -32,9 +32,6 @@ namespace Splunk.Ui
         [Description("Descriptors for context menu commands.")]
         [Browsable(true)]
         public List<RegistryCommand> RegistryCommands { get; set; } = [];
-
-        [Browsable(false)]
-        public bool Like_Valid_TODO2 { get; set; } = false;
         #endregion
     }
 }

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.ComponentModel;
 
 
-// TODO2 Attributes like icon, position, extended, ...
+// ?? Attributes like icon, position, extended, ...
 
 
 namespace Splunk.Common
@@ -90,7 +90,7 @@ namespace Splunk.Common
         public string CommandLine { get; set; } = "";
 
         [DisplayName("Description")]
-        [Description("Info about this command. TODO2 add values")]
+        [Description("Info about this command.")]
         [Browsable(true)]
         public string Description { get; set; } = "";
         #endregion

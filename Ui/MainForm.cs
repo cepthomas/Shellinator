@@ -6,12 +6,14 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Text;
 using System.Reflection;
+using System.Text.Json;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
+using System.Security.Policy;
 
 
 namespace Splunk.Ui
@@ -147,10 +149,10 @@ namespace Splunk.Ui
 
         public List<(string name, string cat)> Edit(object settings, string title, int height, bool expand = false)
         {
-            //// Make a copy for possible restoration.
-            //Type t = settings.GetType();
-            //JsonSerializerOptions opts = new();
-            //string original = JsonSerializer.Serialize(settings, t, opts);
+            // Make a copy for possible restoration.
+            Type t = settings.GetType();
+            JsonSerializerOptions opts = new();
+            string original = JsonSerializer.Serialize(settings, t, opts);
 
             PropertyGrid pg = new()
             {
@@ -183,6 +185,8 @@ namespace Splunk.Ui
 
             pg.PropertyValueChanged += Pg_PropertyValueChanged;
 
+
+
             //{
             //    changes.Add((args.ChangedItem!.PropertyDescriptor!.Name, args.ChangedItem.PropertyDescriptor.Category));
             //};
@@ -204,10 +208,10 @@ namespace Splunk.Ui
             throw new NotImplementedException();
         }
 
-        private void Pg_PropertyGridExChange(object? sender, PropertyGridEx.PropertyGridExEventArgs e)
-        {
-            throw new NotImplementedException();
-        }
+        //private void Pg_PropertyGridExChange(object? sender, PropertyGridEx.PropertyGridExEventArgs e)
+        //{
+        //    throw new NotImplementedException();
+        //}
 
 
 
@@ -309,6 +313,8 @@ namespace Splunk.Ui
 
             // DoTree();
 
+            DoCmder();
+
 
             void InitCommands()
             {
@@ -319,11 +325,11 @@ namespace Splunk.Ui
                 rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
                 rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"));
                 //rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%D\" | clip", "???"));
-                rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" -n \"%D\"", "Open selected directory in Sublime Text."));
+                rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."));
                 rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."));
                 rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
                 // rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%D\" | clip", "???"));
-                rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" - n \"%W\"", "Open here in Sublime Text."));
+                rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
                 rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
             }
 
@@ -354,7 +360,6 @@ namespace Splunk.Ui
                 // "CommandLine": "%SPLUNK %ID \u0022%V\u0022",
                 // arg1:cmder  arg2:dir-where-clicked
 
-                string srcDir = "aaaaa";
 
 
                 // Builtin keys:
@@ -362,22 +367,64 @@ namespace Splunk.Ui
                 // Open a new tab (in Home): Ctrl+T
                 // Open selected dir in new tab: MouseButtons.Middle
 
+                var targetDir = @"C:\Dev\SplunkStuFf"; // <== fake from cmd line path
 
-                // Locate the source dir.
-                var wins = SU.GetAppWindows("explorer");
+                // Get the current path. Could use the %W arg.
+                var path = Path.GetDirectoryName(targetDir);
 
-                if (wins.Count == 0)
+                // Locate the explorer window that generated the click.
+                var explWins = SU.GetAppWindows("explorer");
+                WindowInfo? clicked = null;
+
+                if (explWins.Count == 0)
                 {
-                    // No visible explorers.
+                    throw new("No visible explorers. Shouldn't happen.");
+                }
+                else
+                {
+                    foreach (var win in explWins)
+                    {
+                        if (win.Title.ToLower() == path.ToLower())
+                        {
+                            clicked = win;
+                        }
+                        // Title is the selected tab contents aka dir shown in right pane.
+                        // tvInfo.AppendLine($"EXPL:{win.Title}");
+                    }
+                }
+
+                if (clicked is not null)
+                {
+                    //var dirToOpen = @"C:\Dev\SplunkStuff"; // ==>
+                    // Open clickDir in a new explorer.  test=C:\Dev\SplunkStuff
+
+
+                    /// <summary>Performs an operation on a specified file. See ShellExecuteEx() for args.</summary>
+                    /// Example opens a URL in the default browser:
+                    /// IntPtr result = ShellExecute(IntPtr.Zero, "open", "http://www.google.com", null, null, SW_NORMAL);
+                    //public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile,
+                    //string lpParameters, string lpDirectory, int nShow);
+
+                    // Show hidden. SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
+                    //public const short SWP_NOMOVE = 0X2;
+                    //public const short SWP_NOSIZE = 0X01;
+                    //public const short SWP_NOZORDER = 0X04;
+                    //public const int SWP_SHOWWINDOW = 0x0040;
+
+                    IntPtr handle = NM.ShellExecute(Handle, "explore", targetDir, null, null, (int)NM.SWP_NOZORDER);
+                    // Move it.
+                    var r = clicked.DisplayRectangle;
+                    //bool b = NM.MoveWindow(handle, r.Left + r.Width, r.Top, r.Width, r.Height, true);
+
+                    bool b = NM.SetWindowPos(handle, clicked.Handle, r.Left + r.Width, r.Top, r.Width, r.Height, (int)NM.ShowCommands.SW_NORMAL);
+
+                    // show it.
+                    //NM.ShowWindow(handle, (int)NM.ShowCommands.SW_NORMAL);
 
                 }
                 else
                 {
-                    foreach (var win in wins)
-                    {
-                        // Title is the selected tab contents aka dir shown in right pane.
-                        // tvInfo.AppendLine($"EXPL:{win.Title}");
-                    }
+                    throw new("Couldn't find. Shouldn't happen.");
                 }
 
             }

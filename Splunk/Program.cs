@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,6 +7,7 @@ using Ephemera.NBagOfTricks.Slog;
 
 
 // Set OutputType to WinExe in order to prevent a visible console.
+
 // TODO2 ? generic script runner - Use for all? ps, cmd, lua, py, ... or Default/builtin
 
 

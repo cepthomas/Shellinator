@@ -68,7 +68,7 @@ Built in macros:
 | ----      | ----------- | ----- |
 | %L        | Selected file or directory name. | Only Directory, File. | 
 | %D        | Selected file or directory with expanded named folders. | Only Directory, File, Folder |
-| %V        | The directory of the selection, maybe but unreliable. | All except Folder. | 
+| %V        | The directory of the selection, maybe unreliable? | All except Folder. | 
 | %W        | The working directory. | All except Folder. |
 | %<0-9>    | Positional arg. |  |
 | %*        | Replace with all parameters. |  |
@@ -120,6 +120,6 @@ Note!! Must use `MUIVerb`, not default value `@="text"`. A hard learn.
 
 # Refs
 
-- How to: https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers
+- General how to: https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers
 - Detailed registry editing: https://mrlixm.github.io/blog/windows-explorer-context-menu/
 - Shell command vars: https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context
