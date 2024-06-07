@@ -32,7 +32,8 @@ namespace Splunk.Common
         public const uint WM_GETTEXT = 0x000D;
         #endregion
 
-        #region Enums
+
+        #region Enums TODO2 these don't need to be enums.
         // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
         public enum ShowCommands : int
         {
@@ -90,84 +91,6 @@ namespace Splunk.Common
             HSHELL_LANGUAGE = 8,
             HSHELL_ACCESSIBILITYSTATE = 11,
             HSHELL_APPCOMMAND = 12
-        }
-
-        public enum WindowShowState : int
-        {
-            SW_SHOWNORMAL = 1,
-            SW_SHOWMINIMIZED = 2,
-            SW_SHOWMAXIMIZED = 3,
-        }
-
-        [Flags]
-        public enum AssocF
-        {
-            Init_NoRemapCLSID = 0x01,
-            Init_ByExeName = 0x02,
-            Open_ByExeName = 0x02,
-            Init_DefaultToStar = 0x04,
-            Init_DefaultToFolder = 0x08,
-            NoUserSettings = 0x10,
-            NoTruncate = 0x20,
-            Verify = 0x40,
-            RemapRunDll = 0x80,
-            NoFixUps = 0x100,
-            IgnoreBaseClass = 0x200
-        }
-
-        public enum AssocStr
-        {
-            Command = 1,
-            Executable,
-            FriendlyDocName,
-            FriendlyAppName,
-            NoOpen,
-            ShellNewValue,
-            DDECommand,
-            DDEIfExec,
-            DDEApplication,
-            DDETopic
-        }
-
-        [Flags]
-        public enum SHGFI : int
-        {
-            /// <summary>get icon</summary>
-            Icon = 0x000000100,
-            /// <summary>get display name</summary>
-            DisplayName = 0x000000200,
-            /// <summary>get type name</summary>
-            TypeName = 0x000000400,
-            /// <summary>get attributes</summary>
-            Attributes = 0x000000800,
-            /// <summary>get icon location</summary>
-            IconLocation = 0x000001000,
-            /// <summary>return exe type</summary>
-            ExeType = 0x000002000,
-            /// <summary>get system icon index</summary>
-            SysIconIndex = 0x000004000,
-            /// <summary>put a link overlay on icon</summary>
-            LinkOverlay = 0x000008000,
-            /// <summary>show icon in selected state</summary>
-            Selected = 0x000010000,
-            /// <summary>get only specified attributes</summary>
-            Attr_Specified = 0x000020000,
-            /// <summary>get large icon</summary>
-            LargeIcon = 0x000000000,
-            /// <summary>get small icon</summary>
-            SmallIcon = 0x000000001,
-            /// <summary>get open icon</summary>
-            OpenIcon = 0x000000002,
-            /// <summary>get shell size icon</summary>
-            ShellIconSize = 0x000000004,
-            /// <summary>pszPath is a pidl</summary>
-            PIDL = 0x000000008,
-            /// <summary>use passed dwFileAttribute</summary>
-            UseFileAttributes = 0x000000010,
-            /// <summary>apply the appropriate overlays</summary>
-            AddOverlays = 0x000000020,
-            /// <summary>Get the index of the overlay in the upper 8 bits of the iIcon</summary>
-            OverlayIndex = 0x000000040,
         }
         #endregion
 
@@ -273,19 +196,7 @@ namespace Splunk.Common
         #endregion
 
         #region shell32.dll
-        /// <summary>General shell function execute. See SHELLEXECUTEINFO for programming.</summary>
-        /// Example of Property Dialog:
-        /// public static void ShowFileProperties(string Filename)
-        /// {
-        ///     SHELLEXECUTEINFO info = new SHELLEXECUTEINFO();
-        ///     info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
-        ///     info.lpVerb = "properties";
-        ///     info.lpFile = Filename;
-        ///     info.nShow = SW_SHOW;
-        ///     info.fMask = SEE_MASK_INVOKEIDLIST;
-        ///     ShellExecuteEx(ref info);
-        /// }
-        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        [DllImport("Shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
 
         /// <summary>Performs an operation on a specified file. See ShellExecuteEx() for args.</summary>
@@ -313,24 +224,10 @@ namespace Splunk.Common
         /// to decide how to handle it. It can be any of the values that can be specified in the nCmdShow parameter for 
         /// the ShowWindow function.
         /// 
-        /// Return value - If the function succeeds, it returns a value greater than 32. If the function fails, it returns an error value that indicates the cause of the failure. The return value is cast as an HINSTANCE for backward compatibility with 16-bit Windows applications. It is not a true HINSTANCE, however. It can be cast only to an INT_PTR and compared to either 32 or the following error codes below.
-        /// 
-        /// Return code Description:
-        ///   0 - The operating system is out of memory or resources.
-        ///   ERROR_FILE_NOT_FOUND - The specified file was not found.
-        ///   ERROR_PATH_NOT_FOUND - The specified path was not found.
-        ///   ERROR_BAD_FORMAT - The .exe file is invalid (non-Win32 .exe or error in .exe image).
-        ///   SE_ERR_ACCESSDENIED - The operating system denied access to the specified file.
-        ///   SE_ERR_ASSOCINCOMPLETE - The file name association is incomplete or invalid.
-        ///   SE_ERR_DDEBUSY - The DDE transaction could not be completed because other DDE transactions were being processed.
-        ///   SE_ERR_DDEFAIL - The DDE transaction failed.
-        ///   SE_ERR_DDETIMEOUT - The DDE transaction could not be completed because the request timed out.
-        ///   SE_ERR_DLLNOTFOUND - The specified DLL was not found.
-        ///   SE_ERR_FNF - The specified file was not found.
-        ///   SE_ERR_NOASSOC - There is no application associated with the given file name extension. This error will also be returned if you attempt to print a file that is not printable.
-        ///   SE_ERR_OOM - There was not enough memory to complete the operation.
-        ///   SE_ERR_PNF - The specified path was not found.
-        ///   SE_ERR_SHARE - A sharing violation occurred.
+        /// Return value - If the function succeeds, it returns a value greater than 32. If the function fails,
+        /// it returns an error value that indicates the cause of the failure. The return value is cast as an
+        /// HINSTANCE for backward compatibility with 16-bit Windows applications. It is not a true HINSTANCE, however.
+        /// It can be cast only to an INT_PTR and compared to either 32 or the following error codes below.
         /// Call GetLastError for extended error information.
         [DllImport("Shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, string lpParameters, string lpDirectory, int nShow);
@@ -421,7 +318,7 @@ namespace Splunk.Common
         [DllImport("user32.dll")]
         public static extern bool IsZoomed(IntPtr hWnd);
 
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", SetLastError = true)]
         public extern static bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
 
         [DllImport("User32.dll")]
@@ -429,11 +326,6 @@ namespace Splunk.Common
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, System.Text.StringBuilder lParam);
-        #endregion
-
-        #region shlwapi.dll
-        [DllImport("shlwapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern uint AssocQueryString(AssocF flags, AssocStr str, string pszAssoc, string pszExtra, [Out] StringBuilder pszOut, [In][Out] ref uint pcchOut);
         #endregion
     }
 }

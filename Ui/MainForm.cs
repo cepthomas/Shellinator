@@ -7,13 +7,14 @@ using System.Diagnostics;
 using System.Text;
 using System.Reflection;
 using System.Text.Json;
+using System.Security.Policy;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
-using System.Security.Policy;
+using System.Runtime.InteropServices;
 
 
 namespace Splunk.Ui
@@ -71,10 +72,8 @@ namespace Splunk.Ui
 
             btnEdit.Click += (sender, e) => { EditSettings(); };
 
-            // Install commands in registry.
+            // Manage commands in registry.
             btnInitReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.CreateRegistryEntry(c, Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
-
-            // Remove commands from registry.
             btnClearReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.RemoveRegistryEntry(c)); };
 
             // Shell hook handler.
@@ -146,103 +145,41 @@ namespace Splunk.Ui
 
 
 
-
-        public List<(string name, string cat)> Edit(object settings, string title, int height, bool expand = false)
-        {
-            // Make a copy for possible restoration.
-            Type t = settings.GetType();
-            JsonSerializerOptions opts = new();
-            string original = JsonSerializer.Serialize(settings, t, opts);
-
-            PropertyGrid pg = new()
-            {
-                Dock = DockStyle.Fill,
-                PropertySort = PropertySort.Categorized,
-                SelectedObject = settings
-            };
-
-            //if (settings is SettingsCore)
-            //{
-            //    pg.AddButton("Clear recent", null, "Clear recent file list", (_, __) => (settings as SettingsCore)!.RecentFiles.Clear());
-            //}
-
-            using Form f = new()
-            {
-                Text = title,
-                AutoScaleMode = AutoScaleMode.None,
-                Location = Cursor.Position,
-                StartPosition = FormStartPosition.Manual,
-                FormBorderStyle = FormBorderStyle.SizableToolWindow,
-                ShowIcon = false,
-                ShowInTaskbar = false
-            };
-            f.ClientSize = new(450, height); // do after construction
-
-            // Detect changes of interest.
-            List<(string name, string cat)> changes = new();
-
-            //pg.PropertyGridExChange += Pg_PropertyGridExChange;
-
-            pg.PropertyValueChanged += Pg_PropertyValueChanged;
-
-
-
-            //{
-            //    changes.Add((args.ChangedItem!.PropertyDescriptor!.Name, args.ChangedItem.PropertyDescriptor.Category));
-            //};
-
-            if (expand)
-            {
-                pg.ExpandAllGridItems();
-            }
-
-            f.Controls.Add(pg);
-
-            f.ShowDialog();
-
-            return changes;
-        }
-
-        private void Pg_PropertyValueChanged(object? s, PropertyValueChangedEventArgs e)
-        {
-            throw new NotImplementedException();
-        }
-
-        //private void Pg_PropertyGridExChange(object? sender, PropertyGridEx.PropertyGridExEventArgs e)
-        //{
-        //    throw new NotImplementedException();
-        //}
-
-
-
-
-
-
-
         /// <summary>
         /// Edit the common options in a property grid.
         /// </summary>
         void EditSettings()
         {
-            //var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
-            var changes = Edit(_settings, "User Settings", 500);
+            // Make a copy for possible restoration.
+            Type t = _settings.GetType();
+            JsonSerializerOptions opts = new();
+            string original = JsonSerializer.Serialize(_settings, t, opts);
+
+
+LogManager.MinLevelFile = _settings.FileLogLevel;
+LogManager.MinLevelNotif = _settings.NotifLogLevel;
+
+
+
+            // TODO1 doesn't detect changes in collections. Also needs some kind of cancel/restore. Also set width?
+            var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
 
             // Detect changes of interest. TODO2
             bool restart = false;
-
             foreach (var (name, cat) in changes)
             {
-                switch (name)
-                {
-                    case "TODO2":
-                        restart = true;
-                        break;
-                }
+                restart = true;
+                // switch (name)
+                // {
+                //     case "TODO2":
+                //         restart = true;
+                //         break;
+                // }
             }
 
             if (restart)
             {
-                MessageBox.Show("Restart required for device changes to take effect");
+                MessageBox.Show("Restart required for changes to take effect");
             }
         }
 
@@ -309,14 +246,14 @@ namespace Splunk.Ui
 
         void BtnGo_Click(object? sender, EventArgs e)
         {
-            InitCommands();
+            CreateCommands();
 
             // DoTree();
 
             DoCmder();
 
 
-            void InitCommands()
+            void CreateCommands()
             {
                 var rc = _settings.RegistryCommands; // alias
                 rc.Clear();
@@ -324,11 +261,9 @@ namespace Splunk.Ui
                 rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\"", "Debug stuff."));
                 rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
                 rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"));
-                //rc.Add(new("tree", "Directory", "Tree", "cmd /c tree /a /f \"%D\" | clip", "???"));
                 rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."));
                 rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."));
                 rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
-                // rc.Add(new("tree", "Directory\\Background", "Tree", "cmd /c tree /a /f \"%D\" | clip", "???"));
                 rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
                 rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
             }
@@ -357,108 +292,102 @@ namespace Splunk.Ui
                 Title[Home] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
                 */
 
-                // "CommandLine": "%SPLUNK %ID \u0022%V\u0022",
-                // arg1:cmder  arg2:dir-where-clicked
 
 
 
-                // Builtin keys:
-                // Open folder in new window: Ctrl+N
-                // Open a new tab (in Home): Ctrl+T
-                // Open selected dir in new tab: MouseButtons.Middle
 
-                var targetDir = @"C:\Dev\SplunkStuFf"; // <== fake from cmd line path
+                var targetDirXXX = @"C:\Dev\SplunkStuFf"; // <== fake from cmd line path
 
-                // Get the current path. Could use the %W arg.
-                var path = Path.GetDirectoryName(targetDir);
+                // Get the current path. Could also use the %W arg.
+                var path = Path.GetDirectoryName(targetDirXXX);
 
                 // Locate the explorer window that generated the click.
-                var explWins = SU.GetAppWindows("explorer");
-                WindowInfo? clicked = null;
+                var explorerWindows = SU.GetAppWindows("explorer");
+                WindowInfo? clickedExplorer = null;
 
-                if (explWins.Count == 0)
+                if (explorerWindows.Count == 0)
                 {
                     throw new("No visible explorers. Shouldn't happen.");
                 }
                 else
                 {
-                    foreach (var win in explWins)
+                    foreach (var win in explorerWindows)
                     {
-                        if (win.Title.ToLower() == path.ToLower())
-                        {
-                            clicked = win;
-                        }
                         // Title is the selected tab contents aka dir shown in right pane.
                         // tvInfo.AppendLine($"EXPL:{win.Title}");
+                        if (win.Title == path)
+                        {
+                            clickedExplorer = win;
+                        }
                     }
                 }
 
-                if (clicked is not null)
+                if (clickedExplorer is not null)
                 {
                     //var dirToOpen = @"C:\Dev\SplunkStuff"; // ==>
                     // Open clickDir in a new explorer.  test=C:\Dev\SplunkStuff
 
 
-                    /// <summary>Performs an operation on a specified file. See ShellExecuteEx() for args.</summary>
-                    /// Example opens a URL in the default browser:
-                    /// IntPtr result = ShellExecute(IntPtr.Zero, "open", "http://www.google.com", null, null, SW_NORMAL);
-                    //public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile,
-                    //string lpParameters, string lpDirectory, int nShow);
 
-                    // Show hidden. SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
-                    //public const short SWP_NOMOVE = 0X2;
-                    //public const short SWP_NOSIZE = 0X01;
-                    //public const short SWP_NOZORDER = 0X04;
-                    //public const int SWP_SHOWWINDOW = 0x0040;
+                    //NM.SHELLEXECUTEINFO info = new();
+                    //info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
+                    //info.lpVerb = "explore";
+                    ////info.lpFile = "cmd";
+                    ////info.lpParameters = "/B tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
+                    //info.lpFile = targetDirXXX;
+                    ////info.lpParameters = "tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
+                    ////info.lpParameters = "echo dooda > _dump.txt";
+                    ////info.lpParameters = "type Ui.deps.json";
+                    //info.nShow = (int)NM.ShowCommands.SW_SHOW; //SW_HIDE SW_SHOW
+                    ////info.fMask = (int)NM.ShellExecuteMaskFlags.SEE_MASK_NO_CONSOLE; // SEE_MASK_DEFAULT;
+                    //bool bb = NM.ShellExecuteEx(ref info);
+                    //if (bb == false || info.hInstApp < 32)
+                    //{
+                    //    Debug.WriteLine("!!!");
+                    //}
 
-                    IntPtr handle = NM.ShellExecute(Handle, "explore", targetDir, null, null, (int)NM.SWP_NOZORDER);
+                    //if (ShellExecuteEx(&sei))
+                    //{
+                    //    WaitForInputIdle(sei.hProcess, INFINITE);
+                    //    ProcessWindowsInfo Info(GetProcessId(sei.hProcess ) );
+                    //    EnumWindows((WNDENUMPROC)EnumProcessWindowsProc, reinterpret_cast<LPARAM>(&Info));
+                    //    // Use Info.Windows.....
+                    //}
+
+
+                    IntPtr newHandle = NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL);
+                    if (newHandle <= 32) // 42
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new($"ShellExecute() failed: {SU.XlatErrorCode(error)}");
+                    }
+
+
+                    Thread.Sleep(500);
+
+                    // Locate the new explorer window.
+                    var newExplorerWindows = SU.GetAppWindows("explorer");
+
+
+
                     // Move it.
-                    var r = clicked.DisplayRectangle;
-                    //bool b = NM.MoveWindow(handle, r.Left + r.Width, r.Top, r.Width, r.Height, true);
+                    var r = clickedExplorer.DisplayRectangle;
+                    bool b = NM.MoveWindow(newHandle, r.Left + r.Width, r.Top, r.Width, r.Height, true);
+                    //bool b = NM.SetWindowPos(newHandle, clickedExplorer.Handle, r.Left + r.Width, r.Top, r.Width, r.Height, (int)NM.SWP_NOZORDER);
 
-                    bool b = NM.SetWindowPos(handle, clicked.Handle, r.Left + r.Width, r.Top, r.Width, r.Height, (int)NM.ShowCommands.SW_NORMAL);
+                    if (!b)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new($"MoveWindow() failed: {SU.XlatErrorCode(error)}");
+                    }
 
-                    // show it.
-                    //NM.ShowWindow(handle, (int)NM.ShowCommands.SW_NORMAL);
-
+                    //NM.ShowWindow(newH (int)NM.ShowCommands.SW_NORMAL);
                 }
                 else
                 {
                     throw new("Couldn't find. Shouldn't happen.");
                 }
-
             }
-
-
-
-            ////////////////////////////////////////////////////////////
-            // Run using direct shell command.
-            // case "tree": // direct => cmd /c /q tree /a /f "%V" | clip
-            // still flashes, ? Try ShellExecuteEx, setting nShow=SW_HIDE. https://learn.microsoft.com/en-us/windows/win32/shell/launch
-            //cmd /B tree /a /f "C:\Dev\SplunkStuff\test_dir" | clip
-            //NM.SHELLEXECUTEINFO info = new();
-            //info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
-            //info.lpVerb = "open";
-            ////info.lpFile = "cmd";
-            ////info.lpParameters = "/B tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
-            //info.lpFile = "cmd.exe";
-            ////info.lpParameters = "tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
-            ////info.lpParameters = "echo dooda > _dump.txt";
-            //info.lpParameters = "type Ui.deps.json";
-            //info.nShow = (int)NM.ShowCommands.SW_SHOW; //SW_HIDE SW_SHOW
-            //info.fMask = (int)NM.ShellExecuteMaskFlags.SEE_MASK_NO_CONSOLE; // SEE_MASK_DEFAULT;
-            //bool b = NM.ShellExecuteEx(ref info);
-            //if (b == false || info.hInstApp < 32)
-            //{
-            //    Debug.WriteLine("!!!");
-            //}
-            //
-            //If the function succeeds, it sets the hInstApp member of the SHELLEXECUTEINFO structure to a value greater than 32.
-            //If the function fails, hInstApp is set to the SE_ERR_XXX error value that best indicates the cause of the failure.
-            //Although hInstApp is declared as an HINSTANCE for compatibility with 16 - bit Windows applications, it is not a
-            //true HINSTANCE. It can be cast only to an int and can be compared only to either the value 32 or the SE_ERR_XXX error codes.
-            //The SE_ERR_XXX error values are provided for compatibility with ShellExecute.To retrieve more accurate error information,
-            //use GetLastError. It may return one of the following values.
         }
         #endregion
     }

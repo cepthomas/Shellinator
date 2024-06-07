@@ -82,7 +82,7 @@
             Controls.Add(btnGo);
             Controls.Add(tvInfo);
             Name = "MainForm";
-            Text = "Form1";
+            Text = "Splunk!";
             ResumeLayout(false);
         }
 
