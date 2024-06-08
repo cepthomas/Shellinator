@@ -1,0 +1,64 @@
+{
+  "FileLogLevel": "Trace",
+  "NotifLogLevel": "Debug",
+  "RegistryCommands": [
+    // {
+    //   "Id": "test",
+    //   "RegPath": "Directory",
+    //   "Text": "\u003E\u003E\u003E\u003E\u003E Test",
+    //   "CommandLine": "%SPLUNK %ID \u0022%D\u0022",
+    //   "Description": "Debug stuff."
+    // },
+    {
+      "Id": "cmder",
+      "RegPath": "Directory",
+      "Text": "Commander",
+      "CommandLine": "%SPLUNK %ID \u0022%D\u0022",
+      "Description": "Open a new explorer next to the current."
+    },
+    {
+      "Id": "tree",
+      "RegPath": "Directory",
+      "Text": "Tree",
+      "CommandLine": "%SPLUNK %ID \u0022%D\u0022",
+      "Description": "Copy a tree of selected directory to clipboard"
+    },
+    {
+      "Id": "openst",
+      "RegPath": "Directory",
+      "Text": "Open in Sublime",
+      "CommandLine": "\u0022C:\\Program Files\\Sublime Text\\subl\u0022 --launch-or-new-window \u0022%D\u0022",
+      "Description": "Open selected directory in Sublime Text."
+    },
+    {
+      "Id": "findev",
+      "RegPath": "Directory",
+      "Text": "Find in Everything",
+      "CommandLine": "C:\\Program Files\\Everything\\everything -parent \u0022%D\u0022",
+      "Description": "Open selected directory in Everything."
+    },
+    {
+      "Id": "tree",
+      "RegPath": "Directory\\Background",
+      "Text": "Tree",
+      "CommandLine": "%SPLUNK %ID \u0022%W\u0022",
+      "Description": "Copy a tree here to clipboard."
+    },
+    {
+      "Id": "openst",
+      "RegPath": "Directory\\Background",
+      "Text": "Open in Sublime",
+      "CommandLine": "\u0022C:\\Program Files\\Sublime Text\\subl\u0022 --launch-or-new-window \u0022%W\u0022",
+      "Description": "Open here in Sublime Text."
+    },
+    {
+      "Id": "findev",
+      "RegPath": "Directory\\Background",
+      "Text": "Find in Everything",
+      "CommandLine": "C:\\Program Files\\Everything\\everything -parent \u0022%W\u0022",
+      "Description": "Open here in Everything."
+    }
+  ],
+  "FormGeometry": "224,224,1276,802",
+  "RecentFiles": []
+}

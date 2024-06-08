@@ -21,11 +21,13 @@ namespace Splunk.Ui
         [DisplayName("File Log Level")]
         [Description("Log level for file write.")]
         [Browsable(true)]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public LogLevel FileLogLevel { get; set; } = LogLevel.Trace;
 
         [DisplayName("File Log Level")]
         [Description("Log level for UI notification.")]
         [Browsable(true)]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public LogLevel NotifLogLevel { get; set; } = LogLevel.Debug;
 
         [DisplayName("Registry Commands")]

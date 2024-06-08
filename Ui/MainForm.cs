@@ -8,13 +8,13 @@ using System.Text;
 using System.Reflection;
 using System.Text.Json;
 using System.Security.Policy;
+using System.Runtime.InteropServices;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
-using System.Runtime.InteropServices;
 
 
 namespace Splunk.Ui
@@ -39,6 +39,13 @@ namespace Splunk.Ui
         /// <summary>Hook message processing.</summary>
         readonly int _hookMsg;
         #endregion
+
+        // //https://learn.microsoft.com/en-us/dotnet/api/system.threading.manualresetevent?view=net-8.0
+        ManualResetEvent _newWindowEvent = new ManualResetEvent(false);
+
+        /// <summary>New window created.</summary>
+        IntPtr _newHandle = 0;
+
 
         #region Lifecycle
         /// <summary>Constructor.</summary>
@@ -87,7 +94,7 @@ namespace Splunk.Ui
             NM.RegisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, ALL_WINDOWS_KEY);
 
             // Debug stuff.
-            btnGo.Click += BtnGo_Click;
+            btnGo.Click += (sender, e) => { DoCmder(); };
         }
 
         /// <summary>
@@ -97,7 +104,7 @@ namespace Splunk.Ui
         protected override void OnShown(EventArgs e)
         {
             _sw.Stop();
-            _logger.Debug($"Startup msec: {_sw.ElapsedMilliseconds}"); // 147 msec
+            _logger.Debug($"Startup msec: {_sw.ElapsedMilliseconds}");
             base.OnShown(e);
         }
 
@@ -135,56 +142,39 @@ namespace Splunk.Ui
                 NM.UnregisterHotKey(Handle, MakeKeyId(VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
                 NM.UnregisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
 
+                _newWindowEvent?.Dispose();
+
                 components?.Dispose();
             }
-
             base.Dispose(disposing);
         }
         #endregion
 
-
-
-
+        #region Settings
         /// <summary>
-        /// Edit the common options in a property grid.
+        /// Edit the common options in a property grid. TODO2 best way to handle these + writes to registry? settings_default.json?
         /// </summary>
         void EditSettings()
         {
-            // Make a copy for possible restoration.
-            Type t = _settings.GetType();
-            JsonSerializerOptions opts = new();
-            string original = JsonSerializer.Serialize(_settings, t, opts);
+            // // Make a copy for possible restoration.
+            // Type t = _settings.GetType();
+            // JsonSerializerOptions opts = new();
+            // string original = JsonSerializer.Serialize(_settings, t, opts);
 
-
-LogManager.MinLevelFile = _settings.FileLogLevel;
-LogManager.MinLevelNotif = _settings.NotifLogLevel;
-
-
-
-            // TODO1 doesn't detect changes in collections. Also needs some kind of cancel/restore. Also set width?
+            // Doesn't detect changes in collections. Also needs some kind of cancel/restore. Also set width?
             var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
 
-            // Detect changes of interest. TODO2
-            bool restart = false;
-            foreach (var (name, cat) in changes)
-            {
-                restart = true;
-                // switch (name)
-                // {
-                //     case "TODO2":
-                //         restart = true;
-                //         break;
-                // }
-            }
+            // Detect changes of interest.
+            // foreach (var (name, cat) in changes)
 
-            if (restart)
-            {
-                MessageBox.Show("Restart required for changes to take effect");
-            }
+            LogManager.MinLevelFile = _settings.FileLogLevel;
+            LogManager.MinLevelNotif = _settings.NotifLogLevel;
         }
+        #endregion
 
+        #region Windows hooks
         /// <summary>
-        /// Handle the hooked shell messages: shell window lifetime and hotkeys. Not used currently.
+        /// Handle the hooked shell messages: shell window lifetime and hotkeys.
         /// </summary>
         /// <param name="message"></param>
         protected override void WndProc(ref Message message)
@@ -197,15 +187,19 @@ LogManager.MinLevelNotif = _settings.NotifLogLevel;
                 switch (shellEvent)
                 {
                     case NM.ShellEvents.HSHELL_WINDOWCREATED:
-                        _logger.Debug($"WindowCreatedEvent:{handle}");
+                        WindowInfo wi = SU.GetWindowInfo(handle);
+                        _logger.Debug($"WindowCreatedEvent:{handle} {wi.Title}");
+                        _newHandle = handle;
+                        // Signal event.
+                        _newWindowEvent.Set();
                         break;
 
                     case NM.ShellEvents.HSHELL_WINDOWACTIVATED:
-                        _logger.Debug($"WindowActivatedEvent:{handle}");
+                        //_logger.Debug($"WindowActivatedEvent:{handle}");
                         break;
 
                     case NM.ShellEvents.HSHELL_WINDOWDESTROYED:
-                        _logger.Debug($"WindowDestroyedEvent:{handle}");
+                        //_logger.Debug($"WindowDestroyedEvent:{handle}");
                         break;
                 }
             }
@@ -240,155 +234,116 @@ LogManager.MinLevelNotif = _settings.NotifLogLevel;
         {
             return mod ^ key ^ Handle.ToInt32();
         }
-
+        #endregion
 
         #region Debug stuff
-
-        void BtnGo_Click(object? sender, EventArgs e)
+        void DoCmder()
         {
-            CreateCommands();
-
-            // DoTree();
-
-            DoCmder();
-
-
-            void CreateCommands()
-            {
-                var rc = _settings.RegistryCommands; // alias
-                rc.Clear();
-
-                rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\"", "Debug stuff."));
-                rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
-                rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"));
-                rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."));
-                rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."));
-                rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
-                rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
-                rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
-            }
-
-
-
-            void DoCmder()
+            try
             {
                 // case "cmder": // Put in Splunk.exe when working.
-                // TODO1 Open a new explorer window at the dir selected in the first one.
+                // Open a new explorer window at the dir selected in the first one.
                 // Locate it on one side or other of the first, same size.
                 // Option for full screen?
                 //https://stackoverflow.com/questions/1190423/using-setwindowpos-in-c-sharp-to-move-windows-around
 
+                // TODO1 handle errors consistently.
+
+                var targetDirXXX = @"C:\Dev\SplunkStuff"; // TODO1 fake from cmd line path - the rt click dir
+
+                // Get the current explorer path. Note: could also use the %W arg.
+                var currentPath = Path.GetDirectoryName(targetDirXXX);
+
+                _logger.Debug($"Before ShellExecute {_newHandle}");
+
+                // Create the new explorer.
+                var res = NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL); // SW_HIDE?
+                if (res <= 32)
+                {
+                    int error = Marshal.GetLastWin32Error();
+                    throw new($"ShellExecute() failed: {SU.XlatErrorCode(error)}");
+                }
+
+                // Wait for new window to be created. TODO1 fail
+                _logger.Debug($"Before wait {_newHandle}");
+                _ = _newWindowEvent.WaitOne();
+                _logger.Debug($"After wait {_newHandle}");
+                //Thread.Sleep(500);
 
 
-                /*
-                >>> With no explorers
-                Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
+                // Locate the two explorer windows.
+                WindowInfo? currentExplorer = null;
+                WindowInfo? newExplorer = null;
 
-                >>> With two explorers, 1 tab, 2 tab
-                Title[Program Manager] Geometry[X: 0 Y: 0 W: 1920 H: 1080] IsVisible[True] Handle[65872] Pid[5748]
-                Title[C:\Users\cepth\OneDrive\OneDriveDocuments] Geometry[X: 501 Y: 0 W: 1258 H: 923] IsVisible[True] Handle[265196] Pid[5748]
-                Title[C:\Dev] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
-                or  this:
-                Title[Home] Geometry[X: 469 Y: 94 W: 1258 H: 923] IsVisible[True] Handle[589906] Pid[5748]
-                */
-
-
-
-
-
-                var targetDirXXX = @"C:\Dev\SplunkStuFf"; // <== fake from cmd line path
-
-                // Get the current path. Could also use the %W arg.
-                var path = Path.GetDirectoryName(targetDirXXX);
-
-                // Locate the explorer window that generated the click.
                 var explorerWindows = SU.GetAppWindows("explorer");
-                WindowInfo? clickedExplorer = null;
-
-                if (explorerWindows.Count == 0)
+                foreach (var win in explorerWindows)
                 {
-                    throw new("No visible explorers. Shouldn't happen.");
-                }
-                else
-                {
-                    foreach (var win in explorerWindows)
-                    {
-                        // Title is the selected tab contents aka dir shown in right pane.
-                        // tvInfo.AppendLine($"EXPL:{win.Title}");
-                        if (win.Title == path)
-                        {
-                            clickedExplorer = win;
-                        }
-                    }
+                    if (win.Title == currentPath) { currentExplorer = win; }
+                    if (win.Title == targetDirXXX) { newExplorer = win; }
                 }
 
-                if (clickedExplorer is not null)
+                if (currentExplorer is null || newExplorer is null)
                 {
-                    //var dirToOpen = @"C:\Dev\SplunkStuff"; // ==>
-                    // Open clickDir in a new explorer.  test=C:\Dev\SplunkStuff
-
-
-
-                    //NM.SHELLEXECUTEINFO info = new();
-                    //info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(info);
-                    //info.lpVerb = "explore";
-                    ////info.lpFile = "cmd";
-                    ////info.lpParameters = "/B tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
-                    //info.lpFile = targetDirXXX;
-                    ////info.lpParameters = "tree /a /f \"C:\\Dev\\SplunkStuff\\test_dir\" | clip";
-                    ////info.lpParameters = "echo dooda > _dump.txt";
-                    ////info.lpParameters = "type Ui.deps.json";
-                    //info.nShow = (int)NM.ShowCommands.SW_SHOW; //SW_HIDE SW_SHOW
-                    ////info.fMask = (int)NM.ShellExecuteMaskFlags.SEE_MASK_NO_CONSOLE; // SEE_MASK_DEFAULT;
-                    //bool bb = NM.ShellExecuteEx(ref info);
-                    //if (bb == false || info.hInstApp < 32)
-                    //{
-                    //    Debug.WriteLine("!!!");
-                    //}
-
-                    //if (ShellExecuteEx(&sei))
-                    //{
-                    //    WaitForInputIdle(sei.hProcess, INFINITE);
-                    //    ProcessWindowsInfo Info(GetProcessId(sei.hProcess ) );
-                    //    EnumWindows((WNDENUMPROC)EnumProcessWindowsProc, reinterpret_cast<LPARAM>(&Info));
-                    //    // Use Info.Windows.....
-                    //}
-
-
-                    IntPtr newHandle = NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL);
-                    if (newHandle <= 32) // 42
-                    {
-                        int error = Marshal.GetLastWin32Error();
-                        throw new($"ShellExecute() failed: {SU.XlatErrorCode(error)}");
-                    }
-
-
-                    Thread.Sleep(500);
-
-                    // Locate the new explorer window.
-                    var newExplorerWindows = SU.GetAppWindows("explorer");
-
-
-
-                    // Move it.
-                    var r = clickedExplorer.DisplayRectangle;
-                    bool b = NM.MoveWindow(newHandle, r.Left + r.Width, r.Top, r.Width, r.Height, true);
-                    //bool b = NM.SetWindowPos(newHandle, clickedExplorer.Handle, r.Left + r.Width, r.Top, r.Width, r.Height, (int)NM.SWP_NOZORDER);
-
-                    if (!b)
-                    {
-                        int error = Marshal.GetLastWin32Error();
-                        throw new($"MoveWindow() failed: {SU.XlatErrorCode(error)}");
-                    }
-
-                    //NM.ShowWindow(newH (int)NM.ShowCommands.SW_NORMAL);
+                    int error = Marshal.GetLastWin32Error();
+                    throw new($"Shouldn't happen {SU.XlatErrorCode(error)}");
                 }
-                else
+
+                _logger.Debug($"currentExplorer:{currentExplorer.Handle}");
+                _logger.Debug($"newExplorer:{newExplorer.Handle}");
+
+                // TODO1 Relocate the windows to taste.
+                //Set the first window as foreground
+                //send Windows key + left arrow
+                //Set the second window as foreground
+                //send Windows key + right arrow
+
+                // This works sort of.
+                // Width 1920  Height 1080
+                int w = 900;
+                int h = 900;
+                int t = 50;
+                int l = 50;
+
+                bool b = NM.MoveWindow(currentExplorer.Handle, l, t, w, h, true);
+                if (!b)
                 {
-                    throw new("Couldn't find. Shouldn't happen.");
+                    int error = Marshal.GetLastWin32Error();
+                    throw new($"MoveWindow() 1 failed: {SU.XlatErrorCode(error)}");
                 }
+                NM.BringWindowToTop(currentExplorer.Handle);
+
+                b = NM.MoveWindow(newExplorer.Handle, l + w, t, w, h, true);
+                if (!b)
+                {
+                    int error = Marshal.GetLastWin32Error();
+                    throw new($"MoveWindow() 2 failed: {SU.XlatErrorCode(error)}");
+                }
+                NM.BringWindowToTop(newExplorer.Handle);
             }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message);
+            }
+
+            _ = _newWindowEvent.Reset();
         }
+
+
+
+        // void CreateCommands() use settings_default.json 
+        // {
+        //     var rc = _settings.RegistryCommands; // alias
+        //     rc.Clear();
+
+        //     rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\"", "Debug stuff."));
+        //     rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
+        //     rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"));
+        //     rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."));
+        //     rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."));
+        //     rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
+        //     rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
+        //     rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
+        // }
         #endregion
     }
 }

@@ -11,12 +11,25 @@ using NM = Splunk.Common.NativeMethods;
 
 namespace Splunk.Common
 {
-    /// <summary>Extra shell stuff.</summary>
-    public class ShellUtils2
+    /// <summary>Storage of extra shell stuff.</summary>
+    public class NativeExtra
     {
         #region shlwapi.dll
         [DllImport("shlwapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern uint AssocQueryString(AssocF flags, AssocStr str, string pszAssoc, string pszExtra, [Out] StringBuilder pszOut, [In][Out] ref uint pcchOut);
+        /* shlwapi.dll - a collection of functions that provide support for various shell operations, such as 
+        file and folder manipulation, user interface elements, and internet-related tasks.
+
+        AssocCreate  AssocGetPerceivedType  AssocQueryString  ColorHLSToRGB  ColorRGBToHLS  HashData  IPreviewHandler  IsOS
+        PathAddBackslash  PathAppend  PathBuildRoot  PathCanonicalize  PathCombine  PathCommonPrefix  PathCompactPath
+        PathCompactPathEx  PathCreateFromUrl  PathFileExists  PathFindNextComponent  PathFindOnPath  PathGetArgs
+        PathIsDirectory  PathIsFileSpec  PathIsHTMLFile  PathIsNetworkPath  PathIsRelative  PathIsRoot  PathIsSameRoot
+        PathIsUNC  PathIsUNCServer  PathIsUNCServerShare  PathIsURL  PathMatchSpec  PathQuoteSpaces  PathRelativePathTo
+        PathRemoveArgs  PathRemoveBackslash  PathRemoveBlanks  PathRemoveExtension  PathRemoveFileSpec  PathRenameExtension
+        PathStripPath  PathStripToRoot  PathUndecorate  PathUnExpandEnvStrings  PathUnQuoteSpaces  SHAutoComplete
+        SHCreateStreamOnFile  SHCreateStreamOnFileEx  SHLoadIndirectString  SHMessageBoxCheck  StrCmpLogicalW
+        StrFormatByteSize  StrFormatByteSizeA  StrFromTimeInterval  UrlCreateFromPath
+        */
         #endregion
 
         [Flags]
