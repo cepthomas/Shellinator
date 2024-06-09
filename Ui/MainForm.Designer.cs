@@ -21,23 +21,24 @@
             btnInitReg = new Button();
             btnClearReg = new Button();
             btnEdit = new Button();
+            btnDump = new Button();
             SuspendLayout();
             // 
             // tvInfo
             // 
             tvInfo.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             tvInfo.BorderStyle = BorderStyle.FixedSingle;
-            tvInfo.Location = new Point(12, 64);
+            tvInfo.Location = new Point(12, 53);
             tvInfo.MaxText = 50000;
             tvInfo.Name = "tvInfo";
             tvInfo.Prompt = "";
-            tvInfo.Size = new Size(1196, 469);
+            tvInfo.Size = new Size(1130, 469);
             tvInfo.TabIndex = 1;
             tvInfo.WordWrap = true;
             // 
             // btnGo
             // 
-            btnGo.Location = new Point(76, 18);
+            btnGo.Location = new Point(76, 13);
             btnGo.Name = "btnGo";
             btnGo.Size = new Size(94, 29);
             btnGo.TabIndex = 2;
@@ -46,7 +47,7 @@
             // 
             // btnInitReg
             // 
-            btnInitReg.Location = new Point(222, 24);
+            btnInitReg.Location = new Point(333, 13);
             btnInitReg.Name = "btnInitReg";
             btnInitReg.Size = new Size(94, 29);
             btnInitReg.TabIndex = 3;
@@ -55,7 +56,7 @@
             // 
             // btnClearReg
             // 
-            btnClearReg.Location = new Point(343, 24);
+            btnClearReg.Location = new Point(454, 13);
             btnClearReg.Name = "btnClearReg";
             btnClearReg.Size = new Size(94, 29);
             btnClearReg.TabIndex = 4;
@@ -64,18 +65,28 @@
             // 
             // btnEdit
             // 
-            btnEdit.Location = new Point(498, 23);
+            btnEdit.Location = new Point(609, 12);
             btnEdit.Name = "btnEdit";
             btnEdit.Size = new Size(94, 29);
             btnEdit.TabIndex = 5;
             btnEdit.Text = "Edit";
             btnEdit.UseVisualStyleBackColor = true;
             // 
+            // btnDump
+            // 
+            btnDump.Location = new Point(197, 12);
+            btnDump.Name = "btnDump";
+            btnDump.Size = new Size(94, 29);
+            btnDump.TabIndex = 6;
+            btnDump.Text = "Dump";
+            btnDump.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1220, 545);
+            Controls.Add(btnDump);
             Controls.Add(btnEdit);
             Controls.Add(btnClearReg);
             Controls.Add(btnInitReg);
@@ -93,5 +104,6 @@
         private Button btnInitReg;
         private Button btnClearReg;
         private Button btnEdit;
+        private Button btnDump;
     }
 }

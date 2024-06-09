@@ -76,6 +76,12 @@ namespace Splunk.Ui
             // Manage commands in registry.
             btnInitReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.CreateRegistryEntry(c, Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
             btnClearReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.RemoveRegistryEntry(c)); };
+            btnDump.Click += (sender, e) => {
+                foreach (var item in SU.GetAppWindows("explorer"))
+                {
+                    tvInfo.AppendLine(item.ToString());                    
+                }
+            };
 
             // Shell hook handler.
             // https://stackoverflow.com/questions/4544468/why-my-wndproc-doesnt-receive-shell-hook-messages-if-the-app-is-set-as-default

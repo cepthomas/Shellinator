@@ -201,15 +201,23 @@ namespace Splunk.Common
         [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
 
+
+
+
         /// <summary>Performs an operation on a specified file.
         /// Args: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa.
         /// </summary>
         [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, string lpParameters, string lpDirectory, int nShow);
 
+
+
         /// <summary>Overload for nullable args.</summary>
         [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, IntPtr lpParameters, IntPtr lpDirectory, int nShow);
+
+
+
 
         [DllImport("shell32.dll")]
         public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbSizeFileInfo, uint uFlags);
