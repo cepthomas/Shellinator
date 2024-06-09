@@ -41,10 +41,13 @@ namespace Splunk.Ui
         #endregion
 
         // //https://learn.microsoft.com/en-us/dotnet/api/system.threading.manualresetevent?view=net-8.0
-        ManualResetEvent _newWindowEvent = new ManualResetEvent(false);
+        ManualResetEvent _newWindowEvent_old = new ManualResetEvent(false);
 
         /// <summary>New window created.</summary>
-        IntPtr _newHandle = 0;
+        //IntPtr _newHandle_old = 0;
+
+        /// <summary>New window created.</summary>
+        string _newWindow_old = "";
 
 
         #region Lifecycle
@@ -142,7 +145,7 @@ namespace Splunk.Ui
                 NM.UnregisterHotKey(Handle, MakeKeyId(VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
                 NM.UnregisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
 
-                _newWindowEvent?.Dispose();
+//                _newWindowEvent?.Dispose();
 
                 components?.Dispose();
             }
@@ -189,9 +192,19 @@ namespace Splunk.Ui
                     case NM.ShellEvents.HSHELL_WINDOWCREATED:
                         WindowInfo wi = SU.GetWindowInfo(handle);
                         _logger.Debug($"WindowCreatedEvent:{handle} {wi.Title}");
-                        _newHandle = handle;
-                        // Signal event.
-                        _newWindowEvent.Set();
+
+                        //if (wi.Title == _newWindow)
+                        //{
+                        //    // Signal event.
+                        //    _newWindowEvent.Set();
+                        //}
+
+
+                        //_newHandle = handle;
+                        //// Signal event.
+                        //_newWindowEvent.Set();
+
+
                         break;
 
                     case NM.ShellEvents.HSHELL_WINDOWACTIVATED:
@@ -241,12 +254,7 @@ namespace Splunk.Ui
         {
             try
             {
-                // case "cmder": // Put in Splunk.exe when working.
-                // Open a new explorer window at the dir selected in the first one.
-                // Locate it on one side or other of the first, same size.
-                // Option for full screen?
-                //https://stackoverflow.com/questions/1190423/using-setwindowpos-in-c-sharp-to-move-windows-around
-
+                // TODO2 Option for full screen?
                 // TODO1 handle errors consistently.
 
                 var targetDirXXX = @"C:\Dev\SplunkStuff"; // TODO1 fake from cmd line path - the rt click dir
@@ -254,79 +262,174 @@ namespace Splunk.Ui
                 // Get the current explorer path. Note: could also use the %W arg.
                 var currentPath = Path.GetDirectoryName(targetDirXXX);
 
-                _logger.Debug($"Before ShellExecute {_newHandle}");
+                // Locate the originator.
+                var wins = SU.GetAppWindows("explorer");
 
-                // Create the new explorer.
-                var res = NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL); // SW_HIDE?
+                WindowInfo? currentExplorer = wins.Where(w => w.Title == currentPath).FirstOrDefault();
+
+                // Create a copy of the first explorer -> left pane.
+                NM.ShellExecute(Handle, "explore", currentPath, null, null, (int)NM.ShowCommands.SW_NORMAL);
+
+                // Create the new explorer -> right pane.
+                NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL);
+
+                // Wait for new windows to be created.
+                bool ok = false;
+                int tries = 0;
+                WindowInfo? leftPane = null;
+                WindowInfo? rightPane = null;
+                for (tries = 0; tries < 10 && !ok; tries++) // ~4
+                {
+                    Thread.Sleep(50);
+
+                    // Locate the two new explorer windows.
+                    wins = SU.GetAppWindows("explorer");
+                    foreach (var win in wins)
+                    {
+                        if (win.Title == currentPath && win.Handle != currentExplorer.Handle) { leftPane = win; }
+                        if (win.Title == targetDirXXX) { rightPane = win; }
+                    }
+
+                    ok = leftPane is not null && rightPane is not null;
+                }
+
+                _logger.Debug($"tries:{tries} currentExplorer:{currentExplorer?.Handle} leftPane:{leftPane?.Handle} rightPane:{rightPane?.Handle}");
+
+                if (ok)
+                {
+                    // Relocate the windows to taste.  For 1920x1080 display.
+                    int w = 900;
+                    int h = 900;
+                    int t = 50;
+                    int l = 50;
+
+                    bool b = NM.MoveWindow(leftPane.Handle, l, t, w, h, true);
+                    NM.SetForegroundWindow(leftPane.Handle);
+                    NM.BringWindowToTop(leftPane.Handle);
+
+                    b = NM.MoveWindow(rightPane.Handle, l + w, t, w, h, true);
+                    NM.SetForegroundWindow(rightPane.Handle);
+                    NM.BringWindowToTop(rightPane.Handle);
+                }
+
+                if (!ok)
+                {
+                    throw new($"Failed to find explorer windows");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex.Message);
+            }
+        }
+
+        void DoCmder_all()
+        {
+            try
+            {
+                // TODO2 Option for full screen?
+                // TODO1 handle errors consistently.
+
+                var targetDirXXX = @"C:\Dev\SplunkStuff"; // TODO1 fake from cmd line path - the rt click dir
+
+                // Get the current explorer path. Note: could also use the %W arg.
+                var currentPath = Path.GetDirectoryName(targetDirXXX);
+
+                // Locate the originator.
+                //WindowInfo? currentExplorer = null;
+                var wins = SU.GetAppWindows("explorer");
+
+                WindowInfo? currentExplorer = wins.Where(w => w.Title == currentPath).FirstOrDefault();
+
+                //wins.ForEach(win => { if (win.Title == currentPath) { currentExplorer = win; } });
+                //foreach (var win in wins)
+                //{
+                //    if (win.Title == currentPath) { currentExplorer = win; }
+                //}
+                //if (currentExplorer is null)
+                //{
+                //    throw new($"Couldn't find currentExplorer. Should never happen.");
+                //}
+
+
+                // Create a copy of the first explorer - left pane.
+                //NM.ShellExecute(Handle, "explore", currentPath, null, null, (int)NM.ShowCommands.SW_NORMAL);
+                var res = NM.ShellExecute(Handle, "explore", currentPath, null, null, (int)NM.ShowCommands.SW_NORMAL); // SW_HIDE?
                 if (res <= 32)
                 {
                     int error = Marshal.GetLastWin32Error();
                     throw new($"ShellExecute() failed: {SU.XlatErrorCode(error)}");
                 }
 
-                // Wait for new window to be created. TODO1 fail
-                _logger.Debug($"Before wait {_newHandle}");
-                _ = _newWindowEvent.WaitOne();
-                _logger.Debug($"After wait {_newHandle}");
-                //Thread.Sleep(500);
-
-
-                // Locate the two explorer windows.
-                WindowInfo? currentExplorer = null;
-                WindowInfo? newExplorer = null;
-
-                var explorerWindows = SU.GetAppWindows("explorer");
-                foreach (var win in explorerWindows)
-                {
-                    if (win.Title == currentPath) { currentExplorer = win; }
-                    if (win.Title == targetDirXXX) { newExplorer = win; }
-                }
-
-                if (currentExplorer is null || newExplorer is null)
+                // Create the new explorer - right pane.
+                //NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL);
+                res = NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL); // SW_HIDE?
+                if (res <= 32)
                 {
                     int error = Marshal.GetLastWin32Error();
-                    throw new($"Shouldn't happen {SU.XlatErrorCode(error)}");
+                    throw new($"ShellExecute() failed: {SU.XlatErrorCode(error)}");
                 }
 
-                _logger.Debug($"currentExplorer:{currentExplorer.Handle}");
-                _logger.Debug($"newExplorer:{newExplorer.Handle}");
-
-                // TODO1 Relocate the windows to taste.
-                //Set the first window as foreground
-                //send Windows key + left arrow
-                //Set the second window as foreground
-                //send Windows key + right arrow
-
-                // This works sort of.
-                // Width 1920  Height 1080
-                int w = 900;
-                int h = 900;
-                int t = 50;
-                int l = 50;
-
-                bool b = NM.MoveWindow(currentExplorer.Handle, l, t, w, h, true);
-                if (!b)
+                // Wait for new windows to be created.
+                bool ok = false;
+                int tries = 0;
+                WindowInfo? leftPane = null;
+                WindowInfo? rightPane = null;
+                for (tries = 0; tries < 10 && !ok; tries++) // ~4
                 {
-                    int error = Marshal.GetLastWin32Error();
-                    throw new($"MoveWindow() 1 failed: {SU.XlatErrorCode(error)}");
-                }
-                NM.BringWindowToTop(currentExplorer.Handle);
+                    Thread.Sleep(50);
 
-                b = NM.MoveWindow(newExplorer.Handle, l + w, t, w, h, true);
-                if (!b)
-                {
-                    int error = Marshal.GetLastWin32Error();
-                    throw new($"MoveWindow() 2 failed: {SU.XlatErrorCode(error)}");
+                    // Locate the two new explorer windows.
+                    wins = SU.GetAppWindows("explorer");
+                    foreach (var win in wins)
+                    {
+                        if (win.Title == currentPath && win.Handle != currentExplorer.Handle) { leftPane = win; }
+                        if (win.Title == targetDirXXX) { rightPane = win; }
+                    }
+
+                    ok = leftPane is not null && rightPane is not null;
                 }
-                NM.BringWindowToTop(newExplorer.Handle);
+
+                _logger.Debug($"tries:{tries} currentExplorer:{currentExplorer?.Handle} leftPane:{leftPane?.Handle} rightPane:{rightPane?.Handle}");
+
+                if (ok)
+                {
+                    // Relocate the windows to taste.  For 1920x1080 display.
+                    int w = 900;
+                    int h = 900;
+                    int t = 50;
+                    int l = 50;
+
+                    bool b = NM.MoveWindow(leftPane.Handle, l, t, w, h, true);
+                    if (!b)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new($"MoveWindow() 1 failed: {SU.XlatErrorCode(error)}");
+                    }
+                    NM.SetForegroundWindow(leftPane.Handle);
+                    NM.BringWindowToTop(leftPane.Handle);
+
+                    b = NM.MoveWindow(rightPane.Handle, l + w, t, w, h, true);
+                    if (!b)
+                    {
+                        int error = Marshal.GetLastWin32Error();
+                        throw new($"MoveWindow() 2 failed: {SU.XlatErrorCode(error)}");
+                    }
+                    NM.SetForegroundWindow(rightPane.Handle);
+                    NM.BringWindowToTop(rightPane.Handle);
+                }
+
+                if (!ok)
+                {
+                    throw new($"Failed to find explorer windows");
+                }
             }
             catch (Exception ex)
             {
                 _logger.Error(ex.Message);
             }
-
-            _ = _newWindowEvent.Reset();
         }
+
 
 
 
