@@ -11,6 +11,7 @@ using System.Drawing;
 
 // TODO2 https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
 
+// https://www.p-invoke.net/
 
 namespace Splunk.Common
 {
@@ -179,8 +180,8 @@ namespace Splunk.Common
             public int Top;     // y position of upper-left corner
             public int Right;   // x position of lower-right corner
             public int Bottom;  // y position of lower-right corner
-            public int Width    { get { return Right - Left; } }
-            public int Height   { get { return Bottom - Top; } }
+            public readonly int Width    { get { return Right - Left; } }
+            public readonly int Height   { get { return Bottom - Top; } }
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -205,6 +206,10 @@ namespace Splunk.Common
         /// </summary>
         [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, string lpParameters, string lpDirectory, int nShow);
+
+        /// <summary>Overload for nullable args.</summary>
+        [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, IntPtr lpParameters, IntPtr lpDirectory, int nShow);
 
         [DllImport("shell32.dll")]
         public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbSizeFileInfo, uint uFlags);

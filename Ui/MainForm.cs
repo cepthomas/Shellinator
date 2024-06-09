@@ -40,16 +40,6 @@ namespace Splunk.Ui
         readonly int _hookMsg;
         #endregion
 
-        // //https://learn.microsoft.com/en-us/dotnet/api/system.threading.manualresetevent?view=net-8.0
-        ManualResetEvent _newWindowEvent_old = new ManualResetEvent(false);
-
-        /// <summary>New window created.</summary>
-        //IntPtr _newHandle_old = 0;
-
-        /// <summary>New window created.</summary>
-        string _newWindow_old = "";
-
-
         #region Lifecycle
         /// <summary>Constructor.</summary>
         public MainForm()
@@ -69,6 +59,7 @@ namespace Splunk.Ui
             LogManager.Run($"{appDir}\\log.txt", 100000);
 
             // Main form.
+            StartPosition = FormStartPosition.Manual;
             Location = _settings.FormGeometry.Location;
             Size = _settings.FormGeometry.Size;
             WindowState = FormWindowState.Normal;
@@ -141,11 +132,9 @@ namespace Splunk.Ui
         {
             if (disposing)
             {
-                NM.DeregisterShellHookWindow(Handle);
-                NM.UnregisterHotKey(Handle, MakeKeyId(VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
-                NM.UnregisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
-
-//                _newWindowEvent?.Dispose();
+                _ = NM.DeregisterShellHookWindow(Handle);
+                _ = NM.UnregisterHotKey(Handle, MakeKeyId(VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
+                _ = NM.UnregisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
 
                 components?.Dispose();
             }
@@ -254,31 +243,30 @@ namespace Splunk.Ui
         {
             try
             {
-                // TODO2 Option for full screen?
-                // TODO1 handle errors consistently.
+                // TODO2 Option for custom sizes, full screen?
+                // TODO1 handle errors.
 
                 var targetDirXXX = @"C:\Dev\SplunkStuff"; // TODO1 fake from cmd line path - the rt click dir
 
                 // Get the current explorer path. Note: could also use the %W arg.
-                var currentPath = Path.GetDirectoryName(targetDirXXX);
+                string? currentPath = Path.GetDirectoryName(targetDirXXX) ?? throw new InvalidOperationException($"Couldn't get path for {targetDirXXX}");
 
                 // Locate the originator.
                 var wins = SU.GetAppWindows("explorer");
 
-                WindowInfo? currentExplorer = wins.Where(w => w.Title == currentPath).FirstOrDefault();
+                WindowInfo? currentExplorer = wins.Where(w => w.Title == currentPath).FirstOrDefault() ?? throw new InvalidOperationException($"Couldn't get originator explorer for {targetDirXXX}");
 
                 // Create a copy of the first explorer -> left pane.
-                NM.ShellExecute(Handle, "explore", currentPath, null, null, (int)NM.ShowCommands.SW_NORMAL);
+                NM.ShellExecute(Handle, "explore", currentPath, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
 
                 // Create the new explorer -> right pane.
-                NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL);
+                NM.ShellExecute(Handle, "explore", targetDirXXX, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
 
                 // Wait for new windows to be created.
-                bool ok = false;
                 int tries = 0;
                 WindowInfo? leftPane = null;
                 WindowInfo? rightPane = null;
-                for (tries = 0; tries < 10 && !ok; tries++) // ~4
+                for (tries = 0; tries < 10 && leftPane is null && rightPane is null; tries++) // ~4
                 {
                     Thread.Sleep(50);
 
@@ -289,33 +277,24 @@ namespace Splunk.Ui
                         if (win.Title == currentPath && win.Handle != currentExplorer.Handle) { leftPane = win; }
                         if (win.Title == targetDirXXX) { rightPane = win; }
                     }
-
-                    ok = leftPane is not null && rightPane is not null;
                 }
 
-                _logger.Debug($"tries:{tries} currentExplorer:{currentExplorer?.Handle} leftPane:{leftPane?.Handle} rightPane:{rightPane?.Handle}");
+                if (leftPane is null) throw new InvalidOperationException($"Couldn't create left pane for {currentPath}");
+                if (rightPane is null) throw new InvalidOperationException($"Couldn't create right pane for {targetDirXXX}");
 
-                if (ok)
-                {
-                    // Relocate the windows to taste.  For 1920x1080 display.
-                    int w = 900;
-                    int h = 900;
-                    int t = 50;
-                    int l = 50;
+                _logger.Debug($"tries:{tries} currentExplorer:{currentExplorer.Handle} leftPane:{leftPane.Handle} rightPane:{rightPane.Handle}");
 
-                    bool b = NM.MoveWindow(leftPane.Handle, l, t, w, h, true);
-                    NM.SetForegroundWindow(leftPane.Handle);
-                    NM.BringWindowToTop(leftPane.Handle);
+                // Relocate the windows to taste.  For 1920x1080 display.
+                int w = 900;
+                int h = 900;
+                int t = 50;
+                int l = 50;
 
-                    b = NM.MoveWindow(rightPane.Handle, l + w, t, w, h, true);
-                    NM.SetForegroundWindow(rightPane.Handle);
-                    NM.BringWindowToTop(rightPane.Handle);
-                }
+                _ = NM.MoveWindow(leftPane.Handle, l, t, w, h, true);
+                NM.SetForegroundWindow(leftPane.Handle);
 
-                if (!ok)
-                {
-                    throw new($"Failed to find explorer windows");
-                }
+                _ = NM.MoveWindow(rightPane.Handle, l + w, t, w, h, true);
+                NM.SetForegroundWindow(rightPane.Handle);
             }
             catch (Exception ex)
             {
@@ -323,7 +302,8 @@ namespace Splunk.Ui
             }
         }
 
-        void DoCmder_all()
+        /*
+        void DoCmder_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx()
         {
             try
             {
@@ -429,9 +409,7 @@ namespace Splunk.Ui
                 _logger.Error(ex.Message);
             }
         }
-
-
-
+        */
 
         // void CreateCommands() use settings_default.json 
         // {

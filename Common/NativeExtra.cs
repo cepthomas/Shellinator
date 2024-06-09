@@ -104,13 +104,6 @@ namespace Splunk.Common
             DDETopic
         }
 
-        //public static WINDOWINFO GetNewWindoInfo()
-        //{
-        //    WINDOWINFO result = new WINDOWINFO();
-        //    result.cbSize = (UInt32)(Marshal.SizeOf(typeof(WINDOWINFO)));
-        //    return result;
-        //}
-
         public static string GetFileAssociationInfo(AssocStr assocStr, string ext, string? verb = null)
         {
             uint pcchOut = 0;
