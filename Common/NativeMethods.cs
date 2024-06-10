@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 
 
-// TODO2 https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
+// TODO1 https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
 
 // https://www.p-invoke.net/
 
@@ -35,7 +35,7 @@ namespace Splunk.Common
 
         //TODO1 https://github.com/microsoft/CsWin32
 
-        #region Enums TODO2 these don't need to be enums.
+        #region Enums TODO1 these don't need to be enums.
         // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
         public enum ShowCommands : int
         {
@@ -99,8 +99,8 @@ namespace Splunk.Common
         #region Structs
         /// <summary>For ShellExecuteEx().</summary>
         /// https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa
-        /// - TODO2? Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
-        ///   the first character will be recognized by the function. Use UnmanagedType.LPStr instead.
+        /// ? Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
+        /// the first character will be recognized by the function. Use UnmanagedType.LPStr instead.
         [StructLayout(LayoutKind.Sequential)]
         public struct SHELLEXECUTEINFO
         {

@@ -160,7 +160,7 @@ namespace Splunk.Common
         /// <returns></returns>
         public static string XlatErrorCode(int code)
         {
-            // See winerror.h
+            // See [](C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared\winerror.h)
             switch (code)
             {
                 // Basics

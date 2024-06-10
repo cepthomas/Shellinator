@@ -44,7 +44,7 @@ namespace Splunk.Ui
         /// <summary>Constructor.</summary>
         public MainForm()
         {
-            _sw.Start();
+            //_sw.Start();
 
             // Must do this first before initializing.
             string appDir = MiscUtils.GetAppDataDir("Splunk", "Ephemera");
@@ -71,12 +71,13 @@ namespace Splunk.Ui
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
 
-            btnEdit.Click += (sender, e) => { EditSettings(); };
+            // Misc ui clickers.
+            btnEdit.Click += (sender, e) => { SettingsEditor.Edit(_settings, "User Settings", 500); };
+            btnDump.Click += (sender, e) => { SU.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
 
             // Manage commands in registry.
             btnInitReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.CreateRegistryEntry(c, Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
             btnClearReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.RemoveRegistryEntry(c)); };
-            btnDump.Click += (sender, e) => { SU.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
 
             // Shell hook handler.
             // https://stackoverflow.com/questions/4544468/why-my-wndproc-doesnt-receive-shell-hook-messages-if-the-app-is-set-as-default
@@ -89,19 +90,19 @@ namespace Splunk.Ui
             NM.RegisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, ALL_WINDOWS_KEY);
 
             // Debug stuff.
-            btnGo.Click += (sender, e) => { DoCmder(); };
+            // btnGo.Click += (sender, e) => { DoCmder(); };
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="e"></param>
-        protected override void OnShown(EventArgs e)
-        {
-            _sw.Stop();
-            _logger.Debug($"Startup msec: {_sw.ElapsedMilliseconds}");
-            base.OnShown(e);
-        }
+        ///// <summary>
+        ///// 
+        ///// </summary>
+        ///// <param name="e"></param>
+        //protected override void OnShown(EventArgs e)
+        //{
+        //    _sw.Stop();
+        //    _logger.Debug($"Startup msec: {_sw.ElapsedMilliseconds}");
+        //    base.OnShown(e);
+        //}
 
         /// <summary>
         /// Clean up on shutdown.
@@ -140,28 +141,6 @@ namespace Splunk.Ui
                 components?.Dispose();
             }
             base.Dispose(disposing);
-        }
-        #endregion
-
-        #region Settings
-        /// <summary>
-        /// Edit the common options in a property grid. TODO2 best way to handle these + writes to registry? settings_default.json?
-        /// </summary>
-        void EditSettings()
-        {
-            // // Make a copy for possible restoration.
-            // Type t = _settings.GetType();
-            // JsonSerializerOptions opts = new();
-            // string original = JsonSerializer.Serialize(_settings, t, opts);
-
-            // Doesn't detect changes in collections. Also needs some kind of cancel/restore. Also set width?
-            var changes = SettingsEditor.Edit(_settings, "User Settings", 500);
-
-            // Detect changes of interest.
-            // foreach (var (name, cat) in changes)
-
-            LogManager.MinLevelFile = _settings.FileLogLevel;
-            LogManager.MinLevelNotif = _settings.NotifLogLevel;
         }
         #endregion
 
@@ -240,14 +219,12 @@ namespace Splunk.Ui
         #endregion
 
         #region Debug stuff
+        /*
         void DoCmder()
         {
             try
             {
-                // TODO2 Option for custom sizes, full screen?
-                // TODO1 handle errors.
-
-                var targetDirXXX = @"C:\Dev\SplunkStuff"; // TODO1 fake from cmd line path - the rt click dir
+                var targetDirXXX = @"C:\Dev\SplunkStuff"; // Fake from cmd line path - the rt click dir
 
                 // Get the current explorer path. Note: could also use the %W arg.
                 string? currentPath = Path.GetDirectoryName(targetDirXXX) ?? throw new InvalidOperationException($"Couldn't get path for {targetDirXXX}");
@@ -303,15 +280,11 @@ namespace Splunk.Ui
             }
         }
 
-        /*
         void DoCmder_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx()
         {
             try
             {
-                // TODO2 Option for full screen?
-                // TODO1 handle errors consistently.
-
-                var targetDirXXX = @"C:\Dev\SplunkStuff"; // TODO1 fake from cmd line path - the rt click dir
+                var targetDirXXX = @"C:\Dev\SplunkStuff"; // fake from cmd line path - the rt click dir
 
                 // Get the current explorer path. Note: could also use the %W arg.
                 var currentPath = Path.GetDirectoryName(targetDirXXX);

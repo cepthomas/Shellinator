@@ -16,6 +16,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <Compile Remove="NativeExtra.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="NativeExtra.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
     <Reference Include="Ephemera.NBagOfTricks">
       <HintPath>..\lib\Ephemera.NBagOfTricks.dll</HintPath>
     </Reference>

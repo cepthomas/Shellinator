@@ -9,8 +9,6 @@ Consists of two parts:
 
 Built with VS2022 and .NET8.
 
-TODO2 publishing and packaging: https://stackoverflow.com/questions/58994946/how-to-build-app-without-app-runtimeconfig-json
-
 # Commands
 
 ## Registry Conventions
