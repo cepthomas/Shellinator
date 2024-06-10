@@ -9,33 +9,29 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 
 
-// TODO1 https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation
-
 // https://www.p-invoke.net/
+// TODO suppress warnings:
+// - CA1401 https://stackoverflow.com/a/35819594
+// - CA2101 https://stackoverflow.com/a/67127595 
+
 
 namespace Splunk.Common
 {
+#pragma warning disable SYSLIB1054, CA1401
+
     /// <summary>Interop.</summary>
     public static class NativeMethods
     {
         #region Constants
-        public const uint FILE_ATTRIBUTE_NORMAL = 0x80;
-        public const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
         public const int ALT = 0x0001;
         public const int CTRL = 0x0002;
         public const int SHIFT = 0x0004;
         public const int WIN = 0x0008;
-        public const short SWP_NOMOVE = 0X2;
-        public const short SWP_NOSIZE = 0X01;
-        public const short SWP_NOZORDER = 0X04;
-        public const int SWP_SHOWWINDOW = 0x0040;
         public const int WM_HOTKEY_MESSAGE_ID = 0x0312;
-        public const uint WM_GETTEXT = 0x000D;
+        public const int WM_GETTEXT = 0x000D;
         #endregion
 
-        //TODO1 https://github.com/microsoft/CsWin32
-
-        #region Enums TODO1 these don't need to be enums.
+        #region Enums
         // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-showwindow
         public enum ShowCommands : int
         {
@@ -184,20 +180,20 @@ namespace Splunk.Common
         #endregion
 
         #region shell32.dll - Basic shell functions
-        [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
         public static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
 
         /// <summary>Performs an operation on a specified file.
         /// Args: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa.
         /// </summary>
-        [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, string lpParameters, string lpDirectory, int nShow);
 
         /// <summary>Overload of above for nullable args.</summary>
-        [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, IntPtr lpParameters, IntPtr lpDirectory, int nShow);
 
-        [DllImport("shell32.dll")]
+        [DllImport("shell32.dll", CharSet = CharSet.Ansi)]
         public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbSizeFileInfo, uint uFlags);
         #endregion
 
@@ -234,7 +230,7 @@ namespace Splunk.Common
         [DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
         public static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr extraData);
         public delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
 
@@ -295,8 +291,8 @@ namespace Splunk.Common
         [DllImport("User32.dll")]
         public static extern int DestroyIcon(IntPtr hIcon);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, System.Text.StringBuilder lParam);
+        [DllImport("user32.dll", CharSet = CharSet.Ansi)]
+        static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, StringBuilder lParam);
         #endregion
     }
 }
