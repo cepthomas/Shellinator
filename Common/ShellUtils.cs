@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -26,13 +27,10 @@ namespace Splunk.Common
         public IntPtr Parent { get; init; }
 
         /// <summary>The coordinates of the window.</summary>
-        public NM.RECT DisplayRectangle { get { return NativeInfo.rcWindow; } }
+        public Rectangle DisplayRectangle { get { return Convert(NativeInfo.rcWindow); } }
 
         /// <summary>The coordinates of the client area.</summary>
-        public NM.RECT ClientRectangle { get { return NativeInfo.rcClient; } }
-
-        /// <summary>Internals if needed.</summary>
-        public NM.WINDOWINFO NativeInfo { get; init; }
+        public Rectangle ClientRectangle { get { return Convert(NativeInfo.rcClient); } }
 
         /// <summary>Window Text.</summary>
         public string Title { get; init; } = "";
@@ -40,11 +38,26 @@ namespace Splunk.Common
         /// <summary>This is not trustworthy as it is true for some unseen windows.</summary>
         public bool IsVisible { get; set; }
 
+        /// <summary>Internals if needed.</summary>
+        public NM.WINDOWINFO NativeInfo { get; init; }
+
+        /// <summary>For humans.</summary>
         public override string ToString()
         {
             var g = $"X:{DisplayRectangle.Left} Y:{DisplayRectangle.Top} W:{DisplayRectangle.Width} H:{DisplayRectangle.Height}";
             var s = $"Title[{Title}] Geometry[{g}] IsVisible[{IsVisible}] Handle[{Handle}] Pid[{Pid}]";
             return s;
+        }
+
+        Rectangle Convert(NM.RECT rect)
+        {
+            return new()
+            {
+                X = rect.Left,
+                Y = rect.Top,
+                Width = rect.Right - rect.Left,
+                Height = rect.Bottom - rect.Top
+            };
         }
     }
 

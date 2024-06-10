@@ -99,11 +99,8 @@ namespace Splunk.Common
         #region Structs
         /// <summary>For ShellExecuteEx().</summary>
         /// https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa
-        /// - TODO2 Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
+        /// - TODO2? Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
         ///   the first character will be recognized by the function. Use UnmanagedType.LPStr instead.
-        /// - lpVerb member can be used for a varity of actions like "properties", "find", "openas", "print"..etc depending
-        ///   on the file type you're dealing with. Actions available for a specific file type are stored in registry.
-        ///   Setting lpVerb to null results in the default action of that file type to be executed.
         [StructLayout(LayoutKind.Sequential)]
         public struct SHELLEXECUTEINFO
         {
@@ -116,18 +113,7 @@ namespace Splunk.Common
             // Optional handle to the owner window.
             public IntPtr hwnd;
 
-            // A string, referred to as a verb, that specifies the action to be performed.
-            // open - Opens a file or application.
-            // openas - Opens dialog when no program is associated to the extension.
-            // runas - Open the Run as... Dialog
-            // null - Specifies that the operation is the default for the selected file type.
-            // edit - Opens the default text editor for the file.
-            // explore - Opens the Windows Explorer in the folder specified in lpDirectory.
-            // properties - Opens the properties window of the file.
-            // pastelink - pastes a shortcut
-            // print - Start printing the file with the default application.
-            // find - Start a search
-            // Also opennew, copy, cut, paste, delete, printto - see MSDN.
+            // Specific operation.
             [MarshalAs(UnmanagedType.LPTStr)]
             public string lpVerb;
 
@@ -180,8 +166,8 @@ namespace Splunk.Common
             public int Top;     // y position of upper-left corner
             public int Right;   // x position of lower-right corner
             public int Bottom;  // y position of lower-right corner
-            public readonly int Width    { get { return Right - Left; } }
-            public readonly int Height   { get { return Bottom - Top; } }
+            //public readonly int Width    { get { return Right - Left; } }
+            //public readonly int Height   { get { return Bottom - Top; } }
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -201,29 +187,24 @@ namespace Splunk.Common
         [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
 
-
-
-
         /// <summary>Performs an operation on a specified file.
         /// Args: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa.
         /// </summary>
         [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, string lpParameters, string lpDirectory, int nShow);
 
-
-
-        /// <summary>Overload for nullable args.</summary>
+        /// <summary>Overload of above for nullable args.</summary>
         [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, IntPtr lpParameters, IntPtr lpDirectory, int nShow);
-
-
-
 
         [DllImport("shell32.dll")]
         public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbSizeFileInfo, uint uFlags);
         #endregion
 
         #region user32.dll - Windows management functions for message handling, timers, menus, and communications
+        [DllImport("user32.dll")]
+        public static extern bool SetProcessDPIAware();
+
         [DllImport("user32.dll")]
         public static extern bool BringWindowToTop(IntPtr hWnd);
 
@@ -253,9 +234,6 @@ namespace Splunk.Common
         [DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-        [DllImport("user32.dll")]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
-
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         public static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr extraData);
         public delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
@@ -273,7 +251,7 @@ namespace Splunk.Common
         /// <param name="cch">Max number of characters to copy to the buffer, including the null character. If the text exceeds this limit, it is truncated</param>
         /// <returns>ErrorCode</returns>
         [DllImport("user32.dll", EntryPoint = "GetWindowTextA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern int GetWindowText(IntPtr hwnd, System.Text.StringBuilder lpString, int cch);
+        public static extern int GetWindowText(IntPtr hwnd, StringBuilder lpString, int cch);
 
         [DllImport("user32.dll", EntryPoint = "GetWindowTextLengthA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern int GetWindowTextLength(IntPtr hwnd);
@@ -295,6 +273,9 @@ namespace Splunk.Common
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         #endregion
+
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         public static extern IntPtr GetForegroundWindow();

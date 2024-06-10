@@ -73,7 +73,6 @@ namespace Splunk.Common
             OverlayIndex = 0x000000040,
         }
 
-
         [Flags]
         public enum AssocF
         {
