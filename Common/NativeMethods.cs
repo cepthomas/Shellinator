@@ -10,14 +10,14 @@ using System.Drawing;
 
 
 // https://www.p-invoke.net/
-// TODO suppress warnings:
+// TODO suppress/fix warnings:
 // - CA1401 https://stackoverflow.com/a/35819594
 // - CA2101 https://stackoverflow.com/a/67127595 
 
 
 namespace Splunk.Common
 {
-#pragma warning disable SYSLIB1054, CA1401
+#pragma warning disable SYSLIB1054, CA1401, CA2101
 
     /// <summary>Interop.</summary>
     public static class NativeMethods
@@ -162,8 +162,8 @@ namespace Splunk.Common
             public int Top;     // y position of upper-left corner
             public int Right;   // x position of lower-right corner
             public int Bottom;  // y position of lower-right corner
-            //public readonly int Width    { get { return Right - Left; } }
-            //public readonly int Height   { get { return Bottom - Top; } }
+            public readonly int Width    { get { return Right - Left; } }
+            public readonly int Height   { get { return Bottom - Top; } }
         }
 
         [StructLayout(LayoutKind.Sequential)]

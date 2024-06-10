@@ -1,6 +1,6 @@
 
 # Splunk
-Games with shell extensions to provide some custom context menus.
+Playing with shell extensions to provide some custom context menus.
 
 Consists of two parts:
 - A simple command line client that is called from registry commands. It executes the
@@ -10,6 +10,21 @@ Consists of two parts:
 Built with VS2022 and .NET8.
 
 # Commands
+
+These are the builtin commands. It's stuff I've wanted in an explorer context menu.
+
+| Context Menu          | Menu Item          | Action |
+| ------------          | ---------          | ------ |
+| Directory             | Commander          | Open a new explorer next to the current. Simulates old school Commander. |
+| Directory             | Tree               | Copy a tree of selected directory to clipboard |
+| Directory             | Open in Sublime    | Open selected directory in Sublime Text. |
+| Directory             | Find in Everything | Open selected directory in Everything. |
+| Directory\\Background | Tree               | Copy a tree here to clipboard. |
+| Directory\\Background | Open in Sublime    | Open here in Sublime Text. |
+| Directory\\Background | Find in Everything | Open here in Everything. |
+
+
+# Design
 
 ## Registry Conventions
 
@@ -71,7 +86,6 @@ Built in macros:
 | %<0-9>    | Positional arg. |  |
 | %*        | Replace with all parameters. |  |
 | %~        | Replace with all parameters starting with the second parameter. |  |
-
 
 
 Splunk-specific macros:

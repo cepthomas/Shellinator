@@ -13,7 +13,7 @@ using System.Drawing;
 
 namespace Splunk
 {
-    internal class Program
+    public class Program
     {
         /// <summary>Crude debugging without a console or logger.</summary>
         static readonly List<string> _debug = [];
@@ -29,7 +29,7 @@ namespace Splunk
             Stopwatch sw = new();
             sw.Start();
             _debug.Add($"========== Run {DateTime.Now} [{string.Join(" ", args)}]");
-            Environment.ExitCode = Run(args);
+            Environment.ExitCode = Run([.. args]);
             sw.Stop();
             _debug.Add($"Exit {Environment.ExitCode} {sw.ElapsedMilliseconds} msec");
             File.AppendAllLines(Path.Join(appDir, "debug.txt"), _debug);
@@ -38,14 +38,14 @@ namespace Splunk
         /// <summary>Do the work.</summary>
         /// <param name="args"></param>
         /// <returns></returns>
-        static int Run(string[] args)
+        public static int Run(List<string> args)
         {
             int ret = 0;
 
             try
             {
                 // Process the args.
-                if (args.Length != 2) { throw new($"Invalid command format"); }
+                if (args.Count != 2) { throw new($"Invalid command format"); }
                 var cmd = args[0];
                 var path = args[1];
                 // Check for valid path.
@@ -71,7 +71,8 @@ namespace Splunk
                         WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
                         // New explorer -> right pane.
                         NM.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
-                        // Locate the new explorer window. Wait for it to be created. This is a bit klunky...
+                        // Locate the new explorer window. Wait for it to be created.
+                        // This is a bit klunky but there does not appear to be a more direct method.
                         int tries = 0;
                         WindowInfo? rightPane = null;
                         for (tries = 0; tries < 20 && rightPane is null; tries++) // ~4
@@ -82,7 +83,7 @@ namespace Splunk
                         }
                         if (rightPane is null) throw new InvalidOperationException($"Couldn't create right pane for [{path}]");
 
-                        // Relocate the windows to taste. TODO Get size from settings or desktop or ???.
+                        // Relocate the windows. TODO Get size from settings or desktop or ???.
                         WindowInfo desktop = SU.GetWindowInfo(NM.GetShellWindow());
                         int w = 800, h = 800, t = 50, l = 50; // Hardcode for 1920x1080 display.
                         _ = NM.MoveWindow(fgHandle, l, t, w, h, true);
@@ -116,4 +117,3 @@ namespace Splunk
         }
     }
 }
-

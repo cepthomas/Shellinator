@@ -22,8 +22,8 @@ namespace Splunk.Ui
     public partial class MainForm : Form
     {
         #region Definitions
-        const int VIS_WINDOWS_KEY = (int)Keys.W;
-        const int ALL_WINDOWS_KEY = (int)Keys.A;
+        const int KEY_W = (int)Keys.W;
+        const int KEY_A = (int)Keys.A;
         #endregion
 
         #region Fields
@@ -80,29 +80,16 @@ namespace Splunk.Ui
             btnClearReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.RemoveRegistryEntry(c)); };
 
             // Shell hook handler.
-            // https://stackoverflow.com/questions/4544468/why-my-wndproc-doesnt-receive-shell-hook-messages-if-the-app-is-set-as-default
-            //https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registershellhookwindow
             _hookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
             _ = NM.RegisterShellHookWindow(Handle);
 
             // Hot key handlers.
-            NM.RegisterHotKey(Handle, MakeKeyId(VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, VIS_WINDOWS_KEY);
-            NM.RegisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, ALL_WINDOWS_KEY);
+            NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, KEY_A);
+            NM.RegisterHotKey(Handle, MakeKeyId(KEY_W, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, KEY_W);
 
             // Debug stuff.
             // btnGo.Click += (sender, e) => { DoCmder(); };
         }
-
-        ///// <summary>
-        ///// 
-        ///// </summary>
-        ///// <param name="e"></param>
-        //protected override void OnShown(EventArgs e)
-        //{
-        //    _sw.Stop();
-        //    _logger.Debug($"Startup msec: {_sw.ElapsedMilliseconds}");
-        //    base.OnShown(e);
-        //}
 
         /// <summary>
         /// Clean up on shutdown.
@@ -135,8 +122,8 @@ namespace Splunk.Ui
             if (disposing)
             {
                 _ = NM.DeregisterShellHookWindow(Handle);
-                _ = NM.UnregisterHotKey(Handle, MakeKeyId(VIS_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
-                _ = NM.UnregisterHotKey(Handle, MakeKeyId(ALL_WINDOWS_KEY, NM.ALT + NM.CTRL + NM.SHIFT));
+                _ = NM.UnregisterHotKey(Handle, MakeKeyId(KEY_A, NM.ALT + NM.CTRL + NM.SHIFT));
+                _ = NM.UnregisterHotKey(Handle, MakeKeyId(KEY_W, NM.ALT + NM.CTRL + NM.SHIFT));
 
                 components?.Dispose();
             }
@@ -161,19 +148,6 @@ namespace Splunk.Ui
                     case NM.ShellEvents.HSHELL_WINDOWCREATED:
                         WindowInfo wi = SU.GetWindowInfo(handle);
                         _logger.Debug($"WindowCreatedEvent:{handle} {wi.Title}");
-
-                        //if (wi.Title == _newWindow)
-                        //{
-                        //    // Signal event.
-                        //    _newWindowEvent.Set();
-                        //}
-
-
-                        //_newHandle = handle;
-                        //// Signal event.
-                        //_newWindowEvent.Set();
-
-
                         break;
 
                     case NM.ShellEvents.HSHELL_WINDOWACTIVATED:
@@ -192,20 +166,28 @@ namespace Splunk.Ui
 
                 if (mod == NM.ALT + NM.CTRL + NM.SHIFT)
                 {
-                    if (key == VIS_WINDOWS_KEY)
+                    switch (key)
                     {
-                        _logger.Debug($"VIS_WINDOWS_KEY:{handle}");
-                    }
-                    else if (key == ALL_WINDOWS_KEY)
-                    {
-                        _logger.Debug($"ALL_WINDOWS_KEY:{handle}");
+                        case KEY_A:
+                            _logger.Debug($"KEY_A:{handle}");
+                            break;
+
+                        case KEY_W:
+                            _logger.Debug($"KEY_W:{handle}");
+                            break;
+
+                        default:
+                            // Ignore
+                            break;
                     }
                 }
             }
 
             base.WndProc(ref message);
         }
+        #endregion
 
+        #region Internals
         /// <summary>
         /// Helper.
         /// </summary>
@@ -216,189 +198,35 @@ namespace Splunk.Ui
         {
             return mod ^ key ^ Handle.ToInt32();
         }
-        #endregion
 
-        #region Debug stuff
-        /*
-        void DoCmder()
+        /// <summary>
+        /// Populate the settings with defined functions.
+        /// </summary>
+        void CreateCommands()
         {
-            try
-            {
-                var targetDirXXX = @"C:\Dev\SplunkStuff"; // Fake from cmd line path - the rt click dir
+            var rc = _settings.RegistryCommands; // alias
+            rc.Clear();
 
-                // Get the current explorer path. Note: could also use the %W arg.
-                string? currentPath = Path.GetDirectoryName(targetDirXXX) ?? throw new InvalidOperationException($"Couldn't get path for {targetDirXXX}");
-
-                // Locate the originator.
-                var wins = SU.GetAppWindows("explorer");
-
-                WindowInfo? currentExplorer = wins.Where(w => w.Title == currentPath).FirstOrDefault() ?? throw new InvalidOperationException($"Couldn't get originator explorer for {targetDirXXX}");
-
-                // Create a copy of the first explorer -> left pane.
-                NM.ShellExecute(Handle, "explore", currentPath, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
-
-                // Create the new explorer -> right pane.
-                NM.ShellExecute(Handle, "explore", targetDirXXX, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
-
-                // Wait for new windows to be created.
-                int tries = 0;
-                WindowInfo? leftPane = null;
-                WindowInfo? rightPane = null;
-                for (tries = 0; tries < 10 && leftPane is null && rightPane is null; tries++) // ~4
-                {
-                    Thread.Sleep(50);
-
-                    // Locate the two new explorer windows.
-                    wins = SU.GetAppWindows("explorer");
-                    foreach (var win in wins)
-                    {
-                        if (win.Title == currentPath && win.Handle != currentExplorer.Handle) { leftPane = win; }
-                        if (win.Title == targetDirXXX) { rightPane = win; }
-                    }
-                }
-
-                if (leftPane is null) throw new InvalidOperationException($"Couldn't create left pane for {currentPath}");
-                if (rightPane is null) throw new InvalidOperationException($"Couldn't create right pane for {targetDirXXX}");
-
-                _logger.Debug($"tries:{tries} currentExplorer:{currentExplorer.Handle} leftPane:{leftPane.Handle} rightPane:{rightPane.Handle}");
-
-                // Relocate the windows to taste.  For 1920x1080 display.
-                int w = 900;
-                int h = 900;
-                int t = 50;
-                int l = 50;
-
-                _ = NM.MoveWindow(leftPane.Handle, l, t, w, h, true);
-                NM.SetForegroundWindow(leftPane.Handle);
-
-                _ = NM.MoveWindow(rightPane.Handle, l + w, t, w, h, true);
-                NM.SetForegroundWindow(rightPane.Handle);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex.Message);
-            }
+            //rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\"", "Debug stuff."));
+            rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
+            rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"));
+            rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."));
+            rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."));
+            rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
+            rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
+            rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
         }
 
-        void DoCmder_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx()
+        /// <summary>
+        /// Debug.
+        /// </summary>
+        void DoSplunk()
         {
-            try
-            {
-                var targetDirXXX = @"C:\Dev\SplunkStuff"; // fake from cmd line path - the rt click dir
-
-                // Get the current explorer path. Note: could also use the %W arg.
-                var currentPath = Path.GetDirectoryName(targetDirXXX);
-
-                // Locate the originator.
-                //WindowInfo? currentExplorer = null;
-                var wins = SU.GetAppWindows("explorer");
-
-                WindowInfo? currentExplorer = wins.Where(w => w.Title == currentPath).FirstOrDefault();
-
-                //wins.ForEach(win => { if (win.Title == currentPath) { currentExplorer = win; } });
-                //foreach (var win in wins)
-                //{
-                //    if (win.Title == currentPath) { currentExplorer = win; }
-                //}
-                //if (currentExplorer is null)
-                //{
-                //    throw new($"Couldn't find currentExplorer. Should never happen.");
-                //}
-
-
-                // Create a copy of the first explorer - left pane.
-                //NM.ShellExecute(Handle, "explore", currentPath, null, null, (int)NM.ShowCommands.SW_NORMAL);
-                var res = NM.ShellExecute(Handle, "explore", currentPath, null, null, (int)NM.ShowCommands.SW_NORMAL); // SW_HIDE?
-                if (res <= 32)
-                {
-                    int error = Marshal.GetLastWin32Error();
-                    throw new($"ShellExecute() failed: {SU.XlatErrorCode(error)}");
-                }
-
-                // Create the new explorer - right pane.
-                //NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL);
-                res = NM.ShellExecute(Handle, "explore", targetDirXXX, null, null, (int)NM.ShowCommands.SW_NORMAL); // SW_HIDE?
-                if (res <= 32)
-                {
-                    int error = Marshal.GetLastWin32Error();
-                    throw new($"ShellExecute() failed: {SU.XlatErrorCode(error)}");
-                }
-
-                // Wait for new windows to be created.
-                bool ok = false;
-                int tries = 0;
-                WindowInfo? leftPane = null;
-                WindowInfo? rightPane = null;
-                for (tries = 0; tries < 10 && !ok; tries++) // ~4
-                {
-                    Thread.Sleep(50);
-
-                    // Locate the two new explorer windows.
-                    wins = SU.GetAppWindows("explorer");
-                    foreach (var win in wins)
-                    {
-                        if (win.Title == currentPath && win.Handle != currentExplorer.Handle) { leftPane = win; }
-                        if (win.Title == targetDirXXX) { rightPane = win; }
-                    }
-
-                    ok = leftPane is not null && rightPane is not null;
-                }
-
-                _logger.Debug($"tries:{tries} currentExplorer:{currentExplorer?.Handle} leftPane:{leftPane?.Handle} rightPane:{rightPane?.Handle}");
-
-                if (ok)
-                {
-                    // Relocate the windows to taste.  For 1920x1080 display.
-                    int w = 900;
-                    int h = 900;
-                    int t = 50;
-                    int l = 50;
-
-                    bool b = NM.MoveWindow(leftPane.Handle, l, t, w, h, true);
-                    if (!b)
-                    {
-                        int error = Marshal.GetLastWin32Error();
-                        throw new($"MoveWindow() 1 failed: {SU.XlatErrorCode(error)}");
-                    }
-                    NM.SetForegroundWindow(leftPane.Handle);
-                    NM.BringWindowToTop(leftPane.Handle);
-
-                    b = NM.MoveWindow(rightPane.Handle, l + w, t, w, h, true);
-                    if (!b)
-                    {
-                        int error = Marshal.GetLastWin32Error();
-                        throw new($"MoveWindow() 2 failed: {SU.XlatErrorCode(error)}");
-                    }
-                    NM.SetForegroundWindow(rightPane.Handle);
-                    NM.BringWindowToTop(rightPane.Handle);
-                }
-
-                if (!ok)
-                {
-                    throw new($"Failed to find explorer windows");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex.Message);
-            }
+            var fgHandle = NM.GetForegroundWindow();
+            WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
+            List<string> args = ["cmder", "where???"];
+            Splunk.Program.Run(args);
         }
-        */
-
-        // void CreateCommands() use settings_default.json 
-        // {
-        //     var rc = _settings.RegistryCommands; // alias
-        //     rc.Clear();
-
-        //     rc.Add(new("test", "Directory", ">>>>> Test", "%SPLUNK %ID \"%D\"", "Debug stuff."));
-        //     rc.Add(new("cmder", "Directory", "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
-        //     rc.Add(new("tree", "Directory", "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"));
-        //     rc.Add(new("openst", "Directory", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."));
-        //     rc.Add(new("findev", "Directory", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."));
-        //     rc.Add(new("tree", "Directory\\Background", "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
-        //     rc.Add(new("openst", "Directory\\Background", "Open in Sublime", "\"C:\\Program Files\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
-        //     rc.Add(new("findev", "Directory\\Background", "Find in Everything", "C:\\Program Files\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
-        // }
         #endregion
     }
 }
