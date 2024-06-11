@@ -28,10 +28,10 @@ namespace Splunk
 
             Stopwatch sw = new();
             sw.Start();
-            _debug.Add($"========== Run {DateTime.Now} [{string.Join(" ", args)}]");
+            //_debug.Add($"========== Run {DateTime.Now} [{string.Join(" ", args)}]");
             Environment.ExitCode = Run([.. args]);
             sw.Stop();
-            _debug.Add($"Exit {Environment.ExitCode} {sw.ElapsedMilliseconds} msec");
+            //_debug.Add($"Exit {Environment.ExitCode} {sw.ElapsedMilliseconds} msec");
             File.AppendAllLines(Path.Join(appDir, "debug.txt"), _debug);
         }
 
@@ -109,7 +109,7 @@ namespace Splunk
             }
             catch (Exception ex)
             {
-                _debug.Add($"Error [{ex.Message}]");
+                _debug.Add($"ERROR:{DateTime.Now} {ex.Message}");
                 ret = 1;
             }
 
