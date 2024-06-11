@@ -53,17 +53,6 @@ namespace Splunk
                 FileAttributes attr = File.GetAttributes(path);
                 var dir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
 
-                ProcessStartInfo sinfo = new()
-                {
-                    FileName = "cmd",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WorkingDirectory = dir,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                };
-
                 switch (cmd)
                 {
                     case "cmder":
@@ -83,9 +72,11 @@ namespace Splunk
                         }
                         if (rightPane is null) throw new InvalidOperationException($"Couldn't create right pane for [{path}]");
 
-                        // Relocate the windows. TODO Get size from settings or desktop or ???.
+                        // Relocate the windows. TODO Get size from settings?.
                         WindowInfo desktop = SU.GetWindowInfo(NM.GetShellWindow());
-                        int w = 800, h = 800, t = 50, l = 50; // Hardcode for 1920x1080 display.
+                        int w = desktop.DisplayRectangle.Width * 45 / 100;
+                        int h = desktop.DisplayRectangle.Height * 80 / 100;
+                        int t = 50, l = 50;
                         _ = NM.MoveWindow(fgHandle, l, t, w, h, true);
                         NM.SetForegroundWindow(fgHandle);
                         _ = NM.MoveWindow(rightPane.Handle, l + w, t, w, h, true);
@@ -93,7 +84,7 @@ namespace Splunk
                         break;
 
                     case "tree":
-                        using (Process proc = new() { StartInfo = sinfo })
+                        using (Process proc = new() { StartInfo = MakeStartInfo() })
                         {
                             proc.Start();
                             proc.StandardInput.WriteLine($"tree /a /f \"{dir}\" | clip");
@@ -105,6 +96,21 @@ namespace Splunk
 
                     default:
                         throw new ArgumentException($"Invalid command: {cmd}");
+                }
+
+                ProcessStartInfo MakeStartInfo()
+                {
+                    // Generic command window, hidden.
+                    return new()
+                    {
+                        FileName = "cmd",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WorkingDirectory = dir,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                    };
                 }
             }
             catch (Exception ex)
