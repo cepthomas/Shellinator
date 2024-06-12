@@ -198,6 +198,9 @@ namespace Splunk.Common
         #endregion
 
         #region user32.dll - Windows management functions for message handling, timers, menus, and communications
+        [DllImport("User32.dll", CharSet = CharSet.Unicode)]
+        public static extern int MessageBox(IntPtr h, string m, string c, int type);
+
         [DllImport("user32.dll")]
         public static extern bool SetProcessDPIAware();
 

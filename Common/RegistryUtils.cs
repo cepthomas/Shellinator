@@ -3,9 +3,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 
-
-// ?? Attributes like icon, position, extended, ...
 
 
 namespace Splunk.Common
@@ -13,7 +12,7 @@ namespace Splunk.Common
     public class RegistryUtils
     {
         /// <summary>Dry run the registry entries.</summary>
-        static readonly bool _fake = false;
+        static readonly bool _fake = true;
 
         /// <summary>Write one command to the registry.</summary>
         /// <param name="splunkPath"></param>
@@ -23,7 +22,7 @@ namespace Splunk.Common
             using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
 
             // Key names etc.
-            var ssubkey1 = $"{rc.RegPath}\\shell\\{rc.Id}";
+            var ssubkey1 = $"{GetRegPath(rc.Context)}\\shell\\{rc.Id}";
             var ssubkey2 = $"{ssubkey1}\\command";
             var expCmd = rc.CommandLine.Replace("%SPLUNK", $"\"{splunkPath}\"").Replace("%ID", rc.Id);
 
@@ -52,7 +51,7 @@ namespace Splunk.Common
             using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
 
             // Key name.
-            var ssubkey = $"{rc.RegPath}\\shell\\{rc.Id}";
+            var ssubkey = $"{GetRegPath(rc.Context)}\\shell\\{rc.Id}";
 
             if (_fake)
             {
@@ -63,8 +62,23 @@ namespace Splunk.Common
                 regRoot!.DeleteSubKeyTree(ssubkey);
             }
         }
+
+        public static string GetRegPath(ExplorerContext context)
+        {
+            return context switch
+            {
+                ExplorerContext.Dir => "Directory",
+                ExplorerContext.DirBg => "Directory\\Background",
+                ExplorerContext.DeskBg => "DesktopBackground",
+                ExplorerContext.Folder => "Folder",
+                ExplorerContext.File => ".*"
+            };
+        }
     }
     
+    /// <summary>See README#Commands. TODO supportspecific file extensions.</summary>
+    public enum ExplorerContext { Dir, DirBg, DeskBg, Folder, File }
+
     [Serializable]
     public class RegistryCommand
     {
@@ -72,27 +86,28 @@ namespace Splunk.Common
         [DisplayName("Identifier")]
         [Description("Short name for internal id and registry key.")]
         [Browsable(true)]
-        public string Id { get; set; } = "";
+        public string Id { get; init; } = "???";
 
-        [DisplayName("Registry Path")]
-        [Description("Where to install in HKCU as Key\\Subkey\\...")]
+        [DisplayName("Explorer Context")]
+        [Description("Explorer context menu origin.")]
         [Browsable(true)]
-        public string RegPath { get; set; } = "";
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public ExplorerContext Context { get; init; } = ExplorerContext.Dir;
 
         [DisplayName("Text")]
         [Description("As it appears in the context menu.")]
         [Browsable(true)]
-        public string Text { get; set; } = "";
+        public string Text { get; init; } = "";
 
         [DisplayName("Command Line")]
         [Description("Full command string to execute.")]
         [Browsable(true)]
-        public string CommandLine { get; set; } = "";
+        public string CommandLine { get; init; } = "";
 
         [DisplayName("Description")]
         [Description("Info about this command.")]
         [Browsable(true)]
-        public string Description { get; set; } = "";
+        public string Description { get; init; } = "";
         #endregion
 
         /// <summary>
@@ -106,14 +121,15 @@ namespace Splunk.Common
         /// Normal constructor.
         /// </summary>
         /// <param name="id"></param>
-        /// <param name="regPath"></param>
+        /// <param name="context"></param>
         /// <param name="text"></param>
         /// <param name="cmdLine"></param>
         /// <param name="desc"></param>
-        public RegistryCommand(string id, string regPath, string text, string cmdLine, string desc)
+        public RegistryCommand(string id, ExplorerContext context, string text, string cmdLine, string desc)
         {
+            // TODO1 test id for internal values: edit, explore, find, open, print, properties, runas.
             Id = id;
-            RegPath = regPath;
+            Context = context;
             Text = text;
             CommandLine = cmdLine;
             Description = desc;

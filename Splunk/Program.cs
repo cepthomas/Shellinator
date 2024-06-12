@@ -10,12 +10,14 @@ using SU = Splunk.Common.ShellUtils;
 using System.Linq;
 using System.Drawing;
 
+// TODO1 plugin model?
+test from UI
 
 namespace Splunk
 {
     public class Program
     {
-        /// <summary>Crude debugging without a console or logger.</summary>
+        /// <summary>Crude debugging without spinning up a console or logger.</summary>
         static readonly List<string> _debug = [];
 
         /// <summary>Where it all began.</summary>
@@ -28,10 +30,9 @@ namespace Splunk
 
             Stopwatch sw = new();
             sw.Start();
-            //_debug.Add($"========== Run {DateTime.Now} [{string.Join(" ", args)}]");
             Environment.ExitCode = Run([.. args]);
             sw.Stop();
-            //_debug.Add($"Exit {Environment.ExitCode} {sw.ElapsedMilliseconds} msec");
+            _debug.Add($"{DateTime.Now} Splunk [{string.Join(" ", args)}] Exit:{Environment.ExitCode} Msec:{sw.ElapsedMilliseconds}");
             File.AppendAllLines(Path.Join(appDir, "debug.txt"), _debug);
         }
 
@@ -46,12 +47,13 @@ namespace Splunk
             {
                 // Process the args.
                 if (args.Count != 2) { throw new($"Invalid command format"); }
-                var cmd = args[0];
+                var cmd = Environment.ExpandEnvironmentVariables(args[0]);
                 var path = args[1];
                 // Check for valid path.
                 if (!Path.Exists(path)) { throw new($"Invalid path: {path}"); }
                 FileAttributes attr = File.GetAttributes(path);
                 var dir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
+                var isdir = attr.HasFlag(FileAttributes.Directory);
 
                 switch (cmd)
                 {
@@ -94,13 +96,75 @@ namespace Splunk
                         }
                         break;
 
+                    case "exec":
+                        if (!isdir)
+                        {
+                            var ext = Path.GetExtension(path);
+                            switch (Path.GetExtension(path))
+                            {
+                                case ".cmd":
+                                case ".bat":
+
+
+                                    break;
+
+                                case ".lua":
+                                    //    cmd_list.append('lua')
+                                    //    cmd_list.append(f'\"{path}\"')
+
+                                    break;
+
+                                case ".py":
+                                    //    cmd_list.append('python')
+                                    //    cmd_list.append(f'\"{path}\"')
+
+                                    break;
+
+                                default:
+                                    // just open
+
+                                    break;
+
+
+
+                            }
+
+                        }
+                        else
+                        {
+                            
+
+                        }
+
+                            //cp = subprocess.run(cmd, cwd=dir, universal_newlines=True, capture_output=True, shell=True)  # check=True)
+                            //output = cp.stdout
+                            //errors = cp.stderr
+                            //if len(errors) > 0:
+                            //    output = output + '============ stderr =============\n' + errors
+                            //sc.create_new_view(self.window, output)
+
+
+
+
+
+                        break;
+
+
+                    case "test_deskbg":
+                        NM.MessageBox(IntPtr.Zero, "ExplorerContext.DeskBg", "My Message Box", 0);
+                        break;
+
+                    case "test_folder":
+                        NM.MessageBox(IntPtr.Zero, "ExplorerContext.Folder", "My Message Box", 0);
+                        break;
+
                     default:
                         throw new ArgumentException($"Invalid command: {cmd}");
                 }
 
+                // Generic command window, hidden.
                 ProcessStartInfo MakeStartInfo()
                 {
-                    // Generic command window, hidden.
                     return new()
                     {
                         FileName = "cmd",
@@ -116,6 +180,7 @@ namespace Splunk
             catch (Exception ex)
             {
                 _debug.Add($"ERROR:{DateTime.Now} {ex.Message}");
+                NM.MessageBox(IntPtr.Zero, "Your Message", "My Message Box", 0);
                 ret = 1;
             }
 

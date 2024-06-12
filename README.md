@@ -3,28 +3,38 @@
 Playing with shell extensions to provide some custom context menus.
 
 Consists of two parts:
-- A simple command line client that is called from registry commands. It executes the
-  requested operation.
+- A simple command line client that is called from registry commands. It executes the requested operation.
 - A UI companion that can configure registry commands, and some other stuff.
 
 Built with VS2022 and .NET8.
 
 # Commands
 
-These are the builtin commands. It's stuff I've wanted in an explorer context menu.
+Commands vary depending on which part of the explorer they originate in.
 
-| Context Menu          | Menu Item          | Action |
-| ------------          | ---------          | ------ |
-| Directory             | Commander          | Open a new explorer next to the current. Simulates old school Commander. |
-| Directory             | Tree               | Copy a tree of selected directory to clipboard |
-| Directory             | Open in Sublime    | Open selected directory in Sublime Text. |
-| Directory             | Find in Everything | Open selected directory in Everything. |
-| Directory\\Background | Tree               | Copy a tree here to clipboard. |
-| Directory\\Background | Open in Sublime    | Open here in Sublime Text. |
-| Directory\\Background | Find in Everything | Open here in Everything. |
+| Context   | Description |
+| -------   | ----------- |
+| Dir       | Right click in explorer right pane or windows desktop with a directory selected.|
+| DirBg     | Right click in explorer right pane with nothing selected (background).|
+| DeskBg    | Right click in windows desktop with nothing selected (background).|
+| Folder    | Right click in explorer left pane (navigation) with a folder selected.|
+| File      | Right click in explorer right pane or windows desktop with a file selected (specific extension not supported).|
 
 
-# Design
+These are the builtin commands. It's stuff I've wanted to add to an explorer context menu.
+
+| Context   | Menu Item          | Action |
+| ------    | ---------          | ------ |
+| Dir       | Commander          | Open a new explorer next to the current. Simulates old school Commander. |
+| Dir       | Tree               | Copy a tree of selected directory to clipboard |
+| Dir       | Open in Sublime    | Open selected directory in Sublime Text. |
+| Dir       | Find in Everything | Open selected directory in Everything. |
+| DirBg     | Tree               | Copy a tree here to clipboard. |
+| DirBg     | Open in Sublime    | Open here in Sublime Text. |
+| File      | Exec               | Execute if executable otherwise open. Suppresses console window creation. |
+
+
+# Implementation
 
 ## Registry Conventions
 
@@ -54,13 +64,14 @@ Splunk command specifications contain these properties:
 
 Supported `RegPath`s are:
 
-| RegPath               | Description |
-| -------               | ----------- |
-| Directory             | Right click in explorer right pane or windows desktop with a directory selected.|
-| Directory\Background  | Right click in explorer right pane with nothing selected (background).|
-| DesktopBackground     | Right click in windows desktop with nothing selected (background).|
-| Folder                | Right click in explorer left pane (navigation) with a folder selected.|
-| .ext (File)           | Right click in explorer right pane or windows desktop with file.ext selected (\* for all exts).|
+| Context   | RegPath               |
+| -------   | -------               |
+| Dir       | HKCU\Directory             |
+| DirBg     | HKCU\Directory\Background  |
+| DeskBg    | HKCU\DesktopBackground     |
+| Folder    | HKCU\Folder                |
+| File      | HKCU\.*                    |
+
 
 
 This generates registry entries that look like:
@@ -79,8 +90,8 @@ Built in macros:
 
 | Macro     | Description | Notes |
 | ----      | ----------- | ----- |
-| %L        | Selected file or directory name. | Only Directory, File. | 
-| %D        | Selected file or directory with expanded named folders. | Only Directory, File, Folder |
+| %L        | Selected file or directory name. | Only Dir, File. | 
+| %D        | Selected file or directory with expanded named folders. | Only Dir, File, Folder |
 | %V        | The directory of the selection, maybe unreliable? | All except Folder. | 
 | %W        | The working directory. | All except Folder. |
 | %<0-9>    | Positional arg. |  |
@@ -96,6 +107,8 @@ Splunk-specific macros:
 | %SPLUNK   | Path to the Splunk executable. |
 
 !! Note that all paths and macros that expand to paths must be wrapped in double quotes.
+
+The usual env vars like `%ProgramFiles%` are also supported.
 
 ## Submenus
 
