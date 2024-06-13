@@ -18,20 +18,20 @@ Commands vary depending on which part of the explorer they originate in.
 | DirBg     | Right click in explorer right pane with nothing selected (background).|
 | DeskBg    | Right click in windows desktop with nothing selected (background).|
 | Folder    | Right click in explorer left pane (navigation) with a folder selected.|
-| File      | Right click in explorer right pane or windows desktop with a file selected (specific extension not supported).|
+| File      | Right click in explorer right pane or windows desktop with a file selected (specific extension not supported yet).|
 
 
 These are the builtin commands. It's stuff I've wanted to add to an explorer context menu.
 
-| Context   | Menu Item          | Action |
-| ------    | ---------          | ------ |
-| Dir       | Commander          | Open a new explorer next to the current. Simulates old school Commander. |
-| Dir       | Tree               | Copy a tree of selected directory to clipboard |
-| Dir       | Open in Sublime    | Open selected directory in Sublime Text. |
-| Dir       | Find in Everything | Open selected directory in Everything. |
-| DirBg     | Tree               | Copy a tree here to clipboard. |
-| DirBg     | Open in Sublime    | Open here in Sublime Text. |
-| File      | Exec               | Execute if executable otherwise open. Suppresses console window creation. |
+| Menu Item          | Context   | Action |
+| ---------          | ------    | ------ |
+| Commander          | Dir       | Open a new explorer next to the current. Simulates old school Commander. |
+| Tree               | Dir       | Copy a tree of selected directory to clipboard |
+| Open in Sublime    | Dir       | Open selected directory in Sublime Text. |
+| Find in Everything | Dir       | Open selected directory in Everything. |
+| Tree               | DirBg     | Copy a tree here to clipboard. |
+| Open in Sublime    | DirBg     | Open here in Sublime Text. |
+| Exec               | File      | Execute if executable otherwise open. Suppresses console window creation. |
 
 
 # Implementation
@@ -70,7 +70,7 @@ Supported `RegPath`s are:
 | DirBg     | HKCU\Directory\Background  |
 | DeskBg    | HKCU\DesktopBackground     |
 | Folder    | HKCU\Folder                |
-| File      | HKCU\.*                    |
+| File      | HKCU\*                     |
 
 
 

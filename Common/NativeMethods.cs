@@ -9,11 +9,12 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 
 
-// https://www.p-invoke.net/
+// Reference: https://pinvoke.net  TODO Try CsWin32?
+
 // TODO suppress/fix warnings:
 // - CA1401 https://stackoverflow.com/a/35819594
 // - CA2101 https://stackoverflow.com/a/67127595 
-
+// - SYSLIB1054
 
 namespace Splunk.Common
 {
@@ -90,6 +91,15 @@ namespace Splunk.Common
             HSHELL_ACCESSIBILITYSTATE = 11,
             HSHELL_APPCOMMAND = 12
         }
+
+        //https://learn.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats
+        public enum ClipboardFormats : int
+        {
+            CF_TEXT = 1,            // ANSI Text format. A null character signals the end of the data.
+            CF_BITMAP = 2,          // A handle to a bitmap (HBITMAP).
+            CF_WAVE = 12,           // Audio data in one of the standard wave formats.
+            CF_UNICODETEXT = 13,    // Unicode text format. A null character signals the end of the data.
+        }
         #endregion
 
         #region Structs
@@ -98,7 +108,7 @@ namespace Splunk.Common
         /// ? Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
         /// the first character will be recognized by the function. Use UnmanagedType.LPStr instead.
         [StructLayout(LayoutKind.Sequential)]
-        public struct SHELLEXECUTEINFO
+        public struct ShellExecuteInfo
         {
             // The size of this structure, in bytes.
             public int cbSize;
@@ -141,11 +151,11 @@ namespace Splunk.Common
 
         /// <summary>Contains information about a window.</summary>
         [StructLayout(LayoutKind.Sequential)]
-        public struct WINDOWINFO
+        public struct WindowInfo
         {
-            public uint cbSize;             // The size of the structure, in bytes.The caller must set this member to sizeof(WINDOWINFO).
-            public RECT rcWindow;           // The coordinates of the window.
-            public RECT rcClient;           // The coordinates of the client area.
+            public uint cbSize;             // The size of the structure, in bytes.The caller must set this member to sizeof(WindowInfo).
+            public Rect rcWindow;           // The coordinates of the window.
+            public Rect rcClient;           // The coordinates of the client area.
             public uint dwStyle;            // The window styles.For a table of window styles, see Window Styles.
             public uint dwExStyle;          // The extended window styles. For a table of extended window styles, see Extended Window Styles.
             public uint dwWindowStatus;     // The window status.If this member is WS_ACTIVECAPTION (0x0001), the window is active.Otherwise, this member is zero.
@@ -156,18 +166,18 @@ namespace Splunk.Common
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        public struct RECT
+        public struct Rect
         {
-            public int Left;    // x position of upper-left corner
-            public int Top;     // y position of upper-left corner
-            public int Right;   // x position of lower-right corner
-            public int Bottom;  // y position of lower-right corner
-            public readonly int Width    { get { return Right - Left; } }
-            public readonly int Height   { get { return Bottom - Top; } }
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+            public readonly int Width { get { return Right - Left; } }
+            public readonly int Height { get { return Bottom - Top; } }
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        public struct SHFILEINFO
+        public struct ShFileInfo
         {
             public IntPtr hIcon;
             public IntPtr iIcon;
@@ -181,7 +191,7 @@ namespace Splunk.Common
 
         #region shell32.dll - Basic shell functions
         [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        public static extern bool ShellExecuteEx(ref SHELLEXECUTEINFO lpExecInfo);
+        public static extern bool ShellExecuteEx(ref ShellExecuteInfo lpExecInfo);
 
         /// <summary>Performs an operation on a specified file.
         /// Args: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa.
@@ -194,15 +204,25 @@ namespace Splunk.Common
         public static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, IntPtr lpParameters, IntPtr lpDirectory, int nShow);
 
         [DllImport("shell32.dll", CharSet = CharSet.Ansi)]
-        public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbSizeFileInfo, uint uFlags);
+        public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref ShFileInfo psfi, uint cbSizeFileInfo, uint uFlags);
         #endregion
 
         #region user32.dll - Windows management functions for message handling, timers, menus, and communications
+        /// <summary>Rudimentary UI notification from a console application. TODO Blows up when called from reg command.</summary>
         [DllImport("User32.dll", CharSet = CharSet.Unicode)]
-        public static extern int MessageBox(IntPtr h, string m, string c, int type);
+        public static extern int MessageBox(IntPtr hWnd, string msg, string caption, int type);
 
         [DllImport("user32.dll")]
         public static extern bool SetProcessDPIAware();
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool OpenClipboard(IntPtr hWndNewOwner);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool CloseClipboard();
 
         [DllImport("user32.dll")]
         public static extern bool BringWindowToTop(IntPtr hWnd);
@@ -218,7 +238,7 @@ namespace Splunk.Common
         public static extern IntPtr GetParent(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        public static extern bool GetWindowInfo(IntPtr hWnd, ref WINDOWINFO winfo);
+        public static extern bool GetWindowInfo(IntPtr hWnd, ref WindowInfo winfo);
 
         /// <summary>Retrieves the thread and process ids that created the window.</summary>
         [DllImport("user32.dll")]
@@ -238,7 +258,7 @@ namespace Splunk.Common
         public delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
 
         [DllImport("user32.dll", SetLastError = true)]
-        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        public static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
 
         /// <summary>
         /// Copies the text of the specified window's title bar (if it has one) into a buffer.

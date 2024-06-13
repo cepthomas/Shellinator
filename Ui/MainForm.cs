@@ -88,7 +88,9 @@ namespace Splunk.Ui
             NM.RegisterHotKey(Handle, MakeKeyId(KEY_W, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, KEY_W);
 
             // Debug stuff.
-            // btnGo.Click += (sender, e) => { DoCmder(); };
+            btnGo.Click += (sender, e) => { DoSplunk(); };
+            //btnGo.Click += (sender, e) => { CreateCommands(); };
+
         }
 
         /// <summary>
@@ -215,7 +217,7 @@ namespace Splunk.Ui
             rc.Add(new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
             rc.Add(new("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
 
-            rc.Add(new("exec", ExplorerContext.File, "Run", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."));
+            rc.Add(new("exec", ExplorerContext.File, "Exec", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."));
 
             rc.Add(new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SPLUNK %ID \"%D\"", "Debug stuff."));
             rc.Add(new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SPLUNK %ID \"%D\"", "Debug stuff."));
@@ -228,8 +230,17 @@ namespace Splunk.Ui
         {
             var fgHandle = NM.GetForegroundWindow();
             WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
-            List<string> args = ["cmder", "where???"];
-            Splunk.Program.Run(args);
+
+            //List<string> args = ["cmder", @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages"];
+
+            //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.cmd"];
+
+            //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.lua"];
+
+            List<string> args = ["test_deskbg", @"C:\Dev\repos\Apps\Splunk\Test\go.lua"];
+
+
+            int? code = Splunk.Program.Run(args);
         }
         #endregion
     }

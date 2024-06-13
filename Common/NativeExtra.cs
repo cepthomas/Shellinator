@@ -106,9 +106,9 @@ namespace Splunk.Common
         public static string GetFileAssociationInfo(AssocStr assocStr, string ext, string? verb = null)
         {
             uint pcchOut = 0;
-            _ = AssocQueryString(AssocF.Verify, assocStr, ext, verb, null, ref pcchOut);
+            AssocQueryString(AssocF.Verify, assocStr, ext, verb, null, ref pcchOut);
             StringBuilder pszOut = new((int)pcchOut);
-            _ = AssocQueryString(AssocF.Verify, assocStr, ext, verb, pszOut, ref pcchOut);
+            AssocQueryString(AssocF.Verify, assocStr, ext, verb, pszOut, ref pcchOut);
             return pszOut.ToString();
         }
 

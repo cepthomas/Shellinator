@@ -12,7 +12,7 @@ namespace Splunk.Common
     public class RegistryUtils
     {
         /// <summary>Dry run the registry entries.</summary>
-        static readonly bool _fake = true;
+        static readonly bool _fake = false;
 
         /// <summary>Write one command to the registry.</summary>
         /// <param name="splunkPath"></param>
@@ -25,6 +25,7 @@ namespace Splunk.Common
             var ssubkey1 = $"{GetRegPath(rc.Context)}\\shell\\{rc.Id}";
             var ssubkey2 = $"{ssubkey1}\\command";
             var expCmd = rc.CommandLine.Replace("%SPLUNK", $"\"{splunkPath}\"").Replace("%ID", rc.Id);
+            expCmd = Environment.ExpandEnvironmentVariables(expCmd);
 
             if (_fake)
             {
@@ -71,12 +72,13 @@ namespace Splunk.Common
                 ExplorerContext.DirBg => "Directory\\Background",
                 ExplorerContext.DeskBg => "DesktopBackground",
                 ExplorerContext.Folder => "Folder",
-                ExplorerContext.File => ".*"
+                ExplorerContext.File => "*",
+                _ => throw new NotImplementedException()
             };
         }
     }
     
-    /// <summary>See README#Commands. TODO supportspecific file extensions.</summary>
+    /// <summary>See README#Commands. TODO File: support specific extensions.</summary>
     public enum ExplorerContext { Dir, DirBg, DeskBg, Folder, File }
 
     [Serializable]
@@ -97,7 +99,7 @@ namespace Splunk.Common
         [DisplayName("Text")]
         [Description("As it appears in the context menu.")]
         [Browsable(true)]
-        public string Text { get; init; } = "";
+        public string Text { get; init; } = "???";
 
         [DisplayName("Command Line")]
         [Description("Full command string to execute.")]

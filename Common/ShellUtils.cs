@@ -39,7 +39,7 @@ namespace Splunk.Common
         public bool IsVisible { get; set; }
 
         /// <summary>Internals if needed.</summary>
-        public NM.WINDOWINFO NativeInfo { get; init; }
+        public NM.WindowInfo NativeInfo { get; init; }
 
         /// <summary>For humans.</summary>
         public override string ToString()
@@ -49,7 +49,7 @@ namespace Splunk.Common
             return s;
         }
 
-        Rectangle Convert(NM.RECT rect)
+        Rectangle Convert(NM.Rect rect)
         {
             return new()
             {
@@ -131,12 +131,12 @@ namespace Splunk.Common
         public static WindowInfo GetWindowInfo(IntPtr handle)
         {
             IntPtr threadId = NM.GetWindowThreadProcessId(handle, out IntPtr pid);
-            NM.GetWindowRect(handle, out NM.RECT rect);
+            NM.GetWindowRect(handle, out NM.Rect rect);
 
             StringBuilder sb = new(1024);
-            _ = NM.GetWindowText(handle, sb, sb.Capacity);
+            NM.GetWindowText(handle, sb, sb.Capacity);
 
-            NM.WINDOWINFO wininfo = new();
+            NM.WindowInfo wininfo = new();
             NM.GetWindowInfo(handle, ref wininfo);
 
             WindowInfo wi = new()
