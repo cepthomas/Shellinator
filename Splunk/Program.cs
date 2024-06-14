@@ -21,13 +21,16 @@ namespace Splunk
     {
         #region Fields - public for debugging
         /// <summary>Result of command execution.</summary>
-        public static string _stdout = "";  // TODO1 stdout/stderr to clipboard and/or logfile?
+        public static string _stdout = "";
 
         /// <summary>Result of command execution.</summary>
         public static string _stderr = "";
 
-        /// <summary>Log file name or clipboard if null.</summary>
-        static string? _logFile = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
+        /// <summary>Log file name.</summary>
+        static string _logFileName = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
+
+        /// <summary>Stdio goes to clipboard.</summary>
+        static bool _useClipboard = true;
         #endregion
 
         /// <summary>Where it all began.</summary>
@@ -45,30 +48,49 @@ namespace Splunk
             // Execute.
             var code = Run([.. args]);
 
+            sw.Stop();
+            Log($"Exit code:{Environment.ExitCode} msec:{sw.ElapsedMilliseconds}");
+
             // What happened?
+            string sout = ""; // TODO
             switch (code)
             {
                 case 0:
                     // Everything ok.
-                    Log(_stdout.Length > 0 ? $"OK{Environment.NewLine}{_stdout}" : "OK");
+                    sout = _stdout;
+                    Log("OK");
                     Environment.ExitCode = 0;
                     break;
 
                 case null:
                     // Splunk internal error.
-                    Log($"ERROR splunk{Environment.NewLine}{_stderr}");
+                    sout = $"ERROR splunk{Environment.NewLine}{_stderr}";
+                    Log(sout);
                     Environment.ExitCode = 1;
                     break;
 
                 default:
-                    // Process exit code.
-                    Log($"ERROR process {(int)code}:{new Win32Exception((int)code).Message}{Environment.NewLine}{_stderr}");
+                    // Process error.
+                    sout = $"ERROR process {(int)code}:{new Win32Exception((int)code).Message}{Environment.NewLine}{_stderr}";
+                    Log(sout);
                     Environment.ExitCode = 2;
                     break;
             }
 
-            sw.Stop();
-            Log($"Exit code:{Environment.ExitCode} msec:{sw.ElapsedMilliseconds}");
+            if (_useClipboard)
+            {
+                Clipboard.SetText(sout);
+            }
+
+            // Before we end, manage log size. TODO
+            FileInfo fi = new(_logFileName);
+            if (fi.Exists && fi.Length > 10000)
+            {
+                //Open both the input file and a new output file(as a TextReader / TextWriter, e.g.with File.OpenText and File.CreateText)
+                //Read a line(TextReader.ReadLine) - if you don't want to delete it, write it to the output file (TextWriter.WriteLine)
+                //When you've read all the lines, close both the reader and the writer (if you use using statements for both,
+                //this will happen automatically)
+            }
         }
 
         /// <summary>Do the work.</summary>
@@ -189,7 +211,7 @@ namespace Splunk
             {
                 FileName = exe,
                 Arguments = args,
-                //WorkingDirectory = wdir, // TODO1 needed?
+                WorkingDirectory = wdir, // needed?
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
@@ -210,17 +232,9 @@ namespace Splunk
         /// <summary>Crude debugging without spinning up a console or logger.</summary>
         static void Log(string msg)
         {
-            // TODO1 try real logging. simple style durations:
-            //Splunk cl args: exec C:\Dev\repos\Apps\Splunk\Test\go.cmd Exit code: 0 msec: 46
-            //Splunk cl args: exec C:\Dev\repos\Apps\Splunk\Test\go.lua Exit code: 0 msec: 27
-            //Splunk cl args: tree C:\Dev\repos\Apps\Splunk\Test\bin Exit code: 0 msec: 53
-            //Splunk cl args: exec C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0\Ephemera.NBagOfTricks.xml Exit code: 0 msec: 215
-            //Splunk cl args: cmder C:\Dev\repos\Apps\Splunk\Splunk\bin Exit code: 0 msec: 408
-            //Splunk cl args: exec C:\Dev\repos\Apps\Splunk\Test\dummy.txt Exit code: 0 msec: 212
-
-            if (_logFile is not null)
+            if (_logFileName is not null)
             {
-                File.AppendAllText(_logFile, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {msg}{Environment.NewLine}");
+                File.AppendAllText(_logFileName, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {msg}{Environment.NewLine}");
             }
         }
     }
