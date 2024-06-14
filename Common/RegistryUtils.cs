@@ -129,7 +129,9 @@ namespace Splunk.Common
         /// <param name="desc"></param>
         public RegistryCommand(string id, ExplorerContext context, string text, string cmdLine, string desc)
         {
-            // TODO1 test id for internal values: edit, explore, find, open, print, properties, runas.
+            var ss = new List<string> { "edit", "explore", "find", "open", "print", "properties", "runas" };
+            if (ss.Contains(id)) { throw new ArgumentException($"Reserved id:{id}"); }
+
             Id = id;
             Context = context;
             Text = text;

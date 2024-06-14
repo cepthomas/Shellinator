@@ -4,42 +4,40 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
-using Splunk.Common;
-using NM = Splunk.Common.NativeMethods;
-using SU = Splunk.Common.ShellUtils;
 using System.Linq;
 using System.Drawing;
 using System.ComponentModel;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using Splunk.Common;
+using NM = Splunk.Common.NativeMethods;
+using SU = Splunk.Common.ShellUtils;
 
-// TODO1 plugin model?
-// TODO1 test from UI
 
 namespace Splunk
 {
     public class Program
     {
         #region Fields - public for debugging
-        /// <summary>Crude debugging without spinning up a console or logger.</summary>
-        public static readonly List<string> _debug = [];
-
         /// <summary>Result of command execution.</summary>
-        public static string _stdout = "";
+        public static string _stdout = "";  // TODO1 stdout/stderr to clipboard and/or logfile?
 
         /// <summary>Result of command execution.</summary>
         public static string _stderr = "";
+
+        /// <summary>Log file name or clipboard if null.</summary>
+        static string? _logFile = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
         #endregion
 
         /// <summary>Where it all began.</summary>
         /// <param name="args"></param>
         static void Main(string[] args)
         {
-            _debug.Add($"{DateTime.Now} Splunk [{string.Join(" ", args)}]");
+            Log($"Splunk cl args:{string.Join(" ", args)}");
 
             // I'm in charge of the pixels.
             NM.SetProcessDPIAware();
-            string appDir = MiscUtils.GetAppDataDir("Splunk", "Ephemera");
 
             Stopwatch sw = new();
             sw.Start();
@@ -52,26 +50,25 @@ namespace Splunk
             {
                 case 0:
                     // Everything ok.
-                    PackageResult();
+                    Log(_stdout.Length > 0 ? $"OK{Environment.NewLine}{_stdout}" : "OK");
                     Environment.ExitCode = 0;
                     break;
 
                 case null:
                     // Splunk internal error.
-                    PackageResult();
+                    Log($"ERROR splunk{Environment.NewLine}{_stderr}");
                     Environment.ExitCode = 1;
                     break;
 
                 default:
-                    // Process execute code.
-                    PackageResult(new Win32Exception((int)code).Message);
+                    // Process exit code.
+                    Log($"ERROR process {(int)code}:{new Win32Exception((int)code).Message}{Environment.NewLine}{_stderr}");
                     Environment.ExitCode = 2;
                     break;
             }
 
             sw.Stop();
-            _debug.Add($"Exit:{Environment.ExitCode} Msec:{sw.ElapsedMilliseconds}");
-            File.AppendAllLines(Path.Join(appDir, "debug.txt"), _debug);
+            Log($"Exit code:{Environment.ExitCode} msec:{sw.ElapsedMilliseconds}");
         }
 
         /// <summary>Do the work.</summary>
@@ -80,9 +77,7 @@ namespace Splunk
         public static int? Run(List<string> args)
         {
             int? ret = 0;
-
             //Debugger.Break();
-            //Use ::DebugBreak() in the context handler to cause a break into the debugger.
 
             try
             {
@@ -92,7 +87,8 @@ namespace Splunk
                 var path = Environment.ExpandEnvironmentVariables(args[1]);
 
                 // Check for valid path.
-                if (!Path.Exists(path)) { throw new($"Invalid path: {path}"); }
+                if (path.StartsWith("::")) { throw new($"Can't use system folders e.g. Home"); }
+                else if (!Path.Exists(path)) { throw new($"Invalid path [{path}]"); }
 
                 // Final details.
                 FileAttributes attr = File.GetAttributes(path);
@@ -132,7 +128,7 @@ namespace Splunk
                         break;
 
                     case "tree":
-                        ret = ExecuteCommand("cmd", wdir, $"tree /a /f \"{wdir}\"");
+                        ret = ExecuteCommand("cmd", wdir, $"/c tree /a /f \"{wdir}\" | clip");
                         break;
 
                     case "exec":
@@ -141,11 +137,11 @@ namespace Splunk
                             var ext = Path.GetExtension(path);
                             ret = ext switch
                             {
-                                ".cmd" or ".bat" => ExecuteCommand("cmd", wdir, $"/c /q \"{path}\""),
+                                ".cmd" or ".bat" => ExecuteCommand("cmd", wdir, $"/c \"{path}\""),
                                 ".ps1" => ExecuteCommand("powershell", wdir, $"-executionpolicy bypass -File \"{path}\""),
                                 ".lua" => ExecuteCommand("lua", wdir, $"\"{path}\""),
                                 ".py" => ExecuteCommand("python", wdir, $"\"{path}\""),
-                                _ => ExecuteCommand("cmd", wdir, $"\"{path}\"") // Others - default just open.
+                                _ => ExecuteCommand("cmd", wdir, $"/c \"{path}\"") // default just open.
                             };
                         }
                         else
@@ -155,13 +151,13 @@ namespace Splunk
                         break;
 
                     case "test_deskbg":
-                        _debug.Add($"Got test_deskbg");
-                        //NM.MessageBox(IntPtr.Zero, "ExplorerContext.DeskBg", "Greetings From", 0);
+                        Log($"!!! Got test_deskbg");
+                        NM.MessageBox(IntPtr.Zero, $"!!! Got test_deskbg: {path}", "Debug", 0);
                         break;
 
                     case "test_folder":
-                        _debug.Add($"Got test_folder");
-                        //NM.MessageBox(IntPtr.Zero, "ExplorerContext.Folder", "Greetings From", 0);
+                        Log($"!!! Got test_folder");
+                        NM.MessageBox(IntPtr.Zero, "!!! Got test_folder: {path}", "Debug", 0);
                         break;
 
                     default:
@@ -171,7 +167,6 @@ namespace Splunk
             catch (Exception ex)
             {
                 // Splunk internal error.
-                _debug.Add($"ERROR:{DateTime.Now} {ex.Message}");
                 _stderr = $"{ex.Message}{Environment.NewLine}{ex.StackTrace}";
                 ret = null;
             }
@@ -184,73 +179,49 @@ namespace Splunk
         /// </summary>
         /// <param name="exe"></param>
         /// <param name="wdir"></param>
-        /// <param name="cmd"></param>
+        /// <param name="args"></param>
         /// <returns></returns>
-        static int ExecuteCommand(string exe, string wdir, string cmd)
+        static int ExecuteCommand(string exe, string wdir, string args)
         {
+            //Log($"DEBUG args:{args}");
+
             ProcessStartInfo pinfo = new()
             {
                 FileName = exe,
+                Arguments = args,
+                //WorkingDirectory = wdir, // TODO1 needed?
                 UseShellExecute = false,
                 CreateNoWindow = true,
-// TODO1 needed?
-                WorkingDirectory = wdir,
                 WindowStyle = ProcessWindowStyle.Hidden,
-                RedirectStandardInput = true,
+                //RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
             };
 
-            using (Process proc = new() { StartInfo = pinfo })
-            {
-                proc.Start();
-                proc.StandardInput.WriteLine($"{exe} {cmd}");
-                proc.StandardInput.WriteLine($"exit");
-                proc.WaitForExit();
+            using Process proc = new() { StartInfo = pinfo };
+            proc.Start();
+            proc.WaitForExit();
+            _stdout = proc.StandardOutput.ReadToEnd();
+            _stderr = proc.StandardError.ReadToEnd();
 
-                _stdout = proc.StandardOutput.ReadToEnd();
-                _stderr = proc.StandardError.ReadToEnd();
-
-                return proc.ExitCode;
-            }
+            return proc.ExitCode;
         }
 
-        /// <summary>
-        /// Gather what happened into something useful to the caller.
-        /// </summary>
-        /// <param name="extra"></param>
-        static void PackageResult(string extra = "")
+        /// <summary>Crude debugging without spinning up a console or logger.</summary>
+        static void Log(string msg)
         {
-            StringBuilder sb = new();
-            if (extra.Length > 0 )
-            {
-                sb.AppendLine("========== extra ==========");
-                sb.AppendLine(extra);
-            }
+            // TODO1 try real logging. simple style durations:
+            //Splunk cl args: exec C:\Dev\repos\Apps\Splunk\Test\go.cmd Exit code: 0 msec: 46
+            //Splunk cl args: exec C:\Dev\repos\Apps\Splunk\Test\go.lua Exit code: 0 msec: 27
+            //Splunk cl args: tree C:\Dev\repos\Apps\Splunk\Test\bin Exit code: 0 msec: 53
+            //Splunk cl args: exec C:\Dev\repos\Apps\Splunk\Splunk\bin\Debug\net8.0\Ephemera.NBagOfTricks.xml Exit code: 0 msec: 215
+            //Splunk cl args: cmder C:\Dev\repos\Apps\Splunk\Splunk\bin Exit code: 0 msec: 408
+            //Splunk cl args: exec C:\Dev\repos\Apps\Splunk\Test\dummy.txt Exit code: 0 msec: 212
 
-            if (_stderr.Length > 0)
+            if (_logFile is not null)
             {
-                sb.AppendLine("========== stderr ==========");
-                sb.AppendLine(_stderr);
+                File.AppendAllText(_logFile, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {msg}{Environment.NewLine}");
             }
-
-            if (_stdout.Length > 0)
-            {
-                sb.AppendLine("========== stdout ==========");
-                sb.AppendLine(_stdout);
-            }
-            sb.Append('\0');
-
-            // To clipboard or file?
-            string nullTerminatedStr = sb.ToString();// + '\0';
-            byte[] strBytes = Encoding.Unicode.GetBytes(nullTerminatedStr);
-            IntPtr hglobal = Marshal.AllocHGlobal(strBytes.Length);
-            Marshal.Copy(strBytes, 0, hglobal, strBytes.Length);
-            NM.OpenClipboard(IntPtr.Zero);
-            //NM.EmptyClipboard();
-            NM.SetClipboardData((int)NM.ClipboardFormats.CF_TEXT, hglobal);
-            NM.CloseClipboard();
-            Marshal.FreeHGlobal(hglobal);
         }
     }
 }

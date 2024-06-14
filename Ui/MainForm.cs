@@ -216,30 +216,25 @@ namespace Splunk.Ui
             rc.Add(new("tree", ExplorerContext.DirBg, "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
             rc.Add(new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
             rc.Add(new("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
-
-            rc.Add(new("exec", ExplorerContext.File, "Exec", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."));
-
-            rc.Add(new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SPLUNK %ID \"%D\"", "Debug stuff."));
+            rc.Add(new("exec", ExplorerContext.File, "Execute", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."));
+            // test items:
+            rc.Add(new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SPLUNK %ID \"%W\"", "Debug stuff."));
             rc.Add(new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SPLUNK %ID \"%D\"", "Debug stuff."));
         }
 
         /// <summary>
-        /// Debug.
+        /// Debug stuff.
         /// </summary>
         void DoSplunk()
         {
-            var fgHandle = NM.GetForegroundWindow();
-            WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
+            //var fgHandle = NM.GetForegroundWindow();
+            //WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
+
 
             //List<string> args = ["cmder", @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages"];
-
-            //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.cmd"];
-
+            List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.cmd"];
             //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.lua"];
-
-            List<string> args = ["test_deskbg", @"C:\Dev\repos\Apps\Splunk\Test\go.lua"];
-
-
+            //List<string> args = ["test_deskbg", @"C:\Dev\repos\Apps\Splunk\Test\dummy.txt"];
             int? code = Splunk.Program.Run(args);
         }
         #endregion

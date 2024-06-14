@@ -31,7 +31,7 @@ These are the builtin commands. It's stuff I've wanted to add to an explorer con
 | Find in Everything | Dir       | Open selected directory in Everything. |
 | Tree               | DirBg     | Copy a tree here to clipboard. |
 | Open in Sublime    | DirBg     | Open here in Sublime Text. |
-| Exec               | File      | Execute if executable otherwise open. Suppresses console window creation. |
+| Execute            | File      | Execute if executable otherwise open. Suppresses console window creation. |
 
 
 # Implementation
