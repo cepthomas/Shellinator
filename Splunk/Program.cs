@@ -16,7 +16,6 @@ using System.Runtime.Versioning;
 
 namespace Splunk
 {
-    [SupportedOSPlatform("windows")]
     public class Program
     {
         #region Fields - public for debugging

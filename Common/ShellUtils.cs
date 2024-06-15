@@ -63,7 +63,6 @@ namespace Splunk.Common
         }
     }
 
-    [SupportedOSPlatform("windows")]
     public class ShellUtils
     {
         /// <summary>

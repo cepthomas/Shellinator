@@ -12,7 +12,6 @@ using System.Runtime.Versioning;
 namespace Splunk.Common
 {
     [Serializable]
-    [SupportedOSPlatform("windows")]
     public class UserSettings : SettingsCore
     {
         #region Properties - persisted

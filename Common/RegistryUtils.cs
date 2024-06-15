@@ -9,7 +9,6 @@ using System.Runtime.Versioning;
 
 namespace Splunk.Common
 {
-    [SupportedOSPlatform("windows")]
     public class RegistryUtils
     {
         /// <summary>Dry run the registry writes.</summary>
