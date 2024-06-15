@@ -5,103 +5,41 @@ using System.Text;
 using System.Threading;
 
 
-// From https://github.com/MrM40/W-WinClipboard/tree/main
+// From https://github.com/MrM40/W-WinClipboard
 
-// TODO clean up, put somewhere else?
-//// my old attempt
-//sb.Append('\0');
-//string nullTerminatedStr = sb.ToString();
-//byte[] strBytes = Encoding.Unicode.GetBytes(nullTerminatedStr);
-//IntPtr hglobal = Marshal.AllocHGlobal(strBytes.Length);
-//Marshal.Copy(strBytes, 0, hglobal, strBytes.Length);
-//NM.OpenClipboard(IntPtr.Zero);
-////NM.EmptyClipboard();
-//NM.SetClipboardData((int)NM.ClipboardFormats.CF_TEXT, hglobal);
-//NM.CloseClipboard();
-//Marshal.FreeHGlobal(hglobal);
+// TODO clean up, put somewhere else? Maybe a lib with all Win32 stuff?
 
 
 namespace Splunk.Common
 {
     public static class Clipboard
     {
-        const uint cfUnicodeText = 13;
+        //https://learn.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats
+        public enum ClipboardFormats : int
+        {
+            CF_TEXT = 1,            // ANSI Text format. A null character signals the end of the data.
+            CF_BITMAP = 2,          // A handle to a bitmap (HBITMAP).
+            CF_WAVE = 12,           // Audio data in one of the standard wave formats.
+            CF_UNICODETEXT = 13,    // Unicode text format. A null character signals the end of the data.
+        }
 
         public static string? GetText()
         {
-            if (!IsClipboardFormatAvailable(cfUnicodeText))
+            if (!IsClipboardFormatAvailable((int)ClipboardFormats.CF_UNICODETEXT))
             {
                 return null;
             }
 
             TryOpenClipboard();
 
-            return InnerGet();
-        }
+            // return InnerGet();
 
-        public static void SetText(string text)
-        {
-            TryOpenClipboard();
-
-            InnerSet(text);
-        }
-
-        static void InnerSet(string text)
-        {
-            EmptyClipboard();
-            IntPtr hGlobal = default;
-            try
-            {
-                var bytes = (text.Length + 1) * 2;
-                hGlobal = Marshal.AllocHGlobal(bytes);
-
-                if (hGlobal == default)
-                {
-                    ThrowWin32();
-                }
-
-                var target = GlobalLock(hGlobal);
-
-                if (target == default)
-                {
-                    ThrowWin32();
-                }
-
-                try
-                {
-                    Marshal.Copy(text.ToCharArray(), 0, target, text.Length);
-                }
-                finally
-                {
-                    GlobalUnlock(target);
-                }
-
-                if (SetClipboardData(cfUnicodeText, hGlobal) == default)
-                {
-                    ThrowWin32();
-                }
-
-                hGlobal = default;
-            }
-            finally
-            {
-                if (hGlobal != default)
-                {
-                    Marshal.FreeHGlobal(hGlobal);
-                }
-
-                CloseClipboard();
-            }
-        }
-
-        static string? InnerGet()
-        {
             IntPtr handle = default;
-
             IntPtr pointer = default;
+
             try
             {
-                handle = GetClipboardData(cfUnicodeText);
+                handle = GetClipboardData((int)ClipboardFormats.CF_UNICODETEXT);
                 if (handle == default)
                 {
                     return null;
@@ -131,6 +69,60 @@ namespace Splunk.Common
             }
         }
 
+        public static void SetText(string text)
+        {
+            TryOpenClipboard();
+
+            // InnerSet(text);
+
+            EmptyClipboard();
+            IntPtr hGlobal = default;
+
+            try
+            {
+                var bytes = (text.Length + 1) * 2;
+                hGlobal = Marshal.AllocHGlobal(bytes);
+
+                if (hGlobal == default)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+                var target = GlobalLock(hGlobal);
+
+                if (target == default)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+                try
+                {
+                    Marshal.Copy(text.ToCharArray(), 0, target, text.Length);
+                }
+                finally
+                {
+                    GlobalUnlock(target);
+                }
+
+                if (SetClipboardData((int)ClipboardFormats.CF_UNICODETEXT, hGlobal) == default)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+                hGlobal = default;
+            }
+            finally
+            {
+                if (hGlobal != default)
+                {
+                    Marshal.FreeHGlobal(hGlobal);
+                }
+
+                CloseClipboard();
+            }
+        }
+
+
         static void TryOpenClipboard()
         {
             var num = 10;
@@ -143,16 +135,11 @@ namespace Splunk.Common
 
                 if (--num == 0)
                 {
-                    ThrowWin32();
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
 
                 Thread.Sleep(100);
             }
-        }
-
-        static void ThrowWin32()
-        {
-            throw new Win32Exception(Marshal.GetLastWin32Error());
         }
 
         [DllImport("User32.dll", SetLastError = true)]

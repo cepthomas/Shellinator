@@ -26,12 +26,10 @@ These are the builtin commands. It's stuff I've wanted to add to an explorer con
 | Menu Item          | Context   | Action |
 | ---------          | ------    | ------ |
 | Commander          | Dir       | Open a new explorer next to the current. Simulates old school Commander. |
-| Tree               | Dir       | Copy a tree of selected directory to clipboard |
-| Open in Sublime    | Dir       | Open selected directory in Sublime Text. |
-| Find in Everything | Dir       | Open selected directory in Everything. |
-| Tree               | DirBg     | Copy a tree here to clipboard. |
-| Open in Sublime    | DirBg     | Open here in Sublime Text. |
-| Execute            | File      | Execute if executable otherwise open. Suppresses console window creation. |
+| Tree               | Dir       | Copy a tree of selected directory to clipboard. |
+| Open in Sublime    | Dir/DirBg | Open selected directory/here in Sublime Text. |
+| Find in Everything | Dir/DirBg | Open selected directory/here in Everything. |
+| Execute            | File      | Execute if executable otherwise open. Suppresses console window creation. Output goes in clipboard. |
 
 
 # Implementation

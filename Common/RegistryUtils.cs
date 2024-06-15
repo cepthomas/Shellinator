@@ -6,15 +6,15 @@ using System.ComponentModel;
 using System.Text.Json.Serialization;
 
 
-
 namespace Splunk.Common
 {
     public class RegistryUtils
     {
-        /// <summary>Dry run the registry entries.</summary>
+        /// <summary>Dry run the registry writes.</summary>
         static readonly bool _fake = false;
 
         /// <summary>Write one command to the registry.</summary>
+        /// <param name="rc"></param>
         /// <param name="splunkPath"></param>
         public static void CreateRegistryEntry(RegistryCommand rc, string splunkPath)
         {
@@ -42,9 +42,7 @@ namespace Splunk.Common
             }
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
+        /// <summary>Delete a registry entry.</summary>
         public static void RemoveRegistryEntry(RegistryCommand rc)
         {
             //public void DeleteSubKeyTree(string subkey);
@@ -64,6 +62,7 @@ namespace Splunk.Common
             }
         }
 
+        /// <summary>Convert the splunk context to registry key.</summary>
         public static string GetRegPath(ExplorerContext context)
         {
             return context switch
@@ -73,12 +72,12 @@ namespace Splunk.Common
                 ExplorerContext.DeskBg => "DesktopBackground",
                 ExplorerContext.Folder => "Folder",
                 ExplorerContext.File => "*",
-                _ => throw new NotImplementedException()
+                _ => throw new ArgumentException("Impossible")
             };
         }
     }
     
-    /// <summary>See README#Commands. TODO File: support specific extensions.</summary>
+    /// <summary>See README#Commands. File to support specific extensions?</summary>
     public enum ExplorerContext { Dir, DirBg, DeskBg, Folder, File }
 
     [Serializable]

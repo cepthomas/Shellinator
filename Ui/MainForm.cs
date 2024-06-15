@@ -235,7 +235,15 @@ namespace Splunk.Ui
             List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.cmd"];
             //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.lua"];
             //List<string> args = ["test_deskbg", @"C:\Dev\repos\Apps\Splunk\Test\dummy.txt"];
-            int? code = Splunk.Program.Run(args);
+
+            try
+            {
+                Splunk.Program.Run(args);
+            }
+            catch (Exception ex)
+            {
+                // Get type, do something.
+            }
         }
         #endregion
     }

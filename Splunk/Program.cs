@@ -3,13 +3,11 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Ephemera.NBagOfTricks;
-using Ephemera.NBagOfTricks.Slog;
 using System.Linq;
 using System.Drawing;
 using System.ComponentModel;
 using System.Text;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
@@ -17,6 +15,7 @@ using SU = Splunk.Common.ShellUtils;
 
 namespace Splunk
 {
+
     public class Program
     {
         #region Fields - public for debugging
@@ -30,7 +29,7 @@ namespace Splunk
         static string _logFileName = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
 
         /// <summary>Stdio goes to clipboard.</summary>
-        static bool _useClipboard = true;
+        static readonly bool _useClipboard = true;
         #endregion
 
         /// <summary>Where it all began.</summary>
@@ -46,154 +45,154 @@ namespace Splunk
             sw.Start();
 
             // Execute.
-            var code = Run([.. args]);
+            //string sout = "";
+            //string logLine = "";
+           // string infoLine = "";
+
+
+            try
+            {
+                Run([.. args]);
+
+                Environment.ExitCode = 0;
+                Log("Everything went OK");
+                Clipboard.SetText(_stdout);
+            }
+            catch (SplunkException ex)
+            {
+                if (ex.IsError)
+                {
+                    Environment.ExitCode = 1;
+                    Log($"Splunk ERROR: {ex.Message}");
+                    Clipboard.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                    NM.MessageBox(IntPtr.Zero, ex.Message, "See the clipboard", (uint)NM.MessageBoxFlags.MB_ICONERROR);
+                }
+                else // just notify
+                {
+                    Log($"Splunk INFO: {ex.Message}");
+                    Environment.ExitCode = 0;
+                    NM.MessageBox(IntPtr.Zero, ex.Message, "You should know", (uint)NM.MessageBoxFlags.MB_ICONINFORMATION);
+                }
+            }
+            catch (Win32Exception ex)
+            {
+                Log($"Spawned process ERROR: {ex.ErrorCode} {ex.Message}");
+                Clipboard.SetText($"{ex.Message}{Environment.NewLine}{_stderr}");
+                Environment.ExitCode = 2;
+                NM.MessageBox(IntPtr.Zero, ex.Message, "See the clipboard", (uint)NM.MessageBoxFlags.MB_ICONERROR);
+            }
+            catch (Exception ex) // something else
+            {
+                Log($"Internal ERROR: {ex.Message}");
+                Clipboard.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                Environment.ExitCode = 3;
+                NM.MessageBox(IntPtr.Zero, ex.Message, "See the clipboard", (uint)NM.MessageBoxFlags.MB_ICONERROR);
+            }
 
             sw.Stop();
             Log($"Exit code:{Environment.ExitCode} msec:{sw.ElapsedMilliseconds}");
 
-            // What happened?
-            string sout = ""; // TODO
-            switch (code)
-            {
-                case 0:
-                    // Everything ok.
-                    sout = _stdout;
-                    Log("OK");
-                    Environment.ExitCode = 0;
-                    break;
-
-                case null:
-                    // Splunk internal error.
-                    sout = $"ERROR splunk{Environment.NewLine}{_stderr}";
-                    Log(sout);
-                    Environment.ExitCode = 1;
-                    break;
-
-                default:
-                    // Process error.
-                    sout = $"ERROR process {(int)code}:{new Win32Exception((int)code).Message}{Environment.NewLine}{_stderr}";
-                    Log(sout);
-                    Environment.ExitCode = 2;
-                    break;
-            }
-
-            if (_useClipboard)
-            {
-                Clipboard.SetText(sout);
-            }
-
-            // Before we end, manage log size. TODO
+            // Before we end, manage log file.
             FileInfo fi = new(_logFileName);
             if (fi.Exists && fi.Length > 10000)
             {
-                //Open both the input file and a new output file(as a TextReader / TextWriter, e.g.with File.OpenText and File.CreateText)
-                //Read a line(TextReader.ReadLine) - if you don't want to delete it, write it to the output file (TextWriter.WriteLine)
-                //When you've read all the lines, close both the reader and the writer (if you use using statements for both,
-                //this will happen automatically)
+                var lines = File.ReadAllLines(_logFileName);
+                int start = lines.Length / 3;
+                var trunc = lines.Subset(start, lines.Length - start);
+                File.WriteAllLines(_logFileName, trunc);
             }
         }
 
         /// <summary>Do the work.</summary>
         /// <param name="args"></param>
-        /// <returns>Process return code or null if internal error.</returns>
-        public static int? Run(List<string> args)
+        public static void Run(List<string> args)
         {
-            int? ret = 0;
-            //Debugger.Break();
+            // Process the args => Splunk.exe id path
+            if (args.Count != 2) { throw new SplunkException($"Invalid command line format", true); }
+            var id = Environment.ExpandEnvironmentVariables(args[0]);
+            var path = Environment.ExpandEnvironmentVariables(args[1]);
 
-            try
+            // Check for valid path.
+            if (path.StartsWith("::")) { throw new SplunkException($"Can't use magic system folders e.g. Home", false); }
+            else if (!Path.Exists(path)) { throw new SplunkException($"Invalid path [{path}]", true); }
+
+            // Final details.
+            FileAttributes attr = File.GetAttributes(path);
+            var wdir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
+            var isdir = attr.HasFlag(FileAttributes.Directory);
+
+            switch (id)
             {
-                // Process the args. Splunk.exe "id" "path"
-                if (args.Count != 2) { throw new($"Invalid command line format"); }
-                var id = Environment.ExpandEnvironmentVariables(args[0]);
-                var path = Environment.ExpandEnvironmentVariables(args[1]);
+                case "cmder":
+                    var fgHandle = NM.GetForegroundWindow(); // -> left pane
+                    WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
 
-                // Check for valid path.
-                if (path.StartsWith("::")) { throw new($"Can't use system folders e.g. Home"); }
-                else if (!Path.Exists(path)) { throw new($"Invalid path [{path}]"); }
+                    // New explorer -> right pane.
+                    NM.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
 
-                // Final details.
-                FileAttributes attr = File.GetAttributes(path);
-                var wdir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
-                var isdir = attr.HasFlag(FileAttributes.Directory);
+                    // Locate the new explorer window. Wait for it to be created. This is a bit klunky but there does not appear to be a more direct method.
+                    int tries = 0; // ~4
+                    WindowInfo? rightPane = null;
+                    for (tries = 0; tries < 20 && rightPane is null; tries++)
+                    {
+                        System.Threading.Thread.Sleep(50);
+                        var wins = SU.GetAppWindows("explorer");
+                        rightPane = wins.Where(w => w.Title == path).FirstOrDefault();
+                    }
+                    if (rightPane is null) throw new SplunkException($"Couldn't create right pane for [{path}]", true);
 
-                switch (id)
-                {
-                    case "cmder":
-                        var fgHandle = NM.GetForegroundWindow(); // -> left pane
-                        WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
+                    // Relocate/resize the windows to fit available real estate.
+                    WindowInfo desktop = SU.GetWindowInfo(NM.GetShellWindow());
+                    int w = desktop.DisplayRectangle.Width * 45 / 100;
+                    int h = desktop.DisplayRectangle.Height * 80 / 100;
+                    int t = 50, l = 50;
+                    NM.MoveWindow(fgHandle, l, t, w, h, true);
+                    NM.SetForegroundWindow(fgHandle);
+                    l += w;
+                    NM.MoveWindow(rightPane.Handle, l, t, w, h, true);
+                    NM.SetForegroundWindow(rightPane.Handle);
+                    break;
 
-                        // New explorer -> right pane.
-                        NM.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
+                case "tree":
+                    {
+                        int code = ExecuteCommand("cmdx", wdir, $"/c tree /a /f \"{wdir}\" | clip");
+                        if (code != 0) { throw new Win32Exception(code); }
+                    }
+                    break;
 
-                        // Locate the new explorer window. Wait for it to be created. This is a bit klunky but there does not appear to be a more direct method.
-                        int tries = 0; // ~4
-                        WindowInfo? rightPane = null;
-                        for (tries = 0; tries < 20 && rightPane is null; tries++)
+                case "exec":
+                    if (!isdir)
+                    {
+                        var ext = Path.GetExtension(path);
+                        int code = ext switch
                         {
-                            System.Threading.Thread.Sleep(50);
-                            var wins = SU.GetAppWindows("explorer");
-                            rightPane = wins.Where(w => w.Title == path).FirstOrDefault();
-                        }
-                        if (rightPane is null) throw new InvalidOperationException($"Couldn't create right pane for [{path}]");
+                            ".cmd" or ".bat" => ExecuteCommand("cmd", wdir, $"/c \"{path}\""),
+                            ".ps1" => ExecuteCommand("powershell", wdir, $"-executionpolicy bypass -File \"{path}\""),
+                            ".lua" => ExecuteCommand("lua", wdir, $"\"{path}\""),
+                            ".py" => ExecuteCommand("python", wdir, $"\"{path}\""),
+                            _ => ExecuteCommand("cmd", wdir, $"/c \"{path}\"") // default just open.
+                        };
+                        if (code != 0) { throw new Win32Exception(code); }
+                    }
+                    else
+                    {
+                        // ignore selection of dir
+                    }
+                    break;
 
-                        // Relocate/resize the windows to fit available real estate.
-                        WindowInfo desktop = SU.GetWindowInfo(NM.GetShellWindow());
-                        int w = desktop.DisplayRectangle.Width * 45 / 100;
-                        int h = desktop.DisplayRectangle.Height * 80 / 100;
-                        int t = 50, l = 50;
-                        NM.MoveWindow(fgHandle, l, t, w, h, true);
-                        NM.SetForegroundWindow(fgHandle);
-                        l += w;
-                        NM.MoveWindow(rightPane.Handle, l, t, w, h, true);
-                        NM.SetForegroundWindow(rightPane.Handle);
-                        break;
+                case "test_deskbg":
+                    Log($"!!! Got test_deskbg");
+                    NM.MessageBox(IntPtr.Zero, $"!!! Got test_deskbg: {path}", "Debug", 0);
+                    break;
 
-                    case "tree":
-                        ret = ExecuteCommand("cmd", wdir, $"/c tree /a /f \"{wdir}\" | clip");
-                        break;
+                case "test_folder":
+                    Log($"!!! Got test_folder");
+                    NM.MessageBox(IntPtr.Zero, "!!! Got test_folder: {path}", "Debug", 0);
+                    break;
 
-                    case "exec":
-                        if (!isdir)
-                        {
-                            var ext = Path.GetExtension(path);
-                            ret = ext switch
-                            {
-                                ".cmd" or ".bat" => ExecuteCommand("cmd", wdir, $"/c \"{path}\""),
-                                ".ps1" => ExecuteCommand("powershell", wdir, $"-executionpolicy bypass -File \"{path}\""),
-                                ".lua" => ExecuteCommand("lua", wdir, $"\"{path}\""),
-                                ".py" => ExecuteCommand("python", wdir, $"\"{path}\""),
-                                _ => ExecuteCommand("cmd", wdir, $"/c \"{path}\"") // default just open.
-                            };
-                        }
-                        else
-                        {
-                            // ignore selection of dir
-                        }
-                        break;
-
-                    case "test_deskbg":
-                        Log($"!!! Got test_deskbg");
-                        NM.MessageBox(IntPtr.Zero, $"!!! Got test_deskbg: {path}", "Debug", 0);
-                        break;
-
-                    case "test_folder":
-                        Log($"!!! Got test_folder");
-                        NM.MessageBox(IntPtr.Zero, "!!! Got test_folder: {path}", "Debug", 0);
-                        break;
-
-                    default:
-                        throw new ArgumentException($"Invalid id: {id}");
-                }
+                default:
+                    throw new SplunkException($"Invalid id: {id}", true);
             }
-            catch (Exception ex)
-            {
-                // Splunk internal error.
-                _stderr = $"{ex.Message}{Environment.NewLine}{ex.StackTrace}";
-                ret = null;
-            }
-
-            return ret;
         }
 
         /// <summary>
@@ -223,13 +222,14 @@ namespace Splunk
             using Process proc = new() { StartInfo = pinfo };
             proc.Start();
             proc.WaitForExit();
+            // Save process results.
             _stdout = proc.StandardOutput.ReadToEnd();
             _stderr = proc.StandardError.ReadToEnd();
 
             return proc.ExitCode;
         }
 
-        /// <summary>Crude debugging without spinning up a console or logger.</summary>
+        /// <summary>Simple logging, don't need or want a full-blown logger.</summary>
         static void Log(string msg)
         {
             if (_logFileName is not null)
@@ -237,5 +237,13 @@ namespace Splunk
                 File.AppendAllText(_logFileName, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {msg}{Environment.NewLine}");
             }
         }
+    }
+
+    /// <summary>App exception.</summary>
+    /// <param name="msg"></param>
+    /// <param name="isError">Otherwise info</param>
+    class SplunkException(string msg, bool isError) : Exception(msg)
+    {
+        public bool IsError { get; } = isError;
     }
 }
