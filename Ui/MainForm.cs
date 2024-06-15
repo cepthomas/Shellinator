@@ -242,6 +242,7 @@ namespace Splunk.Ui
             }
             catch (Exception ex)
             {
+                Debug.WriteLine(ex.ToString());
                 // Get type, do something.
             }
         }

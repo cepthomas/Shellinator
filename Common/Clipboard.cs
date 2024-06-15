@@ -7,35 +7,39 @@ using System.Threading;
 
 // From https://github.com/MrM40/W-WinClipboard
 
-// TODO clean up, put somewhere else? Maybe a lib with all Win32 stuff?
+// TODO clean up.
 
 
 namespace Splunk.Common
 {
+#pragma warning disable SYSLIB1054, CA1401, CA2101
+
     public static class Clipboard
     {
-        //https://learn.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats
+        // https://learn.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats
         public enum ClipboardFormats : int
         {
-            CF_TEXT = 1,            // ANSI Text format. A null character signals the end of the data.
-            CF_BITMAP = 2,          // A handle to a bitmap (HBITMAP).
-            CF_WAVE = 12,           // Audio data in one of the standard wave formats.
-            CF_UNICODETEXT = 13,    // Unicode text format. A null character signals the end of the data.
+            CF_TEXT = 1,         // ANSI Text format. A null character signals the end of the data.
+            CF_BITMAP = 2,       // A handle to a bitmap (HBITMAP).
+            CF_WAVE = 12,        // Audio data in one of the standard wave formats.
+            CF_UNICODETEXT = 13, // Unicode text format. A null character signals the end of the data.
         }
 
+        /// <summary>
+        /// Get text from clipboard.
+        /// </summary>
+        /// <returns></returns>
         public static string? GetText()
         {
+            IntPtr handle = default;
+            IntPtr pointer = default;
+
             if (!IsClipboardFormatAvailable((int)ClipboardFormats.CF_UNICODETEXT))
             {
                 return null;
             }
 
             TryOpenClipboard();
-
-            // return InnerGet();
-
-            IntPtr handle = default;
-            IntPtr pointer = default;
 
             try
             {
@@ -69,11 +73,14 @@ namespace Splunk.Common
             }
         }
 
+        /// <summary>
+        /// Set text in clipboard.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <exception cref="Win32Exception"></exception>
         public static void SetText(string text)
         {
             TryOpenClipboard();
-
-            // InnerSet(text);
 
             EmptyClipboard();
             IntPtr hGlobal = default;
@@ -122,7 +129,10 @@ namespace Splunk.Common
             }
         }
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <exception cref="Win32Exception"></exception>
         static void TryOpenClipboard()
         {
             var num = 10;
@@ -142,6 +152,7 @@ namespace Splunk.Common
             }
         }
 
+        #region Native methods
         [DllImport("User32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool IsClipboardFormatAvailable(uint format);
@@ -172,5 +183,6 @@ namespace Splunk.Common
 
         [DllImport("Kernel32.dll", SetLastError = true)]
         static extern int GlobalSize(IntPtr hMem);
+        #endregion
     }
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Text;
 using Ephemera.NBagOfTricks;
 using NM = Splunk.Common.NativeMethods;
@@ -62,6 +63,7 @@ namespace Splunk.Common
         }
     }
 
+    [SupportedOSPlatform("windows")]
     public class ShellUtils
     {
         /// <summary>

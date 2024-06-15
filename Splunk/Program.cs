@@ -11,11 +11,12 @@ using System.Runtime.InteropServices;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
+using System.Runtime.Versioning;
 
 
 namespace Splunk
 {
-
+    [SupportedOSPlatform("windows")]
     public class Program
     {
         #region Fields - public for debugging
@@ -26,7 +27,7 @@ namespace Splunk
         public static string _stderr = "";
 
         /// <summary>Log file name.</summary>
-        static string _logFileName = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
+        static readonly string _logFileName = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
 
         /// <summary>Stdio goes to clipboard.</summary>
         static readonly bool _useClipboard = true;
@@ -45,11 +46,6 @@ namespace Splunk
             sw.Start();
 
             // Execute.
-            //string sout = "";
-            //string logLine = "";
-           // string infoLine = "";
-
-
             try
             {
                 Run([.. args]);

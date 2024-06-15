@@ -6,11 +6,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
+using System.Runtime.Versioning;
 
 
 namespace Splunk.Common
 {
     [Serializable]
+    [SupportedOSPlatform("windows")]
     public class UserSettings : SettingsCore
     {
         #region Properties - persisted

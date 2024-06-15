@@ -7,23 +7,23 @@
     <RootNamespace>Splunk.Common</RootNamespace>
   </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-        <NoWarn>1701;1702;CA1416</NoWarn>
-    </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <NoWarn>CA1806</NoWarn>
+  </PropertyGroup>
 
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-        <NoWarn>1701;1702;CA1416</NoWarn>
-    </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <NoWarn>CA1806</NoWarn>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <Compile Remove="NativeExtra.cs" />
-    </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="NativeExtra.cs" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <None Include="NativeExtra.cs" />
-    </ItemGroup>
+  <ItemGroup>
+    <None Include="NativeExtra.cs" />
+  </ItemGroup>
 
-    <ItemGroup>
+  <ItemGroup>
     <Reference Include="Ephemera.NBagOfTricks">
       <HintPath>..\lib\Ephemera.NBagOfTricks.dll</HintPath>
     </Reference>
