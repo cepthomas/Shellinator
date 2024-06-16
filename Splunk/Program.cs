@@ -95,6 +95,7 @@ namespace Splunk
                 int start = lines.Length / 3;
                 var trunc = lines.Subset(start, lines.Length - start);
                 File.WriteAllLines(_logFileName, trunc);
+                Log($">>>> Trimmed log file");
             }
         }
 
