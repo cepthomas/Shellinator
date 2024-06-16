@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Ephemera.NBagOfTricks;
-using NM = Splunk.Common.NativeMethods;
 
 
 namespace Splunk.Common

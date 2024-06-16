@@ -150,7 +150,7 @@ namespace Splunk
 
                 case "tree":
                     {
-                        int code = ExecuteCommand("cmdx", wdir, $"/c tree /a /f \"{wdir}\" | clip");
+                        int code = ExecuteCommand("cmd", wdir, $"/c tree /a /f \"{wdir}\" | clip");
                         if (code != 0) { throw new Win32Exception(code); }
                     }
                     break;
