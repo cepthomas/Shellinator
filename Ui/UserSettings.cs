@@ -4,12 +4,12 @@ using System.IO;
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+//using System.Runtime.Versioning;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
-using System.Runtime.Versioning;
 
 
-namespace Splunk.Common
+namespace Splunk.Ui
 {
     [Serializable]
     public class UserSettings : SettingsCore

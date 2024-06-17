@@ -75,8 +75,8 @@ namespace Splunk.Ui
             btnDump.Click += (sender, e) => { SU.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
 
             // Manage commands in registry.
-            btnInitReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.CreateRegistryEntry(c, Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
-            btnClearReg.Click += (sender, e) => { _settings.RegistryCommands.ForEach(c => RegistryUtils.RemoveRegistryEntry(c)); };
+            btnInitReg.Click += (sender, e) => { _settings.Commands.ForEach(c => c.CreateRegistryEntry(Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
+            btnClearReg.Click += (sender, e) => { _settings.Commands.ForEach(c => c.RemoveRegistryEntry()); };
 
             // Shell hook handler.
             _hookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
@@ -163,7 +163,7 @@ namespace Splunk.Ui
                 int key = (int)((long)message.LParam >> 16);
                 int mod = (int)((long)message.LParam & 0xFFFF);
 
-                if (mod == NM.ALT | NM.CTRL | NM.SHIFT)
+                if (mod == (NM.ALT | NM.CTRL | NM.SHIFT))
                 {
                     switch (key)
                     {
@@ -199,7 +199,7 @@ namespace Splunk.Ui
         /// </summary>
         void CreateCommands()
         {
-            var rc = _settings.RegistryCommands; // alias
+            var rc = _settings.Commands; // alias
             rc.Clear();
 
             rc.Add(new("cmder", ExplorerContext.Dir, "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
