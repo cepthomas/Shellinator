@@ -1,7 +1,0 @@
-
-
-namespace Win32BagOfTricks
-{
-
-
-}
