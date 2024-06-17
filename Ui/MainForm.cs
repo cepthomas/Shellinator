@@ -13,8 +13,11 @@ using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using Splunk.Common;
+
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
+
+using Win32BagOfTricks;
 //using WBOT = Win32BagOfTricks;
 
 

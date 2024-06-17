@@ -1,5 +1,9 @@
 #pragma once
-ref class Clipboard
-{
-};
 
+
+namespace Win32BagOfTricks
+{
+    ref class Clipboard
+    {
+    };
+}

@@ -1,5 +1,8 @@
 #pragma once
-ref class Internals
-{
-};
 
+namespace Win32BagOfTricks
+{
+    ref class Internals
+    {
+    };
+}

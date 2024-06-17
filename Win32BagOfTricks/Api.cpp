@@ -17,7 +17,7 @@ using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Text;
 using namespace System::Diagnostics;
-using namespace Interop;
+using namespace Win32BagOfTricks;
 
 
 #define MAX_PATH  260 // win32 def

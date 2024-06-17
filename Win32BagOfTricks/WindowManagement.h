@@ -1,5 +1,8 @@
 #pragma once
-ref class WindowManagement
-{
-};
 
+namespace Win32BagOfTricks
+{
+    ref class WindowManagement
+    {
+    };
+}

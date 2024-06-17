@@ -8,7 +8,7 @@ using namespace System::Collections::Generic;
 //#define MAKE_ID(l)  ((int)((long long)l & 0X00000000FFFFFFFF))
 
 
-namespace Interop
+namespace Win32BagOfTricks
 {
     /// <summary>Nebulua status. App errors start after internal lua errors so they can be handled consistently.</summary>
     public enum class NebStatus
