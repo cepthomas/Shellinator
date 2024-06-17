@@ -22,7 +22,6 @@ namespace Splunk.Ui
     public partial class MainForm : Form
     {
         #region Definitions
-        const int KEY_W = (int)Keys.W;
         const int KEY_A = (int)Keys.A;
         #endregion
 
@@ -81,11 +80,10 @@ namespace Splunk.Ui
 
             // Shell hook handler.
             _hookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
-            _ = NM.RegisterShellHookWindow(Handle);
+            NM.RegisterShellHookWindow(Handle);
 
             // Hot key handlers.
-            NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, KEY_A);
-            NM.RegisterHotKey(Handle, MakeKeyId(KEY_W, NM.ALT + NM.CTRL + NM.SHIFT), NM.ALT + NM.CTRL + NM.SHIFT, KEY_W);
+            NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.ALT | NM.CTRL | NM.SHIFT), NM.ALT | NM.CTRL | NM.SHIFT, KEY_A);
 
             // Debug stuff.
             btnGo.Click += (sender, e) => { DoSplunk(); };
@@ -123,9 +121,8 @@ namespace Splunk.Ui
         {
             if (disposing)
             {
-                _ = NM.DeregisterShellHookWindow(Handle);
-                _ = NM.UnregisterHotKey(Handle, MakeKeyId(KEY_A, NM.ALT + NM.CTRL + NM.SHIFT));
-                _ = NM.UnregisterHotKey(Handle, MakeKeyId(KEY_W, NM.ALT + NM.CTRL + NM.SHIFT));
+                NM.DeregisterShellHookWindow(Handle);
+                NM.UnregisterHotKey(Handle, MakeKeyId(KEY_A, NM.ALT | NM.CTRL | NM.SHIFT));
 
                 components?.Dispose();
             }
@@ -166,16 +163,12 @@ namespace Splunk.Ui
                 int key = (int)((long)message.LParam >> 16);
                 int mod = (int)((long)message.LParam & 0xFFFF);
 
-                if (mod == NM.ALT + NM.CTRL + NM.SHIFT)
+                if (mod == NM.ALT | NM.CTRL | NM.SHIFT)
                 {
                     switch (key)
                     {
                         case KEY_A:
                             _logger.Debug($"KEY_A:{handle}");
-                            break;
-
-                        case KEY_W:
-                            _logger.Debug($"KEY_W:{handle}");
                             break;
 
                         default:

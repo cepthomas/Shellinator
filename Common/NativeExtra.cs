@@ -102,6 +102,27 @@ namespace Splunk.Common
             DDETopic
         }
 
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct ShFileInfo
+        {
+            public IntPtr hIcon;
+            public IntPtr iIcon;
+            public uint dwAttributes;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szDisplayName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+            public string szTypeName;
+        }
+
+
+        [DllImport("User32.dll")]
+        public static extern int DestroyIcon(IntPtr hIcon);
+
+
+        [DllImport("shell32.dll", CharSet = CharSet.Ansi)]
+        public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref ShFileInfo psfi, uint cbSizeFileInfo, uint uFlags);
+
         public static string GetFileAssociationInfo(AssocStr assocStr, string ext, string? verb = null)
         {
             uint pcchOut = 0;

@@ -30,7 +30,7 @@ namespace Splunk.Common
         [DisplayName("Registry Commands")]
         [Description("Descriptors for context menu commands.")]
         [Browsable(true)]
-        public List<RegistryCommand> RegistryCommands { get; set; } = [];
+        public List<ExplorerCommand> Commands { get; set; } = [];
         #endregion
     }
 }

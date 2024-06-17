@@ -204,18 +204,6 @@ namespace Splunk.Common
             public readonly int Width { get { return Right - Left; } }
             public readonly int Height { get { return Bottom - Top; } }
         }
-
-        // [StructLayout(LayoutKind.Sequential)]
-        // public struct ShFileInfo
-        // {
-        //     public IntPtr hIcon;
-        //     public IntPtr iIcon;
-        //     public uint dwAttributes;
-        //     [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-        //     public string szDisplayName;
-        //     [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
-        //     public string szTypeName;
-        // }
         #endregion
 
         #region shell32.dll - Basic shell functions
@@ -232,9 +220,6 @@ namespace Splunk.Common
         /// <summary>Finer control version of above.</summary>
         [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
         public static extern bool ShellExecuteEx(ref ShellExecuteInfo lpExecInfo);
-
-        // [DllImport("shell32.dll", CharSet = CharSet.Ansi)]
-        // public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref ShFileInfo psfi, uint cbSizeFileInfo, uint uFlags);
         #endregion
 
         #region user32.dll - Windows management functions for message handling, timers, menus, and communications
@@ -244,9 +229,6 @@ namespace Splunk.Common
 
         [DllImport("user32.dll")]
         public static extern bool SetProcessDPIAware();
-
-        [DllImport("User32.dll")]
-        public static extern int DestroyIcon(IntPtr hIcon);
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi)]
         static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, StringBuilder lParam);
