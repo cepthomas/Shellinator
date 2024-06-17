@@ -13,12 +13,8 @@ using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using Splunk.Common;
-
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
-
-using Win32BagOfTricks;
-//using WBOT = Win32BagOfTricks;
 
 
 namespace Splunk.Ui
@@ -87,7 +83,7 @@ namespace Splunk.Ui
             NM.RegisterShellHookWindow(Handle);
 
             // Hot key handlers.
-            NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.ALT | NM.CTRL | NM.SHIFT), NM.ALT | NM.CTRL | NM.SHIFT, KEY_A);
+            NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT), NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT, KEY_A);
 
             // Debug stuff.
             btnGo.Click += (sender, e) => { DoSplunk(); };
@@ -126,7 +122,7 @@ namespace Splunk.Ui
             if (disposing)
             {
                 NM.DeregisterShellHookWindow(Handle);
-                NM.UnregisterHotKey(Handle, MakeKeyId(KEY_A, NM.ALT | NM.CTRL | NM.SHIFT));
+                NM.UnregisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT));
 
                 components?.Dispose();
             }
@@ -167,7 +163,7 @@ namespace Splunk.Ui
                 int key = (int)((long)message.LParam >> 16);
                 int mod = (int)((long)message.LParam & 0xFFFF);
 
-                if (mod == (NM.ALT | NM.CTRL | NM.SHIFT))
+                if (mod == (NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT))
                 {
                     switch (key)
                     {
