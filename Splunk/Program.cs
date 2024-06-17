@@ -11,7 +11,6 @@ using System.Runtime.InteropServices;
 using Splunk.Common;
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
-//using System.Runtime.Versioning;
 
 
 namespace Splunk
