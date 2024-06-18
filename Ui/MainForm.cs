@@ -13,8 +13,12 @@ using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using Splunk.Common;
+
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
+
+//using WI = Win32BagOfTricks.Internals;
+//using WM = Win32BagOfTricks.WindowManagement;
 
 
 namespace Splunk.Ui
@@ -138,14 +142,14 @@ namespace Splunk.Ui
         protected override void WndProc(ref Message message)
         {
             IntPtr handle = message.LParam;
-            if (message.Msg == _hookMsg) // Window lifecycle.
+            if (message.Msg == _hookMsg)
             {
                 NM.ShellEvents shellEvent = (NM.ShellEvents)message.WParam.ToInt32();
 
                 switch (shellEvent)
                 {
                     case NM.ShellEvents.HSHELL_WINDOWCREATED:
-                        WindowInfo wi = SU.GetWindowInfo(handle);
+                        AppWindowInfo wi = SU.GetAppWindowInfo(handle);
                         _logger.Debug($"WindowCreatedEvent:{handle} {wi.Title}");
                         break;
 

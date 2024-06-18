@@ -9,8 +9,12 @@ using System.ComponentModel;
 using System.Text;
 using System.Runtime.InteropServices;
 using Splunk.Common;
+
 using NM = Splunk.Common.NativeMethods;
 using SU = Splunk.Common.ShellUtils;
+
+//using WI = Win32BagOfTricks.Internals;
+//using WM = Win32BagOfTricks.WindowManagement;
 
 
 //TODO1 move bins to a convenient location for reg to find.
@@ -119,14 +123,14 @@ namespace Splunk
             {
                 case "cmder":
                     var fgHandle = NM.GetForegroundWindow(); // -> left pane
-                    WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
+                    AppWindowInfo fginfo = SU.GetAppWindowInfo(fgHandle);
 
                     // New explorer -> right pane.
                     NM.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
 
                     // Locate the new explorer window. Wait for it to be created. This is a bit klunky but there does not appear to be a more direct method.
                     int tries = 0; // ~4
-                    WindowInfo? rightPane = null;
+                    AppWindowInfo? rightPane = null;
                     for (tries = 0; tries < 20 && rightPane is null; tries++)
                     {
                         System.Threading.Thread.Sleep(50);
@@ -136,7 +140,7 @@ namespace Splunk
                     if (rightPane is null) throw new SplunkException($"Couldn't create right pane for [{path}]", true);
 
                     // Relocate/resize the windows to fit available real estate.
-                    WindowInfo desktop = SU.GetWindowInfo(NM.GetShellWindow());
+                    AppWindowInfo desktop = SU.GetAppWindowInfo(NM.GetShellWindow());
                     int w = desktop.DisplayRectangle.Width * 45 / 100;
                     int h = desktop.DisplayRectangle.Height * 80 / 100;
                     int t = 50, l = 50;

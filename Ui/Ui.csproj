@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\Splunk\Splunk.csproj" />
+    <ProjectReference Include="..\Win32BagOfTricks\Win32BagOfTricks.csproj" />
   </ItemGroup>
 
   <ItemGroup>
