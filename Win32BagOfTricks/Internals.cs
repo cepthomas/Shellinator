@@ -69,7 +69,43 @@ namespace Win32BagOfTricks
         {
             _hotKeyIds.ForEach(id => UnregisterHotKey(handle, id));
         }
-        
+
+
+        /// <summary>
+        /// Generic limited modal message box.
+        /// </summary>
+        /// <param name="message">Body.</param>
+        /// <param name="caption">Caption.</param>
+        /// <param name="error">Use error icon otherwise info.</param>
+        /// <param name="ask">Use OK/cancel buttons.</param>
+        /// <returns>True if OK </returns>
+        public static bool MessageBox(string message, string caption, bool error = false, bool ask = false)
+        {
+            bool ok = true;
+            uint flags = error ? (uint)MessageBoxFlags.MB_ICONERROR : (uint)MessageBoxFlags.MB_ICONINFORMATION;
+
+            if (ask)
+            {
+                flags |= (uint)MessageBoxFlags.MB_OKCANCEL;
+                int res = MessageBox(IntPtr.Zero, message, caption, flags);
+                if (res != 1) //IDOK
+                {
+                    ok = false;
+                }
+            }
+            else
+            {
+                MessageBox(IntPtr.Zero, message, caption, flags);
+            }
+
+            return ok;
+        }
+
+
+        //WI.SetProcessDPIAware();
+        //WI.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int) WI.ShowCommands.SW_NORMAL);
+
+
 
         #endregion
 
@@ -77,7 +113,7 @@ namespace Win32BagOfTricks
         #region Native methods
 
         [Flags]
-        internal enum MessageBoxFlags : uint
+        enum MessageBoxFlags : uint
         {
             MB_OK = 0x00000000,
             MB_OKCANCEL = 0x00000001,
@@ -116,7 +152,7 @@ namespace Win32BagOfTricks
         /// ? Be careful with the string structure fields: UnmanagedType.LPTStr will be marshalled as unicode string so only
         /// the first character will be recognized by the function. Use UnmanagedType.LPStr instead.
         [StructLayout(LayoutKind.Sequential)]
-        internal struct ShellExecuteInfo
+        struct ShellExecuteInfo
         {
             // The size of this structure, in bytes.
             public int cbSize;
@@ -156,44 +192,44 @@ namespace Win32BagOfTricks
         /// Args: https://learn.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-shellexecuteinfoa.
         /// </summary>
         [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        internal static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, string lpParameters, string lpDirectory, int nShow);
+        static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, string lpParameters, string lpDirectory, int nShow);
 
         /// <summary>Overload of above for nullable args.</summary>
         [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        internal static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, IntPtr lpParameters, IntPtr lpDirectory, int nShow);
+        static extern IntPtr ShellExecute(IntPtr hwnd, string lpVerb, string lpFile, IntPtr lpParameters, IntPtr lpDirectory, int nShow);
 
         /// <summary>Finer control version of above.</summary>
         [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        internal static extern bool ShellExecuteEx(ref ShellExecuteInfo lpExecInfo);
+        static extern bool ShellExecuteEx(ref ShellExecuteInfo lpExecInfo);
         #endregion
 
 
         #region user32.dll
         /// <summary>Rudimentary UI notification from a console application.</summary>
         [DllImport("User32.dll", CharSet = CharSet.Ansi)]
-        internal static extern int MessageBox(IntPtr hWnd, string msg, string caption, uint type);
+        static extern int MessageBox(IntPtr hWnd, string msg, string caption, uint type);
 
         [DllImport("user32.dll")]
-        internal static extern bool SetProcessDPIAware();
+        static extern bool SetProcessDPIAware();
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi)]
         static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, int wParam, StringBuilder lParam);
 
         [DllImport("user32.dll", EntryPoint = "RegisterWindowMessageA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        internal static extern int RegisterWindowMessage(string lpString);
+        static extern int RegisterWindowMessage(string lpString);
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        internal static extern int DeregisterShellHookWindow(IntPtr hWnd);
+        static extern int DeregisterShellHookWindow(IntPtr hWnd);
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        internal static extern int RegisterShellHookWindow(IntPtr hWnd);
+        static extern int RegisterShellHookWindow(IntPtr hWnd);
 
         // Keyboard hooks.
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        internal static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+        static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        internal static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         #endregion
 
 

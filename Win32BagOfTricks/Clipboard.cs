@@ -131,6 +131,7 @@ namespace Win32BagOfTricks
         }
         #endregion
 
+        #region Private methods
         /// <summary>
         /// 
         /// </summary>
@@ -153,6 +154,7 @@ namespace Win32BagOfTricks
                 Thread.Sleep(100);
             }
         }
+        #endregion
 
         #region Native methods
         [DllImport("User32.dll", SetLastError = true)]

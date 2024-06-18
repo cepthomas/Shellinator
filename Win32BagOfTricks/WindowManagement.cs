@@ -167,11 +167,27 @@ namespace Win32BagOfTricks
             return wi;
         }
 
+
+        public static IntPtr GetForegroundWindow()
+        {
+            return GetForegroundWindow();
+        }
+
+        public static bool MoveWindow(IntPtr handle, int l, int t, int w, int h)
+        {
+            return MoveWindow(handle, l, t, w, h, true);
+        }
+
+        public static bool SetForegroundWindow(IntPtr hWnd)
+        {
+            return SetForegroundWindow(hWnd);
+        }
+
         #endregion
 
         #region Native methods
         [StructLayout(LayoutKind.Sequential)]
-        internal struct Rect
+         struct Rect
         {
             public int Left;
             public int Top;
@@ -181,7 +197,7 @@ namespace Win32BagOfTricks
 
         /// <summary>Contains information about a window.</summary>
         [StructLayout(LayoutKind.Sequential)]
-        internal struct WindowInfo
+         struct WindowInfo
         {
             // The size of the structure, in bytes.The caller must set this member to sizeof(WindowInfo).
             public uint cbSize;
@@ -206,68 +222,68 @@ namespace Win32BagOfTricks
         }
 
         [DllImport("user32.dll")]
-        internal static extern bool SetForegroundWindow(IntPtr hWnd);
+         static extern bool SetForegroundWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        internal static extern IntPtr GetForegroundWindow();
+         static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
-        internal static extern IntPtr GetTopWindow(IntPtr hWnd);
+         static extern IntPtr GetTopWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        internal static extern bool IsIconic(IntPtr hWnd);
+         static extern bool IsIconic(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        internal static extern bool IsZoomed(IntPtr hWnd);
+         static extern bool IsZoomed(IntPtr hWnd);
 
         [DllImport("user32.dll", SetLastError = true)]
-        internal extern static bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
+         extern static bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
 
         [DllImport("user32.dll")]
-        internal static extern bool BringWindowToTop(IntPtr hWnd);
+         static extern bool BringWindowToTop(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        internal static extern bool IsWindowVisible(IntPtr hWnd);
+         static extern bool IsWindowVisible(IntPtr hWnd);
 
         /// <summary>Retrieves a handle to the Shell's desktop window.</summary>
         [DllImport("user32.dll")]
-        internal static extern IntPtr GetShellWindow();
+         static extern IntPtr GetShellWindow();
 
         [DllImport("user32.dll")]
-        internal static extern IntPtr GetParent(IntPtr hWnd);
+         static extern IntPtr GetParent(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        internal static extern bool GetWindowInfo(IntPtr hWnd, ref WindowInfo winfo);
+         static extern bool GetWindowInfo(IntPtr hWnd, ref WindowInfo winfo);
 
         /// <summary>Retrieves the thread and process ids that created the window.</summary>
         [DllImport("user32.dll")]
-        internal static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, out IntPtr ProcessId);
+         static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, out IntPtr ProcessId);
 
         [DllImport("user32.dll", SetLastError = true)]
-        internal static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+         static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
 
         [DllImport("user32.dll")]
-        internal static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+         static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 
         [DllImport("user32.dll")]
-        internal static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        internal static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr extraData);
-        internal delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
+         static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr extraData);
+         delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
 
         [DllImport("user32.dll", SetLastError = true)]
-        internal static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
+         static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
 
         /// <summary>Copies the text of the specified window's title bar (if it has one) into a buffer.</summary>
         /// <param name="hwnd">handle to the window</param>
         /// <param name="lpString">StringBuilder to receive the result</param>
         /// <param name="cch">Max number of characters to copy to the buffer, including the null character. If the text exceeds this limit, it is truncated</param>
         [DllImport("user32.dll", EntryPoint = "GetWindowTextA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        internal static extern int GetWindowText(IntPtr hwnd, StringBuilder lpString, int cch);
+         static extern int GetWindowText(IntPtr hwnd, StringBuilder lpString, int cch);
 
         [DllImport("user32.dll", EntryPoint = "GetWindowTextLengthA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        internal static extern int GetWindowTextLength(IntPtr hwnd);
+         static extern int GetWindowTextLength(IntPtr hwnd);
         #endregion
     }
 }

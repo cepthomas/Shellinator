@@ -10,11 +10,11 @@ using System.Text;
 using System.Runtime.InteropServices;
 using Splunk.Common;
 
-using NM = Splunk.Common.NativeMethods;
-using SU = Splunk.Common.ShellUtils;
+//using NM = Splunk.Common.NativeMethods;
+//using SU = Splunk.Common.ShellUtils;
 
-//using WI = Win32BagOfTricks.Internals;
-//using WM = Win32BagOfTricks.WindowManagement;
+using WI = Win32BagOfTricks.Internals;
+using WM = Win32BagOfTricks.WindowManagement;
 
 
 //TODO1 move bins to a convenient location for reg to find.
@@ -41,7 +41,7 @@ namespace Splunk
             Log($"Splunk cl args:{string.Join(" ", args)}");
 
             // I'm in charge of the pixels.
-            NM.SetProcessDPIAware();
+            WI.SetProcessDPIAware();
 
             Stopwatch sw = new();
             sw.Start();
@@ -62,13 +62,13 @@ namespace Splunk
                     Environment.ExitCode = 1;
                     Log($"Splunk ERROR: {ex.Message}");
                     Clipboard.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
-                    NM.MessageBox(IntPtr.Zero, ex.Message, "See the clipboard", (uint)NM.MessageBoxFlags.MB_ICONERROR);
+                    WI.MessageBox(ex.Message, "See the clipboard", true);
                 }
                 else // just notify
                 {
                     Log($"Splunk INFO: {ex.Message}");
                     Environment.ExitCode = 0;
-                    NM.MessageBox(IntPtr.Zero, ex.Message, "You should know", (uint)NM.MessageBoxFlags.MB_ICONINFORMATION);
+                    WI.MessageBox(ex.Message, "You should know");
                 }
             }
             catch (Win32Exception ex)
@@ -76,14 +76,14 @@ namespace Splunk
                 Log($"Spawned process ERROR: {ex.ErrorCode} {ex.Message}");
                 Clipboard.SetText($"{ex.Message}{Environment.NewLine}{_stderr}");
                 Environment.ExitCode = 2;
-                NM.MessageBox(IntPtr.Zero, ex.Message, "See the clipboard", (uint)NM.MessageBoxFlags.MB_ICONERROR);
+                WI.MessageBox(ex.Message, "See the clipboard", true);
             }
             catch (Exception ex) // something else
             {
                 Log($"Internal ERROR: {ex.Message}");
                 Clipboard.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                 Environment.ExitCode = 3;
-                NM.MessageBox(IntPtr.Zero, ex.Message, "See the clipboard", (uint)NM.MessageBoxFlags.MB_ICONERROR);
+                WI.MessageBox(ex.Message, "See the clipboard", true);
             }
 
             sw.Stop();
@@ -97,7 +97,7 @@ namespace Splunk
                 int start = lines.Length / 3;
                 var trunc = lines.Subset(start, lines.Length - start);
                 File.WriteAllLines(_logFileName, trunc);
-                Log($">>>> Trimmed log file");
+                //Log($">>>> Trimmed log file");
             }
         }
 
@@ -122,11 +122,11 @@ namespace Splunk
             switch (id)
             {
                 case "cmder":
-                    var fgHandle = NM.GetForegroundWindow(); // -> left pane
-                    AppWindowInfo fginfo = SU.GetAppWindowInfo(fgHandle);
+                    var fgHandle = WM.GetForegroundWindow(); // -> left pane
+                    AppWindowInfo fginfo = WM.GetAppWindowInfo(fgHandle);
 
                     // New explorer -> right pane.
-                    NM.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int)NM.ShowCommands.SW_NORMAL);
+                    WI.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int)WI.ShowCommands.SW_NORMAL);
 
                     // Locate the new explorer window. Wait for it to be created. This is a bit klunky but there does not appear to be a more direct method.
                     int tries = 0; // ~4
@@ -140,15 +140,15 @@ namespace Splunk
                     if (rightPane is null) throw new SplunkException($"Couldn't create right pane for [{path}]", true);
 
                     // Relocate/resize the windows to fit available real estate.
-                    AppWindowInfo desktop = SU.GetAppWindowInfo(NM.GetShellWindow());
+                    AppWindowInfo desktop = WM.GetAppWindowInfo(WM.GetShellWindow());
                     int w = desktop.DisplayRectangle.Width * 45 / 100;
                     int h = desktop.DisplayRectangle.Height * 80 / 100;
                     int t = 50, l = 50;
-                    NM.MoveWindow(fgHandle, l, t, w, h, true);
-                    NM.SetForegroundWindow(fgHandle);
+                    WM.MoveWindow(fgHandle, l, t, w, h, true);
+                    WM.SetForegroundWindow(fgHandle);
                     l += w;
-                    NM.MoveWindow(rightPane.Handle, l, t, w, h, true);
-                    NM.SetForegroundWindow(rightPane.Handle);
+                    WM.MoveWindow(rightPane.Handle, l, t, w, h, true);
+                    WM.SetForegroundWindow(rightPane.Handle);
                     break;
 
                 case "tree":
@@ -180,12 +180,12 @@ namespace Splunk
 
                 case "test_deskbg":
                     Log($"!!! Got test_deskbg");
-                    NM.MessageBox(IntPtr.Zero, $"!!! Got test_deskbg: {path}", "Debug", 0);
+                    WI.MessageBox($"!!! Got test_deskbg: {path}", "Debug");
                     break;
 
                 case "test_folder":
                     Log($"!!! Got test_folder");
-                    NM.MessageBox(IntPtr.Zero, "!!! Got test_folder: {path}", "Debug", 0);
+                    WI.MessageBox("!!! Got test_folder: {path}", "Debug");
                     break;
 
                 default:
