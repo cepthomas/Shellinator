@@ -5,8 +5,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-
-//using System.Runtime.Versioning;
 using System.Text;
 using Ephemera.NBagOfTricks;
 using NM = Splunk.Common.NativeMethods;
@@ -15,7 +13,7 @@ using NM = Splunk.Common.NativeMethods;
 namespace Splunk.Common
 {
     /// <summary>Useful info about a window.</summary>
-    public class WindowInfo
+    public class AppWindowInfo
     {
         /// <summary>Native window handle.</summary>
         public IntPtr Handle { get; init; }
@@ -30,10 +28,10 @@ namespace Splunk.Common
         public IntPtr Parent { get; init; }
 
         /// <summary>The coordinates of the window.</summary>
-        public Rectangle DisplayRectangle { get { return Convert(NativeInfo.rcWindow); } }
+        public Rectangle DisplayRectangle { get; init; }
 
         /// <summary>The coordinates of the client area.</summary>
-        public Rectangle ClientRectangle { get { return Convert(NativeInfo.rcClient); } }
+        public Rectangle ClientRectangle { get; init; }
 
         /// <summary>Window Text.</summary>
         public string Title { get; init; } = "";
@@ -51,134 +49,12 @@ namespace Splunk.Common
             var s = $"Title[{Title}] Geometry[{g}] IsVisible[{IsVisible}] Handle[{Handle}] Pid[{Pid}]";
             return s;
         }
-
-        /// <summary>Helper</summary>
-        Rectangle Convert(NM.Rect rect)
-        {
-            return new()
-            {
-                X = rect.Left,
-                Y = rect.Top,
-                Width = rect.Right - rect.Left,
-                Height = rect.Bottom - rect.Top
-            };
-        }
     }
 
 
 
     public class ShellUtils
     {
-
-        /// <summary>Contains information about a window.</summary>
-        [StructLayout(LayoutKind.Sequential)]
-        public struct WindowInfoNative
-        {
-            // The size of the structure, in bytes.The caller must set this member to sizeof(WindowInfo).
-            public uint cbSize;             
-            // The coordinates of the window.
-            public Rect rcWindow;           
-            // The coordinates of the client area.
-            public Rect rcClient;           
-            // The window styles.For a table of window styles, see Window Styles.
-            public uint dwStyle;            
-            // The extended window styles. For a table of extended window styles, see Extended Window Styles.
-            public uint dwExStyle;          
-            // The window status.If this member is WS_ACTIVECAPTION (0x0001), the window is active.Otherwise, this member is zero.
-            public uint dwWindowStatus;     
-            // The width of the window border, in pixels.
-            public uint cxWindowBorders;    
-            // The height of the window border, in pixels.
-            public uint cyWindowBorders;    
-            // The window class atom (see RegisterClass).
-            public ushort atomWindowType;   
-            // The Windows version of the application that created the window.
-            public ushort wCreatorVersion;  
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct Rect
-        {
-            public int Left;
-            public int Top;
-            public int Right;
-            public int Bottom;
-            public readonly int Width { get { return Right - Left; } }
-            public readonly int Height { get { return Bottom - Top; } }
-        }
-
-
-
-        #region Window management
-        [DllImport("user32.dll")]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetForegroundWindow();
-
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetTopWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        public static extern bool IsIconic(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        public static extern bool IsZoomed(IntPtr hWnd);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public extern static bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
-
-        [DllImport("user32.dll")]
-        public static extern bool BringWindowToTop(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        public static extern bool IsWindowVisible(IntPtr hWnd);
-
-        /// <summary>Retrieves a handle to the Shell's desktop window.</summary>
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetShellWindow();
-
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetParent(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        public static extern bool GetWindowInfo(IntPtr hWnd, ref WindowInfo winfo);
-
-        /// <summary>Retrieves the thread and process ids that created the window.</summary>
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, out IntPtr ProcessId);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
-
-        [DllImport("user32.dll")]
-        public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-
-        [DllImport("user32.dll")]
-        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-        public static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr extraData);
-        public delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
-
-        /// <summary>Copies the text of the specified window's title bar (if it has one) into a buffer.</summary>
-        /// <param name="hwnd">handle to the window</param>
-        /// <param name="lpString">StringBuilder to receive the result</param>
-        /// <param name="cch">Max number of characters to copy to the buffer, including the null character. If the text exceeds this limit, it is truncated</param>
-        [DllImport("user32.dll", EntryPoint = "GetWindowTextA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern int GetWindowText(IntPtr hwnd, StringBuilder lpString, int cch);
-
-        [DllImport("user32.dll", EntryPoint = "GetWindowTextLengthA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-        public static extern int GetWindowTextLength(IntPtr hwnd);
-        #endregion
-
-
-
-
-
         /// <summary>
         /// Get all pertinent/visible windows for the application. Ignores non-visible or non-titled (internal).
         /// Note that new explorers may be in the same process or separate ones. Depends on explorer user options.
@@ -186,9 +62,9 @@ namespace Splunk.Common
         /// <param name="appName">Application name.</param>
         /// <param name="includeAnonymous">Include those without titles or base "Program Manager".</param>
         /// <returns>List of window infos.</returns>
-        public static List<WindowInfo> GetAppWindows(string appName, bool includeAnonymous = false)
+        public static List<AppWindowInfo> GetAppWindows(string appName, bool includeAnonymous = false)
         {
-            List<WindowInfo> winfos = [];
+            List<AppWindowInfo> winfos = [];
             List<IntPtr> procids = [];
 
             // Get all processes.
@@ -210,7 +86,7 @@ namespace Splunk.Common
 
             foreach (var vh in visHandles)
             {
-                var wi = GetWindowInfo(vh);
+                var wi = GetAppWindowInfo(vh);
 
                 var realWin = wi.Title != "" && wi.Title != "Program Manager";
                 if (procids.Contains(wi.Pid) && (includeAnonymous || realWin))
@@ -244,7 +120,7 @@ namespace Splunk.Common
         /// </summary>
         /// <param name="handle"></param>
         /// <returns>The info object.</returns>
-        public static WindowInfo GetWindowInfo(IntPtr handle)
+        public static AppWindowInfo GetAppWindowInfo(IntPtr handle)
         {
             IntPtr threadId = NM.GetWindowThreadProcessId(handle, out IntPtr pid);
             NM.GetWindowRect(handle, out NM.Rect rect);
@@ -255,7 +131,7 @@ namespace Splunk.Common
             NM.WindowInfo wininfo = new();
             NM.GetWindowInfo(handle, ref wininfo);
 
-            WindowInfo wi = new()
+            AppWindowInfo wi = new()
             {
                 Handle = handle,
                 ThreadId = threadId,
@@ -263,8 +139,22 @@ namespace Splunk.Common
                 Parent = NM.GetParent(handle),
                 NativeInfo = wininfo,
                 Title = sb.ToString(),
-                IsVisible = NM.IsWindowVisible(handle)
+                IsVisible = NM.IsWindowVisible(handle),
+                DisplayRectangle = Convert(wininfo.rcWindow),
+                ClientRectangle = Convert(wininfo.rcClient)
             };
+
+            // Helper.
+            static Rectangle Convert(NM.Rect rect)
+            {
+                return new()
+                {
+                    X = rect.Left,
+                    Y = rect.Top,
+                    Width = rect.Right - rect.Left,
+                    Height = rect.Bottom - rect.Top
+                };
+            }
 
             return wi;
         }

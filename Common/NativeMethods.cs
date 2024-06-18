@@ -201,8 +201,6 @@ namespace Splunk.Common
             public int Top;
             public int Right;
             public int Bottom;
-            public readonly int Width { get { return Right - Left; } }
-            public readonly int Height { get { return Bottom - Top; } }
         }
         #endregion
 

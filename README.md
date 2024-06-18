@@ -6,6 +6,10 @@ Consists of two parts:
 - A simple command line client that is called from registry commands. It executes the requested operation.
 - A UI companion that can configure registry commands, and some other stuff.
 
+A few limitations that could be reconsidered:
+- Operations on files are enabled generically, eventually specific extensions could be supported.
+- If the commands produce output (stdout/stderr) it is placed in the clipboard for the user.
+
 Built with VS2022 and .NET8.
 
 # Commands
@@ -18,7 +22,7 @@ Commands vary depending on which part of the explorer they originate in.
 | DirBg     | Right click in explorer right pane with nothing selected (background).|
 | DeskBg    | Right click in windows desktop with nothing selected (background).|
 | Folder    | Right click in explorer left pane (navigation) with a folder selected.|
-| File      | Right click in explorer right pane or windows desktop with a file selected (specific extension not supported yet).|
+| File      | Right click in explorer right pane or windows desktop with a file selected.|
 
 
 These are the builtin commands. It's stuff I've wanted to add to an explorer context menu.
@@ -29,7 +33,7 @@ These are the builtin commands. It's stuff I've wanted to add to an explorer con
 | Tree               | Dir       | Copy a tree of selected directory to clipboard. |
 | Open in Sublime    | Dir/DirBg | Open selected directory/here in Sublime Text. |
 | Find in Everything | Dir/DirBg | Open selected directory/here in Everything. |
-| Execute            | File      | Execute if executable otherwise open. Suppresses console window creation. Output goes in clipboard. |
+| Execute            | File      | Execute if executable otherwise open. Suppresses console window creation. |
 
 
 # Implementation

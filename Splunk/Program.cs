@@ -28,9 +28,6 @@ namespace Splunk
 
         /// <summary>Log file name.</summary>
         static readonly string _logFileName = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
-
-        /// <summary>Stdio goes to clipboard.</summary>
-        static readonly bool _useClipboard = true;
         #endregion
 
         /// <summary>Where it all began.</summary>
@@ -45,7 +42,7 @@ namespace Splunk
             Stopwatch sw = new();
             sw.Start();
 
-            // Execute.
+            // Execute. Run throws various exceptions depending on the origin of the error.
             try
             {
                 Run([.. args]);
