@@ -8,14 +8,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Drawing;
 
-// C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\WinUser.h
-
-// Reference: https://pinvoke.net
-
-// TODO Try CsWin32? or suppress/fix warnings:
-// - CA1401 https://stackoverflow.com/a/35819594
-// - CA2101 https://stackoverflow.com/a/67127595 
-// - SYSLIB1054
 
 namespace Splunk.Common
 {

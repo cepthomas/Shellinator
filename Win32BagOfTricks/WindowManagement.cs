@@ -20,50 +20,68 @@ using Ephemera.NBagOfTricks;
 // - SYSLIB1054
 
 
-namespace Win32BagOfTricks
-{
 #pragma warning disable SYSLIB1054, CA1401, CA2101
 
-    /// <summary>Useful info about a window.</summary>
-    public class AppWindowInfo
-    {
-        /// <summary>Native window handle.</summary>
-        public IntPtr Handle { get; init; }
-
-        /// <summary>Owner process.</summary>
-        public int Pid { get; init; }
-
-        /// <summary>Running on this thread.</summary>
-        public IntPtr ThreadId { get; init; }
-
-        /// <summary>Who's your daddy?</summary>
-        public IntPtr Parent { get; init; }
-
-        /// <summary>The coordinates of the window.</summary>
-        public Rectangle DisplayRectangle { get; init; }
-
-        /// <summary>The coordinates of the client area.</summary>
-        public Rectangle ClientRectangle { get; init; }
-
-        /// <summary>Window Text.</summary>
-        public string Title { get; init; } = "";
-
-        /// <summary>This is not trustworthy as it is true for some unseen windows.</summary>
-        public bool IsVisible { get; set; }
-
-        /// <summary>For humans.</summary>
-        public override string ToString()
-        {
-            var g = $"X:{DisplayRectangle.Left} Y:{DisplayRectangle.Top} W:{DisplayRectangle.Width} H:{DisplayRectangle.Height}";
-            var s = $"Title[{Title}] Geometry[{g}] IsVisible[{IsVisible}] Handle[{Handle}] Pid[{Pid}]";
-            return s;
-        }
-    }
-
-
+namespace Win32BagOfTricks
+{
     public class WindowManagement
     {
+        #region Types
+        /// <summary>Useful info about a window.</summary>
+        public class AppWindowInfo
+        {
+            /// <summary>Native window handle.</summary>
+            public IntPtr Handle { get; init; }
+
+            /// <summary>Owner process.</summary>
+            public int Pid { get; init; }
+
+            /// <summary>Running on this thread.</summary>
+            public IntPtr ThreadId { get; init; }
+
+            /// <summary>Who's your daddy?</summary>
+            public IntPtr Parent { get; init; }
+
+            /// <summary>The coordinates of the window.</summary>
+            public Rectangle DisplayRectangle { get; init; }
+
+            /// <summary>The coordinates of the client area.</summary>
+            public Rectangle ClientRectangle { get; init; }
+
+            /// <summary>Window Text.</summary>
+            public string Title { get; init; } = "";
+
+            /// <summary>This is not trustworthy as it is true for some unseen windows.</summary>
+            public bool IsVisible { get; set; }
+
+            /// <summary>For humans.</summary>
+            public override string ToString()
+            {
+                var g = $"X:{DisplayRectangle.Left} Y:{DisplayRectangle.Top} W:{DisplayRectangle.Width} H:{DisplayRectangle.Height}";
+                var s = $"Title[{Title}] Geometry[{g}] IsVisible[{IsVisible}] Handle[{Handle}] Pid[{Pid}]";
+                return s;
+            }
+        }
+        #endregion
+
         #region API
+        /// <summary>
+        /// 
+        /// </summary>
+        public static IntPtr ForegroundWindow
+        {
+            get { return GetForegroundWindow(); }
+            set { SetForegroundWindow(value); }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public static IntPtr ShellWindow
+        {
+            get { return GetShellWindow(); }
+        }
+
         /// <summary>
         /// Get all pertinent/visible windows for the application. Ignores non-visible or non-titled (internal).
         /// Note that new explorers may be in the same process or separate ones. Depends on explorer user options.
@@ -167,27 +185,24 @@ namespace Win32BagOfTricks
             return wi;
         }
 
-
-        public static IntPtr GetForegroundWindow()
-        {
-            return GetForegroundWindow();
-        }
-
+        /// <summary>
+        /// Move and/or resize a window.
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="l"></param>
+        /// <param name="t"></param>
+        /// <param name="w"></param>
+        /// <param name="h"></param>
+        /// <returns></returns>
         public static bool MoveWindow(IntPtr handle, int l, int t, int w, int h)
         {
             return MoveWindow(handle, l, t, w, h, true);
         }
-
-        public static bool SetForegroundWindow(IntPtr hWnd)
-        {
-            return SetForegroundWindow(hWnd);
-        }
-
         #endregion
 
-        #region Native methods
+        #region Native methods - private
         [StructLayout(LayoutKind.Sequential)]
-         struct Rect
+        struct Rect
         {
             public int Left;
             public int Top;
@@ -197,7 +212,7 @@ namespace Win32BagOfTricks
 
         /// <summary>Contains information about a window.</summary>
         [StructLayout(LayoutKind.Sequential)]
-         struct WindowInfo
+        struct WindowInfo
         {
             // The size of the structure, in bytes.The caller must set this member to sizeof(WindowInfo).
             public uint cbSize;
@@ -222,68 +237,68 @@ namespace Win32BagOfTricks
         }
 
         [DllImport("user32.dll")]
-         static extern bool SetForegroundWindow(IntPtr hWnd);
+        static extern bool SetForegroundWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-         static extern IntPtr GetForegroundWindow();
+        static extern IntPtr GetForegroundWindow();
 
         [DllImport("user32.dll")]
-         static extern IntPtr GetTopWindow(IntPtr hWnd);
+        static extern IntPtr GetTopWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-         static extern bool IsIconic(IntPtr hWnd);
+        static extern bool IsIconic(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-         static extern bool IsZoomed(IntPtr hWnd);
+        static extern bool IsZoomed(IntPtr hWnd);
 
         [DllImport("user32.dll", SetLastError = true)]
-         extern static bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
+        extern static bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, int uFlags);
 
         [DllImport("user32.dll")]
-         static extern bool BringWindowToTop(IntPtr hWnd);
+        static extern bool BringWindowToTop(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-         static extern bool IsWindowVisible(IntPtr hWnd);
+        static extern bool IsWindowVisible(IntPtr hWnd);
 
         /// <summary>Retrieves a handle to the Shell's desktop window.</summary>
         [DllImport("user32.dll")]
-         static extern IntPtr GetShellWindow();
+        static extern IntPtr GetShellWindow();
 
         [DllImport("user32.dll")]
-         static extern IntPtr GetParent(IntPtr hWnd);
+        static extern IntPtr GetParent(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-         static extern bool GetWindowInfo(IntPtr hWnd, ref WindowInfo winfo);
+        static extern bool GetWindowInfo(IntPtr hWnd, ref WindowInfo winfo);
 
         /// <summary>Retrieves the thread and process ids that created the window.</summary>
         [DllImport("user32.dll")]
-         static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, out IntPtr ProcessId);
+        static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, out IntPtr ProcessId);
 
         [DllImport("user32.dll", SetLastError = true)]
-         static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
+        static extern bool MoveWindow(IntPtr hWnd, int x, int y, int width, int height, bool repaint);
 
         [DllImport("user32.dll")]
-         static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+        static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 
         [DllImport("user32.dll")]
-         static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
-         static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr extraData);
-         delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
+        static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr extraData);
+        delegate bool EnumWindowsCallback(IntPtr hWnd, IntPtr lParam);
 
         [DllImport("user32.dll", SetLastError = true)]
-         static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
+        static extern bool GetWindowRect(IntPtr hWnd, out Rect lpRect);
 
         /// <summary>Copies the text of the specified window's title bar (if it has one) into a buffer.</summary>
         /// <param name="hwnd">handle to the window</param>
         /// <param name="lpString">StringBuilder to receive the result</param>
         /// <param name="cch">Max number of characters to copy to the buffer, including the null character. If the text exceeds this limit, it is truncated</param>
         [DllImport("user32.dll", EntryPoint = "GetWindowTextA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-         static extern int GetWindowText(IntPtr hwnd, StringBuilder lpString, int cch);
+        static extern int GetWindowText(IntPtr hwnd, StringBuilder lpString, int cch);
 
         [DllImport("user32.dll", EntryPoint = "GetWindowTextLengthA", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
-         static extern int GetWindowTextLength(IntPtr hwnd);
+        static extern int GetWindowTextLength(IntPtr hwnd);
         #endregion
     }
 }

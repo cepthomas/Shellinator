@@ -9,11 +9,10 @@ using System.Threading;
 
 // TODO clean up.
 
+#pragma warning disable SYSLIB1054, CA1401, CA2101
 
 namespace Win32BagOfTricks
 {
-#pragma warning disable SYSLIB1054, CA1401, CA2101
-
     public static class Clipboard
     {
         // https://learn.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats
@@ -156,7 +155,7 @@ namespace Win32BagOfTricks
         }
         #endregion
 
-        #region Native methods
+        #region Native methods - private
         [DllImport("User32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool IsClipboardFormatAvailable(uint format);

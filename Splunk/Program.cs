@@ -8,13 +8,14 @@ using System.Drawing;
 using System.ComponentModel;
 using System.Text;
 using System.Runtime.InteropServices;
-using Splunk.Common;
+//using Splunk.Common;
 
 //using NM = Splunk.Common.NativeMethods;
 //using SU = Splunk.Common.ShellUtils;
 
 using WI = Win32BagOfTricks.Internals;
 using WM = Win32BagOfTricks.WindowManagement;
+using CB = Win32BagOfTricks.Clipboard;
 
 
 //TODO1 move bins to a convenient location for reg to find.
@@ -41,7 +42,7 @@ namespace Splunk
             Log($"Splunk cl args:{string.Join(" ", args)}");
 
             // I'm in charge of the pixels.
-            WI.SetProcessDPIAware();
+            WI.DisableDpiScaling();
 
             Stopwatch sw = new();
             sw.Start();
@@ -53,7 +54,7 @@ namespace Splunk
 
                 Environment.ExitCode = 0;
                 Log("Everything went OK");
-                Clipboard.SetText(_stdout);
+                CB.SetText(_stdout);
             }
             catch (SplunkException ex)
             {
@@ -61,7 +62,7 @@ namespace Splunk
                 {
                     Environment.ExitCode = 1;
                     Log($"Splunk ERROR: {ex.Message}");
-                    Clipboard.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                    CB.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                     WI.MessageBox(ex.Message, "See the clipboard", true);
                 }
                 else // just notify
@@ -74,14 +75,14 @@ namespace Splunk
             catch (Win32Exception ex)
             {
                 Log($"Spawned process ERROR: {ex.ErrorCode} {ex.Message}");
-                Clipboard.SetText($"{ex.Message}{Environment.NewLine}{_stderr}");
+                CB.SetText($"{ex.Message}{Environment.NewLine}{_stderr}");
                 Environment.ExitCode = 2;
                 WI.MessageBox(ex.Message, "See the clipboard", true);
             }
             catch (Exception ex) // something else
             {
                 Log($"Internal ERROR: {ex.Message}");
-                Clipboard.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
+                CB.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                 Environment.ExitCode = 3;
                 WI.MessageBox(ex.Message, "See the clipboard", true);
             }
@@ -122,33 +123,33 @@ namespace Splunk
             switch (id)
             {
                 case "cmder":
-                    var fgHandle = WM.GetForegroundWindow(); // -> left pane
-                    AppWindowInfo fginfo = WM.GetAppWindowInfo(fgHandle);
+                    var fgHandle = WM.ForegroundWindow; // -> left pane
+                    WM.AppWindowInfo fginfo = WM.GetAppWindowInfo(fgHandle);
 
                     // New explorer -> right pane.
-                    WI.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int)WI.ShowCommands.SW_NORMAL);
+                    WI.ShellExecute("explore", path);
 
                     // Locate the new explorer window. Wait for it to be created. This is a bit klunky but there does not appear to be a more direct method.
                     int tries = 0; // ~4
-                    AppWindowInfo? rightPane = null;
+                    WM.AppWindowInfo? rightPane = null;
                     for (tries = 0; tries < 20 && rightPane is null; tries++)
                     {
                         System.Threading.Thread.Sleep(50);
-                        var wins = SU.GetAppWindows("explorer");
+                        var wins = WM.GetAppWindows("explorer");
                         rightPane = wins.Where(w => w.Title == path).FirstOrDefault();
                     }
                     if (rightPane is null) throw new SplunkException($"Couldn't create right pane for [{path}]", true);
 
                     // Relocate/resize the windows to fit available real estate.
-                    AppWindowInfo desktop = WM.GetAppWindowInfo(WM.GetShellWindow());
+                    WM.AppWindowInfo desktop = WM.GetAppWindowInfo(WM.ShellWindow);
                     int w = desktop.DisplayRectangle.Width * 45 / 100;
                     int h = desktop.DisplayRectangle.Height * 80 / 100;
                     int t = 50, l = 50;
-                    WM.MoveWindow(fgHandle, l, t, w, h, true);
-                    WM.SetForegroundWindow(fgHandle);
+                    WM.MoveWindow(fgHandle, l, t, w, h);
+                    WM.ForegroundWindow = fgHandle;
                     l += w;
-                    WM.MoveWindow(rightPane.Handle, l, t, w, h, true);
-                    WM.SetForegroundWindow(rightPane.Handle);
+                    WM.MoveWindow(rightPane.Handle, l, t, w, h);
+                    WM.ForegroundWindow = rightPane.Handle;
                     break;
 
                 case "tree":

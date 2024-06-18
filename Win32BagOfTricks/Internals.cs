@@ -1,45 +1,35 @@
-
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
+
+
+#pragma warning disable SYSLIB1054, CA1401, CA2101
 
 namespace Win32BagOfTricks
 {
-#pragma warning disable SYSLIB1054, CA1401, CA2101
-
     public static class Internals
     {
-        #region Types
-
-        public const int MOD_ALT = 0x0001;
-        public const int MOD_CTRL = 0x0002;
-        public const int MOD_SHIFT = 0x0004;
-        public const int MOD_WIN = 0x0008;
-
+        #region Definitions
         public const int WM_HOTKEY_MESSAGE_ID = 0x0312;
         public const int WM_GETTEXT = 0x000D;
 
-        public enum ShellEvents : int
-        {
-            HSHELL_WINDOWCREATED = 1,
-            HSHELL_WINDOWDESTROYED = 2,
-            HSHELL_ACTIVATESHELLWINDOW = 3, // not used
-            HSHELL_WINDOWACTIVATED = 4,
-            HSHELL_GETMINRECT = 5,
-            HSHELL_REDRAW = 6,
-            HSHELL_TASKMAN = 7,
-            HSHELL_LANGUAGE = 8,
-            HSHELL_ACCESSIBILITYSTATE = 11,
-            HSHELL_APPCOMMAND = 12
-        }
-
+        // Expose some internal definitions.
+        public const int MOD_ALT = (int)KeyModifiers.MOD_ALT;
+        public const int MOD_CTRL = (int)KeyModifiers.MOD_CTRL;
+        public const int MOD_SHIFT = (int)KeyModifiers.MOD_SHIFT;
+        public const int MOD_WIN = (int)KeyModifiers.MOD_WIN;
+        public const int HSHELL_WINDOWCREATED = (int)ShellEvents.HSHELL_WINDOWCREATED;
+        public const int HSHELL_WINDOWDESTROYED = (int)ShellEvents.HSHELL_WINDOWDESTROYED;
+        public const int HSHELL_WINDOWACTIVATED = (int)ShellEvents.HSHELL_WINDOWACTIVATED;
         #endregion
 
         #region API
-
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <returns></returns>
         public static int RegisterShellHook(IntPtr handle)
         {
             int msg = RegisterWindowMessage("SHELLHOOK"); // test for 0?
@@ -47,16 +37,23 @@ namespace Win32BagOfTricks
             return msg;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="handle"></param>
         public static void DeregisterShellHook(IntPtr handle)
         {
             DeregisterShellHookWindow(handle);
         }
 
-
-
-        // Rudimentary management of hotkeys. Only supports one (global) handle.
         static List<int> _hotKeyIds = new();
-
+        /// <summary>
+        /// Rudimentary management of hotkeys. Only supports one (global) handle.
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="key"></param>
+        /// <param name="mod"></param>
+        /// <returns></returns>
         public static int RegisterHotKey(IntPtr handle, int key, int mod)
         {
             int id = mod ^ key ^ (int)handle;
@@ -65,14 +62,17 @@ namespace Win32BagOfTricks
             return id;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="handle"></param>
         public static void UnregisterHotKeys(IntPtr handle)
         {
             _hotKeyIds.ForEach(id => UnregisterHotKey(handle, id));
         }
 
-
         /// <summary>
-        /// Generic limited modal message box.
+        /// Generic limited modal message box. Just enough for a console/hidden application.
         /// </summary>
         /// <param name="message">Body.</param>
         /// <param name="caption">Caption.</param>
@@ -101,16 +101,59 @@ namespace Win32BagOfTricks
             return ok;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        public static void DisableDpiScaling()
+        {
+            SetProcessDPIAware();
+        }
 
-        //WI.SetProcessDPIAware();
-        //WI.ShellExecute(IntPtr.Zero, "explore", path, IntPtr.Zero, IntPtr.Zero, (int) WI.ShowCommands.SW_NORMAL);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="verb">Standard verb</param>
+        /// <param name="path">Where</param>
+        /// <param name="hide">Hide the new window.</param>
+        /// <returns>Standard error code</returns>
+        public static int ShellExecute(string verb, string path, bool hide = false)
+        {
+            //If the function succeeds, it returns a value greater than 32. If the function fails, it returns an error value
+            //that indicates the cause of the failure. The return value is cast as an HINSTANCE for backward compatibility
+            //with 16 - bit Windows applications. It is not a true HINSTANCE, however. It can be cast only to an INT_PTR and
+            //compared to either 32 or the following error codes below.
 
+            var ss = new List<string> { "edit", "explore", "find", "open", "print", "properties", "runas" };
+            if (ss.Contains(verb)) { throw new ArgumentException($"Invalid verb:{verb}"); }
 
+            int res = (int)ShellExecute(IntPtr.Zero, verb, path, IntPtr.Zero, IntPtr.Zero,
+                hide ? (int)ShowCommands.SW_HIDE : (int)ShowCommands.SW_NORMAL);
 
+            return res > 32 ? 0 : res;
+        }
         #endregion
 
+        #region Native methods - private
 
-        #region Native methods
+        #region Types
+        enum ShowCommands : int
+        {
+            SW_HIDE = 0,
+            SW_SHOWNORMAL = 1,
+            SW_NORMAL = SW_SHOWNORMAL,
+            SW_SHOWMINIMIZED = 2,
+            SW_SHOWMAXIMIZED = 3,
+            SW_MAXIMIZE = SW_SHOWMAXIMIZED,
+            SW_SHOWNOACTIVATE = 4,
+            SW_SHOW = 5,
+            SW_MINIMIZE = 6,
+            SW_SHOWMINNOACTIVE = 7,
+            SW_SHOWNA = 8,
+            SW_RESTORE = 9,
+            SW_SHOWDEFAULT = 10,
+            SW_FORCEMINIMIZE = 11,
+            SW_MAX = SW_FORCEMINIMIZE
+        }
 
         [Flags]
         enum MessageBoxFlags : uint
@@ -145,6 +188,54 @@ namespace Win32BagOfTricks
             //MB_TOPMOST = 0x00040000,
             //MB_RIGHT = 0x00080000,
             //MB_RTLREADING = 0x00100000,
+        }
+
+        [Flags]
+        enum KeyModifiers : int
+        {
+            MOD_ALT = 0x0001,
+            MOD_CTRL = 0x0002,
+            MOD_SHIFT = 0x0004,
+            MOD_WIN = 0x0008
+        }
+
+        enum ShellEvents : int
+        {
+            HSHELL_WINDOWCREATED = 1,
+            HSHELL_WINDOWDESTROYED = 2,
+            HSHELL_ACTIVATESHELLWINDOW = 3, // not used
+            HSHELL_WINDOWACTIVATED = 4,
+            HSHELL_GETMINRECT = 5,
+            HSHELL_REDRAW = 6,
+            HSHELL_TASKMAN = 7,
+            HSHELL_LANGUAGE = 8,
+            HSHELL_ACCESSIBILITYSTATE = 11,
+            HSHELL_APPCOMMAND = 12
+        }
+
+        [Flags]
+        public enum ShellExecuteMaskFlags : uint
+        {
+            SEE_MASK_DEFAULT = 0x00000000,
+            SEE_MASK_CLASSNAME = 0x00000001,
+            SEE_MASK_CLASSKEY = 0x00000003,
+            SEE_MASK_IDLIST = 0x00000004,
+            SEE_MASK_INVOKEIDLIST = 0x0000000c,   // Note SEE_MASK_INVOKEIDLIST(0xC) implies SEE_MASK_IDLIST(0x04)
+            SEE_MASK_HOTKEY = 0x00000020,
+            SEE_MASK_NOCLOSEPROCESS = 0x00000040,
+            SEE_MASK_CONNECTNETDRV = 0x00000080,
+            SEE_MASK_NOASYNC = 0x00000100,
+            SEE_MASK_FLAG_DDEWAIT = SEE_MASK_NOASYNC,
+            SEE_MASK_DOENVSUBST = 0x00000200,
+            SEE_MASK_FLAG_NO_UI = 0x00000400,
+            SEE_MASK_UNICODE = 0x00004000,
+            SEE_MASK_NO_CONSOLE = 0x00008000,
+            SEE_MASK_ASYNCOK = 0x00100000,
+            SEE_MASK_HMONITOR = 0x00200000,
+            SEE_MASK_NOZONECHECKS = 0x00800000,
+            SEE_MASK_NOQUERYCLASSSTORE = 0x01000000,
+            SEE_MASK_WAITFORINPUTIDLE = 0x02000000,
+            SEE_MASK_FLAG_LOG_USAGE = 0x04000000,
         }
 
         /// <summary>For ShellExecuteEx().</summary>
@@ -184,8 +275,7 @@ namespace Win32BagOfTricks
             public IntPtr hIcon;
             public IntPtr hProcess;
         }
-
-
+        #endregion
 
         #region shell32.dll
         /// <summary>Performs an operation on a specified file.
@@ -202,7 +292,6 @@ namespace Win32BagOfTricks
         [DllImport("shell32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
         static extern bool ShellExecuteEx(ref ShellExecuteInfo lpExecInfo);
         #endregion
-
 
         #region user32.dll
         /// <summary>Rudimentary UI notification from a console application.</summary>
@@ -231,7 +320,6 @@ namespace Win32BagOfTricks
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         static extern bool UnregisterHotKey(IntPtr hWnd, int id);
         #endregion
-
 
         #endregion
     }

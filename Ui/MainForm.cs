@@ -12,13 +12,13 @@ using System.Runtime.InteropServices;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
-using Splunk.Common;
+//using Splunk.Common;
 
-using NM = Splunk.Common.NativeMethods;
-using SU = Splunk.Common.ShellUtils;
+//using NM = Splunk.Common.NativeMethods;
+//using SU = Splunk.Common.ShellUtils;
 
-//using WI = Win32BagOfTricks.Internals;
-//using WM = Win32BagOfTricks.WindowManagement;
+using WI = Win32BagOfTricks.Internals;
+using WM = Win32BagOfTricks.WindowManagement;
 
 
 namespace Splunk.Ui
@@ -76,18 +76,20 @@ namespace Splunk.Ui
 
             // Misc ui clickers.
             btnEdit.Click += (sender, e) => { SettingsEditor.Edit(_settings, "User Settings", 500); };
-            btnDump.Click += (sender, e) => { SU.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
+            btnDump.Click += (sender, e) => { WM.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
 
             // Manage commands in registry.
             btnInitReg.Click += (sender, e) => { _settings.Commands.ForEach(c => c.CreateRegistryEntry(Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
             btnClearReg.Click += (sender, e) => { _settings.Commands.ForEach(c => c.RemoveRegistryEntry()); };
 
             // Shell hook handler.
-            _hookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
-            NM.RegisterShellHookWindow(Handle);
+            _hookMsg = WI.RegisterShellHook(Handle); // test for 0?
+            //_hookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
+            //NM.RegisterShellHookWindow(Handle);
 
             // Hot key handlers.
-            NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT), NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT, KEY_A);
+            //NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT), NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT, KEY_A);
+            WI.RegisterHotKey(Handle, KEY_A, WI.MOD_ALT | WI.MOD_CTRL | WI.MOD_SHIFT);
 
             // Debug stuff.
             btnGo.Click += (sender, e) => { DoSplunk(); };
@@ -125,8 +127,10 @@ namespace Splunk.Ui
         {
             if (disposing)
             {
-                NM.DeregisterShellHookWindow(Handle);
-                NM.UnregisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT));
+                WI.DeregisterShellHook(Handle);
+                WI.UnregisterHotKeys(Handle);
+                //NM.DeregisterShellHookWindow(Handle);
+                //NM.UnregisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT));
 
                 components?.Dispose();
             }
@@ -144,30 +148,30 @@ namespace Splunk.Ui
             IntPtr handle = message.LParam;
             if (message.Msg == _hookMsg)
             {
-                NM.ShellEvents shellEvent = (NM.ShellEvents)message.WParam.ToInt32();
+                var shellEvent = message.WParam.ToInt32();
 
                 switch (shellEvent)
                 {
-                    case NM.ShellEvents.HSHELL_WINDOWCREATED:
-                        AppWindowInfo wi = SU.GetAppWindowInfo(handle);
+                    case WI.HSHELL_WINDOWCREATED:
+                        WM.AppWindowInfo wi = WM.GetAppWindowInfo(handle);
                         _logger.Debug($"WindowCreatedEvent:{handle} {wi.Title}");
                         break;
 
-                    case NM.ShellEvents.HSHELL_WINDOWACTIVATED:
+                    case WI.HSHELL_WINDOWACTIVATED:
                         //_logger.Debug($"WindowActivatedEvent:{handle}");
                         break;
 
-                    case NM.ShellEvents.HSHELL_WINDOWDESTROYED:
+                    case WI.HSHELL_WINDOWDESTROYED:
                         //_logger.Debug($"WindowDestroyedEvent:{handle}");
                         break;
                 }
             }
-            else if (message.Msg == NM.WM_HOTKEY_MESSAGE_ID) // Decode key.
+            else if (message.Msg == WI.WM_HOTKEY_MESSAGE_ID) // Decode key.
             {
                 int key = (int)((long)message.LParam >> 16);
                 int mod = (int)((long)message.LParam & 0xFFFF);
 
-                if (mod == (NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT))
+                if (mod == (WI.MOD_ALT | WI.MOD_CTRL | WI.MOD_SHIFT))
                 {
                     switch (key)
                     {
