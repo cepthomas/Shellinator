@@ -7,7 +7,7 @@ using System.Threading;
 
 // From https://github.com/MrM40/W-WinClipboard
 
-// TODO clean up.
+// TO-DO clean up.
 
 
 namespace Splunk.Common

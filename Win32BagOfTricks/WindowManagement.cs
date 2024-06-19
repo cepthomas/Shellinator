@@ -7,17 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Drawing;
-using static Win32BagOfTricks.WindowManagement;
 using Ephemera.NBagOfTricks;
-
-// C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um\WinUser.h
-
-// Reference: https://pinvoke.net
-
-// TODO Try CsWin32? or suppress/fix warnings:
-// - CA1401 https://stackoverflow.com/a/35819594
-// - CA2101 https://stackoverflow.com/a/67127595 
-// - SYSLIB1054
 
 
 #pragma warning disable SYSLIB1054, CA1401, CA2101
@@ -66,7 +56,7 @@ namespace Win32BagOfTricks
 
         #region API
         /// <summary>
-        /// 
+        /// Get or set the fg.
         /// </summary>
         public static IntPtr ForegroundWindow
         {
@@ -75,7 +65,7 @@ namespace Win32BagOfTricks
         }
 
         /// <summary>
-        /// 
+        /// Get the shell window.
         /// </summary>
         public static IntPtr ShellWindow
         {
@@ -86,7 +76,7 @@ namespace Win32BagOfTricks
         /// Get all pertinent/visible windows for the application. Ignores non-visible or non-titled (internal).
         /// Note that new explorers may be in the same process or separate ones. Depends on explorer user options.
         /// </summary>
-        /// <param name="appName">Application name.</param>
+        /// <param name="appName">The application name to filter on.</param>
         /// <param name="includeAnonymous">Include those without titles or base "Program Manager".</param>
         /// <returns>List of window infos.</returns>
         public static List<AppWindowInfo> GetAppWindows(string appName, bool includeAnonymous = false)
@@ -128,14 +118,13 @@ namespace Win32BagOfTricks
         /// <summary>
         /// Get main window(s) for the application. Could be multiple if more than one process.
         /// </summary>
-        /// <param name="appName">The app name</param>
+        /// <param name="appName">The application name to filter on.</param>
         /// <returns>List of window handles.</returns>
         public static List<IntPtr> GetAppMainWindows(string appName)
         {
             List<IntPtr> handles = [];
 
             // Get all processes. There is one entry per separate process.
-            // XPL: Title[] Geometry[X:0 Y: 1020 W: 1920 H: 60] IsVisible[True] Handle[131326] Pid[5748]
             Process[] procs = Process.GetProcessesByName(appName);
             // Get each main window.
             procs.ForEach(p => handles.Add(p.MainWindowHandle));
@@ -189,14 +178,32 @@ namespace Win32BagOfTricks
         /// Move and/or resize a window.
         /// </summary>
         /// <param name="handle"></param>
-        /// <param name="l"></param>
-        /// <param name="t"></param>
-        /// <param name="w"></param>
-        /// <param name="h"></param>
+        /// <param name="loc">Where to.</param>
         /// <returns></returns>
-        public static bool MoveWindow(IntPtr handle, int l, int t, int w, int h)
+        public static bool MoveWindow(IntPtr handle, Point loc)
         {
-            return MoveWindow(handle, l, t, w, h, true);
+            bool ok = GetWindowRect(handle, out Rect rect);
+            if (ok)
+            {
+                ok = MoveWindow(handle, loc.X, loc.Y, rect.Right - rect.Left, rect.Bottom - rect.Top, true);
+            }
+            return ok;
+        }
+
+        /// <summary>
+        /// Resize a window.
+        /// </summary>
+        /// <param name="handle"></param>
+        /// <param name="size">How big is it.</param>
+        /// <returns></returns>
+        public static bool ResizeWindow(IntPtr handle, Size size)
+        {
+            bool ok = GetWindowRect(handle, out Rect rect);
+            if (ok)
+            {
+                ok = MoveWindow(handle, rect.Left, rect.Top, size.Width, size.Height, true);
+            }
+            return ok;
         }
         #endregion
 

@@ -6,8 +6,7 @@ using System.Threading;
 
 
 // From https://github.com/MrM40/W-WinClipboard
-
-// TODO clean up.
+// TODO could use some tidying up.
 
 #pragma warning disable SYSLIB1054, CA1401, CA2101
 
@@ -15,15 +14,6 @@ namespace Win32BagOfTricks
 {
     public static class Clipboard
     {
-        // https://learn.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats
-        public enum ClipboardFormats : int
-        {
-            CF_TEXT = 1,         // ANSI Text format. A null character signals the end of the data.
-            CF_BITMAP = 2,       // A handle to a bitmap (HBITMAP).
-            CF_WAVE = 12,        // Audio data in one of the standard wave formats.
-            CF_UNICODETEXT = 13, // Unicode text format. A null character signals the end of the data.
-        }
-
         #region API
         /// <summary>
         /// Get text from clipboard.
@@ -156,6 +146,18 @@ namespace Win32BagOfTricks
         #endregion
 
         #region Native methods - private
+
+        #region Types
+        // https://learn.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats
+        enum ClipboardFormats : int
+        {
+            CF_TEXT = 1,         // ANSI Text format. A null character signals the end of the data.
+            CF_BITMAP = 2,       // A handle to a bitmap (HBITMAP).
+            CF_WAVE = 12,        // Audio data in one of the standard wave formats.
+            CF_UNICODETEXT = 13, // Unicode text format. A null character signals the end of the data.
+        }
+        #endregion
+
         [DllImport("User32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool IsClipboardFormatAvailable(uint format);

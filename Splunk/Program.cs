@@ -8,38 +8,34 @@ using System.Drawing;
 using System.ComponentModel;
 using System.Text;
 using System.Runtime.InteropServices;
-//using Splunk.Common;
-
-//using NM = Splunk.Common.NativeMethods;
-//using SU = Splunk.Common.ShellUtils;
-
 using WI = Win32BagOfTricks.Internals;
 using WM = Win32BagOfTricks.WindowManagement;
 using CB = Win32BagOfTricks.Clipboard;
 
 
-//TODO1 move bins to a convenient location for reg to find.
-
 namespace Splunk
 {
     public class Program
     {
-        #region Fields - public for debugging
+        #region Fields
         /// <summary>Result of command execution.</summary>
-        public static string _stdout = "";
+        static string _stdout = "";
 
         /// <summary>Result of command execution.</summary>
-        public static string _stderr = "";
+        static string _stderr = "";
 
         /// <summary>Log file name.</summary>
         static readonly string _logFileName = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
+
+        /// <summary>Log debug stuff.</summary>
+        static bool _debug = false;
         #endregion
 
         /// <summary>Where it all began.</summary>
         /// <param name="args"></param>
         static void Main(string[] args)
         {
-            Log($"Splunk cl args:{string.Join(" ", args)}");
+            Log($"Splunk command args:{string.Join(" ", args)}");
 
             // I'm in charge of the pixels.
             WI.DisableDpiScaling();
@@ -51,9 +47,8 @@ namespace Splunk
             try
             {
                 Run([.. args]);
-
+                // OK here.
                 Environment.ExitCode = 0;
-                Log("Everything went OK");
                 CB.SetText(_stdout);
             }
             catch (SplunkException ex)
@@ -98,7 +93,7 @@ namespace Splunk
                 int start = lines.Length / 3;
                 var trunc = lines.Subset(start, lines.Length - start);
                 File.WriteAllLines(_logFileName, trunc);
-                //Log($">>>> Trimmed log file");
+                Log($"Trimmed log file", true);
             }
         }
 
@@ -120,9 +115,12 @@ namespace Splunk
             var wdir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
             var isdir = attr.HasFlag(FileAttributes.Directory);
 
+            Log($"Run() id:{id} path:{path} wdir:{wdir} isdir:{isdir}", true);
+
             switch (id)
             {
                 case "cmder":
+                {
                     var fgHandle = WM.ForegroundWindow; // -> left pane
                     WM.AppWindowInfo fginfo = WM.GetAppWindowInfo(fgHandle);
 
@@ -142,24 +140,29 @@ namespace Splunk
 
                     // Relocate/resize the windows to fit available real estate.
                     WM.AppWindowInfo desktop = WM.GetAppWindowInfo(WM.ShellWindow);
-                    int w = desktop.DisplayRectangle.Width * 45 / 100;
-                    int h = desktop.DisplayRectangle.Height * 80 / 100;
-                    int t = 50, l = 50;
-                    WM.MoveWindow(fgHandle, l, t, w, h);
+                    Point loc = new(50, 50);
+                    Size sz = new(desktop.DisplayRectangle.Width * 45 / 100, desktop.DisplayRectangle.Height * 80 / 100);
+                    // Left pane.
+                    WM.MoveWindow(fgHandle, loc);
+                    WM.ResizeWindow(fgHandle, sz);
                     WM.ForegroundWindow = fgHandle;
-                    l += w;
-                    WM.MoveWindow(rightPane.Handle, l, t, w, h);
+                    // Right pane.
+                    loc.Offset(sz.Width, 0);
+                    WM.MoveWindow(rightPane.Handle, loc);
+                    WM.ResizeWindow(rightPane.Handle, sz);
                     WM.ForegroundWindow = rightPane.Handle;
-                    break;
+                }
+                break;
 
                 case "tree":
-                    {
-                        int code = ExecuteCommand("cmd", wdir, $"/c tree /a /f \"{wdir}\" | clip");
-                        if (code != 0) { throw new Win32Exception(code); }
-                    }
-                    break;
+                {
+                    int code = ExecuteCommand("cmd", wdir, $"/c tree /a /f \"{wdir}\"");
+                    if (code != 0) { throw new Win32Exception(code); }
+                }
+                break;
 
                 case "exec":
+                {
                     if (!isdir)
                     {
                         var ext = Path.GetExtension(path);
@@ -173,24 +176,20 @@ namespace Splunk
                         };
                         if (code != 0) { throw new Win32Exception(code); }
                     }
-                    else
-                    {
-                        // ignore selection of dir
-                    }
-                    break;
+                    // else ignore selection of dir
+                }
+                break;
 
                 case "test_deskbg":
-                    Log($"!!! Got test_deskbg");
-                    WI.MessageBox($"!!! Got test_deskbg: {path}", "Debug");
-                    break;
-
                 case "test_folder":
-                    Log($"!!! Got test_folder");
-                    WI.MessageBox("!!! Got test_folder: {path}", "Debug");
-                    break;
+                {
+                    Log($"!!! Got {id}:{path}", true);
+                    WI.MessageBox($"!!! Got {id}:{path}", "Debug");
+                }
+                break;
 
                 default:
-                    throw new SplunkException($"Invalid id: {id}", true);
+                    throw new SplunkException($"Invalid id:{id}", true);
             }
         }
 
@@ -203,7 +202,7 @@ namespace Splunk
         /// <returns></returns>
         static int ExecuteCommand(string exe, string wdir, string args)
         {
-            //Log($"DEBUG args:{args}");
+            Log($"ExecuteCommand() exe:{exe} wdir:{wdir} args:{args}", true);
 
             ProcessStartInfo pinfo = new()
             {
@@ -220,27 +219,26 @@ namespace Splunk
 
             using Process proc = new() { StartInfo = pinfo };
             proc.Start();
-            proc.WaitForExit();
-            // Save process results.
+            // TIL: To avoid deadlocks, always read the output stream first and then wait.
             _stdout = proc.StandardOutput.ReadToEnd();
             _stderr = proc.StandardError.ReadToEnd();
+            proc.WaitForExit();
+
+            Log($"ExecuteCommand() exit:{proc.ExitCode}", true);
 
             return proc.ExitCode;
         }
 
         /// <summary>Simple logging, don't need or want a full-blown logger.</summary>
-        static void Log(string msg)
+        static void Log(string msg, bool debug = false)
         {
-            if (_logFileName is not null)
+            if (_debug || !debug)
             {
-                File.AppendAllText(_logFileName, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {msg}{Environment.NewLine}");
+                File.AppendAllText(_logFileName, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {(debug ? "DEBUG " : "")}{msg}{Environment.NewLine}");
             }
         }
     }
 
-    /// <summary>App exception.</summary>
-    /// <param name="msg"></param>
-    /// <param name="isError">Otherwise info</param>
     class SplunkException(string msg, bool isError) : Exception(msg)
     {
         public bool IsError { get; } = isError;

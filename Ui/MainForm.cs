@@ -12,11 +12,6 @@ using System.Runtime.InteropServices;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
-//using Splunk.Common;
-
-//using NM = Splunk.Common.NativeMethods;
-//using SU = Splunk.Common.ShellUtils;
-
 using WI = Win32BagOfTricks.Internals;
 using WM = Win32BagOfTricks.WindowManagement;
 
@@ -25,10 +20,6 @@ namespace Splunk.Ui
 {
     public partial class MainForm : Form
     {
-        #region Definitions
-        const int KEY_A = (int)Keys.A;
-        #endregion
-
         #region Fields
         /// <summary>My logger.</summary>
         readonly Logger _logger = LogManager.CreateLogger("Splunk.Ui");
@@ -89,7 +80,7 @@ namespace Splunk.Ui
 
             // Hot key handlers.
             //NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT), NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT, KEY_A);
-            WI.RegisterHotKey(Handle, KEY_A, WI.MOD_ALT | WI.MOD_CTRL | WI.MOD_SHIFT);
+            WI.RegisterHotKey(Handle, (int)Keys.A, WI.MOD_ALT | WI.MOD_CTRL);
 
             // Debug stuff.
             btnGo.Click += (sender, e) => { DoSplunk(); };
@@ -157,32 +148,25 @@ namespace Splunk.Ui
                         _logger.Debug($"WindowCreatedEvent:{handle} {wi.Title}");
                         break;
 
-                    case WI.HSHELL_WINDOWACTIVATED:
-                        //_logger.Debug($"WindowActivatedEvent:{handle}");
-                        break;
-
                     case WI.HSHELL_WINDOWDESTROYED:
-                        //_logger.Debug($"WindowDestroyedEvent:{handle}");
+                        _logger.Debug($"WindowDestroyedEvent:{handle}");
                         break;
                 }
             }
             else if (message.Msg == WI.WM_HOTKEY_MESSAGE_ID) // Decode key.
             {
-                int key = (int)((long)message.LParam >> 16);
+                Keys key = Keys.None;
                 int mod = (int)((long)message.LParam & 0xFFFF);
-
-                if (mod == (WI.MOD_ALT | WI.MOD_CTRL | WI.MOD_SHIFT))
+                if (Enum.IsDefined(typeof(Keys), message.LParam >> 16))
                 {
-                    switch (key)
-                    {
-                        case KEY_A:
-                            _logger.Debug($"KEY_A:{handle}");
-                            break;
+                    key = (Keys)Enum.ToObject(typeof(Keys), message.LParam >> 16);
+                }
+                // else do something?
 
-                        default:
-                            // Ignore
-                            break;
-                    }
+                if ((key != Keys.None) && (mod & WI.MOD_ALT) > 0 && (mod & WI.MOD_CTRL) > 0)
+                {
+                    _logger.Debug($"Hotkey:{key}");
+                    //switch (key) etc...
                 }
             }
 
@@ -191,17 +175,6 @@ namespace Splunk.Ui
         #endregion
 
         #region Internals
-        /// <summary>
-        /// Helper.
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="mod"></param>
-        /// <returns></returns>
-        int MakeKeyId(int key, int mod = 0)
-        {
-            return mod ^ key ^ Handle.ToInt32();
-        }
-
         /// <summary>
         /// Populate the settings with defined functions.
         /// </summary>
@@ -218,7 +191,6 @@ namespace Splunk.Ui
             rc.Add(new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
             rc.Add(new("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
             rc.Add(new("exec", ExplorerContext.File, "Execute", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."));
-            // test items:
             rc.Add(new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SPLUNK %ID \"%W\"", "Debug stuff."));
             rc.Add(new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SPLUNK %ID \"%D\"", "Debug stuff."));
         }
@@ -228,12 +200,12 @@ namespace Splunk.Ui
         /// </summary>
         void DoSplunk()
         {
-            //var fgHandle = NM.GetForegroundWindow();
-            //WindowInfo fginfo = SU.GetWindowInfo(fgHandle);
+            //CreateCommands();
+            //return;
 
-
+            List<string> args = ["tree", @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages"];
             //List<string> args = ["cmder", @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages"];
-            List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.cmd"];
+            //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.cmd"];
             //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.lua"];
             //List<string> args = ["test_deskbg", @"C:\Dev\repos\Apps\Splunk\Test\dummy.txt"];
 
@@ -243,8 +215,8 @@ namespace Splunk.Ui
             }
             catch (Exception ex)
             {
+                tvInfo.AppendLine($"ERR {ex.Message}");
                 Debug.WriteLine(ex.ToString());
-                // Get type, do something.
             }
         }
         #endregion

@@ -24,9 +24,13 @@ namespace Win32BagOfTricks
         public const int HSHELL_WINDOWACTIVATED = (int)ShellEvents.HSHELL_WINDOWACTIVATED;
         #endregion
 
+        #region Fields
+        static List<int> _hotKeyIds = new();
+        #endregion
+
         #region API
         /// <summary>
-        /// 
+        /// Register shell hook.
         /// </summary>
         /// <param name="handle"></param>
         /// <returns></returns>
@@ -38,7 +42,7 @@ namespace Win32BagOfTricks
         }
 
         /// <summary>
-        /// 
+        /// Deregister shell hook.
         /// </summary>
         /// <param name="handle"></param>
         public static void DeregisterShellHook(IntPtr handle)
@@ -46,7 +50,6 @@ namespace Win32BagOfTricks
             DeregisterShellHookWindow(handle);
         }
 
-        static List<int> _hotKeyIds = new();
         /// <summary>
         /// Rudimentary management of hotkeys. Only supports one (global) handle.
         /// </summary>
@@ -63,7 +66,7 @@ namespace Win32BagOfTricks
         }
 
         /// <summary>
-        /// 
+        /// Rudimentary management of hotkeys. Only supports one (global) handle.
         /// </summary>
         /// <param name="handle"></param>
         public static void UnregisterHotKeys(IntPtr handle)
@@ -72,7 +75,7 @@ namespace Win32BagOfTricks
         }
 
         /// <summary>
-        /// Generic limited modal message box. Just enough for a console/hidden application.
+        /// Generic limited modal message box. Just enough for a typical console or hidden application.
         /// </summary>
         /// <param name="message">Body.</param>
         /// <param name="caption">Caption.</param>
@@ -81,28 +84,24 @@ namespace Win32BagOfTricks
         /// <returns>True if OK </returns>
         public static bool MessageBox(string message, string caption, bool error = false, bool ask = false)
         {
-            bool ok = true;
             uint flags = error ? (uint)MessageBoxFlags.MB_ICONERROR : (uint)MessageBoxFlags.MB_ICONINFORMATION;
 
             if (ask)
             {
                 flags |= (uint)MessageBoxFlags.MB_OKCANCEL;
                 int res = MessageBox(IntPtr.Zero, message, caption, flags);
-                if (res != 1) //IDOK
-                {
-                    ok = false;
-                }
+                return res == 1; //IDOK
             }
             else
             {
                 MessageBox(IntPtr.Zero, message, caption, flags);
             }
 
-            return ok;
+            return true;
         }
 
         /// <summary>
-        /// 
+        /// Thunk.
         /// </summary>
         public static void DisableDpiScaling()
         {
@@ -110,7 +109,7 @@ namespace Win32BagOfTricks
         }
 
         /// <summary>
-        /// 
+        /// Streamlined version of the real function.
         /// </summary>
         /// <param name="verb">Standard verb</param>
         /// <param name="path">Where</param>
@@ -118,14 +117,11 @@ namespace Win32BagOfTricks
         /// <returns>Standard error code</returns>
         public static int ShellExecute(string verb, string path, bool hide = false)
         {
-            //If the function succeeds, it returns a value greater than 32. If the function fails, it returns an error value
-            //that indicates the cause of the failure. The return value is cast as an HINSTANCE for backward compatibility
-            //with 16 - bit Windows applications. It is not a true HINSTANCE, however. It can be cast only to an INT_PTR and
-            //compared to either 32 or the following error codes below.
-
             var ss = new List<string> { "edit", "explore", "find", "open", "print", "properties", "runas" };
-            if (ss.Contains(verb)) { throw new ArgumentException($"Invalid verb:{verb}"); }
+            if (!ss.Contains(verb)) { throw new ArgumentException($"Invalid verb:{verb}"); }
 
+            // If ShellExecute() succeeds, it returns a value greater than 32,
+            //   else it returns an error value that indicates the cause of the failure.
             int res = (int)ShellExecute(IntPtr.Zero, verb, path, IntPtr.Zero, IntPtr.Zero,
                 hide ? (int)ShowCommands.SW_HIDE : (int)ShowCommands.SW_NORMAL);
 
@@ -174,20 +170,6 @@ namespace Win32BagOfTricks
             MB_ICONERROR = MB_ICONHAND,
             MB_ICONINFORMATION = MB_ICONASTERISK,
             MB_ICONSTOP = MB_ICONHAND,
-            //MB_DEFBUTTON1 = 0x00000000,
-            //MB_DEFBUTTON2 = 0x00000100,
-            //MB_DEFBUTTON3 = 0x00000200,
-            //MB_DEFBUTTON4 = 0x00000300,
-            //MB_APPLMODAL = 0x00000000,
-            //MB_SYSTEMMODAL = 0x00001000,
-            //MB_TASKMODAL = 0x00002000,
-            //MB_HELP = 0x00004000, // Help Button
-            //MB_NOFOCUS = 0x00008000,
-            //MB_SETFOREGROUND = 0x00010000,
-            //MB_DEFAULT_DESKTOP_ONLY = 0x00020000,
-            //MB_TOPMOST = 0x00040000,
-            //MB_RIGHT = 0x00080000,
-            //MB_RTLREADING = 0x00100000,
         }
 
         [Flags]
