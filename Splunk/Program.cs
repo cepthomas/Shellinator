@@ -138,7 +138,7 @@ namespace Splunk
                     }
                     if (rightPane is null) throw new SplunkException($"Couldn't create right pane for [{path}]", true);
 
-                    // Relocate/resize the windows to fit available real estate.
+                    // Relocate/resize the windows to fit available real estate. TODO configurable? full screen?
                     WM.AppWindowInfo desktop = WM.GetAppWindowInfo(WM.ShellWindow);
                     Point loc = new(50, 50);
                     Size sz = new(desktop.DisplayRectangle.Width * 45 / 100, desktop.DisplayRectangle.Height * 80 / 100);

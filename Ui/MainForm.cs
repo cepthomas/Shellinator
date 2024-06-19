@@ -15,6 +15,7 @@ using Ephemera.NBagOfUis;
 using WI = Win32BagOfTricks.Internals;
 using WM = Win32BagOfTricks.WindowManagement;
 
+// TODO install procedure, creates settings commands and writes the registry.
 
 namespace Splunk.Ui
 {
@@ -32,6 +33,21 @@ namespace Splunk.Ui
 
         /// <summary>Hook message processing.</summary>
         readonly int _hookMsg;
+
+        /// <summary>All the commands.</summary>
+        List<ExplorerCommand> _commands =
+        [
+            new("cmder", ExplorerContext.Dir, "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."),
+            new("tree", ExplorerContext.Dir, "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
+            new("openst", ExplorerContext.Dir, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
+            new("findev", ExplorerContext.Dir, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."),
+            new("tree", ExplorerContext.DirBg, "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."),
+            new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."),
+            new("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."),
+            new("exec", ExplorerContext.File, "Execute", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."),
+            new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SPLUNK %ID \"%W\"", "Debug stuff."),
+            new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SPLUNK %ID \"%D\"", "Debug stuff."),
+        ];
         #endregion
 
         #region Lifecycle
@@ -70,22 +86,15 @@ namespace Splunk.Ui
             btnDump.Click += (sender, e) => { WM.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
 
             // Manage commands in registry.
-            btnInitReg.Click += (sender, e) => { _settings.Commands.ForEach(c => c.CreateRegistryEntry(Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
-            btnClearReg.Click += (sender, e) => { _settings.Commands.ForEach(c => c.RemoveRegistryEntry()); };
+            btnInitReg.Click += (sender, e) => { _commands.ForEach(c => c.CreateRegistryEntry(Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
+            btnClearReg.Click += (sender, e) => { _commands.ForEach(c => c.RemoveRegistryEntry()); };
 
-            // Shell hook handler.
+            // Shell handlers.
             _hookMsg = WI.RegisterShellHook(Handle); // test for 0?
-            //_hookMsg = NM.RegisterWindowMessage("SHELLHOOK"); // test for 0?
-            //NM.RegisterShellHookWindow(Handle);
-
-            // Hot key handlers.
-            //NM.RegisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT), NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT, KEY_A);
             WI.RegisterHotKey(Handle, (int)Keys.A, WI.MOD_ALT | WI.MOD_CTRL);
 
             // Debug stuff.
-            btnGo.Click += (sender, e) => { DoSplunk(); };
-            //btnGo.Click += (sender, e) => { CreateCommands(); };
-
+            btnGo.Click += (sender, e) => { DoStuff(); };
         }
 
         /// <summary>
@@ -120,8 +129,6 @@ namespace Splunk.Ui
             {
                 WI.DeregisterShellHook(Handle);
                 WI.UnregisterHotKeys(Handle);
-                //NM.DeregisterShellHookWindow(Handle);
-                //NM.UnregisterHotKey(Handle, MakeKeyId(KEY_A, NM.MOD_ALT | NM.MOD_CTRL | NM.MOD_SHIFT));
 
                 components?.Dispose();
             }
@@ -174,31 +181,11 @@ namespace Splunk.Ui
         }
         #endregion
 
-        #region Internals
-        /// <summary>
-        /// Populate the settings with defined functions.
-        /// </summary>
-        void CreateCommands()
-        {
-            var rc = _settings.Commands; // alias
-            rc.Clear();
-
-            rc.Add(new("cmder", ExplorerContext.Dir, "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."));
-            rc.Add(new("tree", ExplorerContext.Dir, "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"));
-            rc.Add(new("openst", ExplorerContext.Dir, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."));
-            rc.Add(new("findev", ExplorerContext.Dir, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."));
-            rc.Add(new("tree", ExplorerContext.DirBg, "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."));
-            rc.Add(new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."));
-            rc.Add(new("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."));
-            rc.Add(new("exec", ExplorerContext.File, "Execute", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."));
-            rc.Add(new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SPLUNK %ID \"%W\"", "Debug stuff."));
-            rc.Add(new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SPLUNK %ID \"%D\"", "Debug stuff."));
-        }
-
+        #region Debug
         /// <summary>
         /// Debug stuff.
         /// </summary>
-        void DoSplunk()
+        void DoStuff()
         {
             //CreateCommands();
             //return;

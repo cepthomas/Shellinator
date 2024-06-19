@@ -4,7 +4,6 @@ using System.IO;
 using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-//using System.Runtime.Versioning;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 
@@ -27,10 +26,10 @@ namespace Splunk.Ui
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public LogLevel NotifLogLevel { get; set; } = LogLevel.Debug;
 
-        [DisplayName("Registry Commands")]
-        [Description("Descriptors for context menu commands.")]
-        [Browsable(true)]
-        public List<ExplorerCommand> Commands { get; set; } = [];
+        // [DisplayName("Registry Commands")]
+        // [Description("Descriptors for context menu commands.")]
+        // [Browsable(true)]
+        // public List<ExplorerCommand> Commands { get; set; } = [];
         #endregion
     }
 }
