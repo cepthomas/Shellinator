@@ -8,9 +8,9 @@ using System.Drawing;
 using System.ComponentModel;
 using System.Text;
 using System.Runtime.InteropServices;
-using WI = Win32BagOfTricks.Internals;
-using WM = Win32BagOfTricks.WindowManagement;
-using CB = Win32BagOfTricks.Clipboard;
+using WI = Ephemera.Win32.Internals;
+using WM = Ephemera.Win32.WindowManagement;
+using CB = Ephemera.Win32.Clipboard;
 
 
 namespace Splunk

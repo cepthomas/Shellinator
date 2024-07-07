@@ -12,8 +12,8 @@ using System.Runtime.InteropServices;
 using Ephemera.NBagOfTricks;
 using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
-using WI = Win32BagOfTricks.Internals;
-using WM = Win32BagOfTricks.WindowManagement;
+using WI = Ephemera.Win32.Internals;
+using WM = Ephemera.Win32.WindowManagement;
 
 // TODO install procedure, creates settings commands and writes the registry.
 

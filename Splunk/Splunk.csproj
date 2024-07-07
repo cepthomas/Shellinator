@@ -19,12 +19,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Win32BagOfTricks\Win32BagOfTricks.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="Ephemera.NBagOfTricks">
       <HintPath>..\lib\Ephemera.NBagOfTricks.dll</HintPath>
+    </Reference>
+    <Reference Include="Ephemera.Win32">
+      <HintPath>..\lib\Ephemera.Win32.dll</HintPath>
     </Reference>
   </ItemGroup>
 
