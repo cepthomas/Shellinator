@@ -279,7 +279,7 @@ namespace Win32BagOfTricks
 
         #region user32.dll
         /// <summary>Rudimentary UI notification from a console application.</summary>
-        [DllImport("User32.dll", CharSet = CharSet.Ansi)]
+        [DllImport("user32.dll", CharSet = CharSet.Ansi)]
         static extern int MessageBox(IntPtr hWnd, string msg, string caption, uint type);
 
         [DllImport("user32.dll")]
@@ -303,6 +303,22 @@ namespace Win32BagOfTricks
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
         static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        #endregion
+
+        #region kernel32.dll
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        private static extern bool FreeConsole();
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        private static extern bool DetachConsole();
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AllocConsole();
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool AttachConsole(uint dwProcessId);
         #endregion
 
         #endregion
