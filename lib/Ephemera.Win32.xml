@@ -68,7 +68,7 @@
         </member>
         <member name="M:Ephemera.Win32.Internals.ShellExecute(System.String,System.String,System.Boolean)">
             <summary>
-            Streamlined version of the real function.
+            Streamlined version of the real function. TODO1 clean up all ShellExecute()
             </summary>
             <param name="verb">Standard verb</param>
             <param name="path">Where</param>
@@ -93,7 +93,7 @@
             <summary>Finer control version of above.</summary>
         </member>
         <member name="M:Ephemera.Win32.Internals.MessageBox(System.IntPtr,System.String,System.String,System.UInt32)">
-            <summary>Rudimentary UI notification from a console application.</summary>
+            <summary>Rudimentary UI notification for use in a console application.</summary>
         </member>
         <member name="T:Ephemera.Win32.WindowManagement.AppWindowInfo">
             <summary>Useful info about a window.</summary>
@@ -158,9 +158,16 @@
             <param name="handle"></param>
             <returns>The info object.</returns>
         </member>
+        <member name="M:Ephemera.Win32.WindowManagement.ShowWindow(System.IntPtr)">
+            <summary>
+            Show the window.
+            </summary>
+            <param name="handle"></param>
+            <returns></returns>        
+        </member>
         <member name="M:Ephemera.Win32.WindowManagement.MoveWindow(System.IntPtr,System.Drawing.Point)">
             <summary>
-            Move and/or resize a window.
+            Move a window.
             </summary>
             <param name="handle"></param>
             <param name="loc">Where to.</param>

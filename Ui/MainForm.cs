@@ -77,7 +77,7 @@ namespace Splunk.Ui
             Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 
             // Info display.
-            tvInfo.MatchColors.Add("ERR", Color.LightPink);
+            tvInfo.MatchText.Add("ERR", Color.LightPink);
             tvInfo.BackColor = Color.Cornsilk;
             tvInfo.Prompt = ">";
 
