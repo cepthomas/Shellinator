@@ -10,7 +10,6 @@ using System.Text.Json;
 using System.Security.Policy;
 using System.Runtime.InteropServices;
 using Ephemera.NBagOfTricks;
-using Ephemera.NBagOfTricks.Slog;
 using Ephemera.NBagOfUis;
 using WI = Ephemera.Win32.Internals;
 using WM = Ephemera.Win32.WindowManagement;

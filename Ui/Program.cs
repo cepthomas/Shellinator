@@ -1,5 +1,4 @@
 using Ephemera.NBagOfTricks;
-using Ephemera.NBagOfTricks.Slog;
 
 namespace Splunk.Ui
 {
