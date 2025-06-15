@@ -3,9 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34902.65
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Splunk", "Splunk\Splunk.csproj", "{26727473-EDDA-4803-A065-FCBA7E516F71}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ui", "Ui\Ui.csproj", "{1B34B425-15BA-44D4-9E2F-771C26B09A94}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Splunk", "Splunk.csproj", "{26727473-EDDA-4803-A065-FCBA7E516F71}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +15,6 @@ Global
 		{26727473-EDDA-4803-A065-FCBA7E516F71}.Debug|x64.Build.0 = Debug|x64
 		{26727473-EDDA-4803-A065-FCBA7E516F71}.Release|x64.ActiveCfg = Release|x64
 		{26727473-EDDA-4803-A065-FCBA7E516F71}.Release|x64.Build.0 = Release|x64
-		{1B34B425-15BA-44D4-9E2F-771C26B09A94}.Debug|x64.ActiveCfg = Debug|x64
-		{1B34B425-15BA-44D4-9E2F-771C26B09A94}.Debug|x64.Build.0 = Debug|x64
-		{1B34B425-15BA-44D4-9E2F-771C26B09A94}.Release|x64.ActiveCfg = Release|x64
-		{1B34B425-15BA-44D4-9E2F-771C26B09A94}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
