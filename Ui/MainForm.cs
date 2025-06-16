@@ -191,9 +191,9 @@ namespace Splunk.Ui
 
             List<string> args = ["tree", @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages"];
             //List<string> args = ["cmder", @"C:\Users\cepth\AppData\Roaming\Sublime Text\Packages"];
-            //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.cmd"];
-            //List<string> args = ["exec", @"C:\Dev\repos\Apps\Splunk\Test\go.lua"];
-            //List<string> args = ["test_deskbg", @"C:\Dev\repos\Apps\Splunk\Test\dummy.txt"];
+            //List<string> args = ["exec", @"C:\Dev\Apps\Splunk\Test\go.cmd"];
+            //List<string> args = ["exec", @"C:\Dev\Apps\Splunk\Test\go.lua"];
+            //List<string> args = ["test_deskbg", @"C:\Dev\Apps\Splunk\Test\dummy.txt"];
 
             try
             {
