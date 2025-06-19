@@ -1,5 +1,5 @@
 
-# Splunk
+# ShellEx
 Playing with shell extensions to provide some custom context menus.
 
 Consists of two parts:
@@ -46,15 +46,16 @@ Registry sections of interest:
 - `HKEY_CLASSES_ROOT` (HKCR): virtual hive of `HKEY_LOCAL_MACHINE` with `HKEY_CURRENT_USER` overrides (administrator)
 
 `HKEY_CLASSES_ROOT` should be used only for reading currently effective settings. A write to `HKEY_CLASSES_ROOT` is
-always redirected to `HKEY_LOCAL_MACHINE`\Software\Classes. In general, write directly to 
-`HKEY_LOCAL_MACHINE\Software\Classes` or `HKEY_CURRENT_USER\Software\Classes` and read from `HKEY_CLASSES_ROOT`.
+always redirected to `HKEY_LOCAL_MACHINE`\Software\Classes. 
 
-Splunk bases all registry accesses (R/W) at `HKEY_CURRENT_USER\Software\Classes` aka `REG_ROOT`.
+>>>>> In general, write directly to `HKEY_LOCAL_MACHINE\Software\Classes` or `HKEY_CURRENT_USER\Software\Classes` and read from `HKEY_CLASSES_ROOT`.
+
+ShellEx bases all registry accesses (R/W) at `HKEY_CURRENT_USER\Software\Classes` aka `REG_ROOT`.
 
 
-## Splunk Commands
+## ShellEx Commands
 
-Splunk command specifications contain these properties:
+ShellEx command specifications contain these properties:
 
 | Property      | Description |
 | --------      | ----------- |
@@ -101,12 +102,12 @@ Built in macros:
 | %~        | Replace with all parameters starting with the second parameter. |  |
 
 
-Splunk-specific macros:
+ShellEx-specific macros:
 
 | Macro     | Description |
 | ----      | ----------- |
 | %ID       | The Id property value. |
-| %SPLUNK   | Path to the Splunk executable. |
+| %SPLUNK   | Path to the ShellEx executable. |
 
 !! Note that all paths and macros that expand to paths must be wrapped in double quotes.
 
@@ -114,7 +115,7 @@ The usual env vars like `%ProgramFiles%` are also supported.
 
 ## Submenus
 
-Not used currently in Splunk but could be useful later.
+Not used currently in ShellEx but could be useful later.
 
 Note!! Must use `MUIVerb`, not default value `@="text"`. A hard learn.
 

@@ -1,6 +1,6 @@
 using System;
 
-namespace Splunk
+namespace ShellEx
 {
     internal class Program
     {

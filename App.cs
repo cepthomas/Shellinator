@@ -13,35 +13,111 @@ using WM = Ephemera.Win32.WindowManagement;
 using CB = Ephemera.Win32.Clipboard;
 
 
-namespace Splunk
+?? Computer\HKEY_CURRENT_USER\Software\Classes\Directory\shellex\ContextMenuHandlers
+
+
+namespace ShellEx
 {
-    class SplunkException(string msg, bool isError) : Exception(msg)
+    class ShellExException(string msg, bool isError) : Exception(msg)
     {
         public bool IsError { get; } = isError;
     }
 
 
+    /// <summary>See README#Commands. File to support specific extensions?</summary>
+    public enum ExplorerContext { Dir, DirBg, DeskBg, Folder, File }
+
+
+    public class ExplorerCommand
+    {
+        public string Id { get; init; } = "???";
+
+        public ExplorerContext Context { get; init; } = ExplorerContext.Dir;
+
+        public string Text { get; init; } = "???";
+
+        public string CommandLine { get; init; } = "";
+
+        public string Description { get; init; } = "";
+
+        static List<string> _reservedIds = ["edit", "explore", "find", "open", "print", "properties", "runas"];
+
+        public ExplorerCommand(string id, ExplorerContext context, string text, string cmdLine, string desc)
+        {
+            if (_reservedIds.Contains(id))
+            {
+                throw new ArgumentException($"Reserved id:{id}");
+            }
+
+            Id = id;
+            Context = context;
+            Text = text;
+            CommandLine = cmdLine;
+            Description = desc;
+        }
+
+        /// <summary>Readable version for property grid label.</summary>
+        public override string ToString()
+        {
+            return $"{Id}: {Text}";
+        }
+    }
+
     public class App
     {
         #region Fields
-        /// <summary>Result of command execution.</summary>
-        static string _stdout = "";
+        /// <summary>Measure performance. TODO1 use TimeIt</summary>
+        readonly Stopwatch _sw = new();
 
         /// <summary>Result of command execution.</summary>
-        static string _stderr = "";
+        string _stdout = "";
+
+        /// <summary>Result of command execution.</summary>
+        string _stderr = "";
 
         /// <summary>Log file name.</summary>
-        static readonly string _logFileName = Path.Join(MiscUtils.GetAppDataDir("Splunk", "Ephemera"), "splunk.txt");
+        readonly string _logFileName;
 
         /// <summary>Log debug stuff.</summary>
-        static bool _debug = false;
+        bool _debug = false;
+
+        /// <summary>Dry run the registry writes.</summary>
+        readonly bool _fake = true;
+
+
+        /// <summary>All the commands.</summary>
+        List<ExplorerCommand> _commands =
+        [
+            new("cmder", ExplorerContext.Dir, "Commander", "%SHELLEX %ID \"%D\"", "Open a new explorer next to the current."),
+            new("tree", ExplorerContext.Dir, "Tree", "%SHELLEX %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
+            new("openst", ExplorerContext.Dir, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
+            new("findev", ExplorerContext.Dir, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."),
+            new("tree", ExplorerContext.DirBg, "Tree", "%SHELLEX %ID \"%W\"", "Copy a tree here to clipboard."),
+            new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."),
+            new("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."),
+            new("exec", ExplorerContext.File, "Execute", "%SHELLEX %ID \"%D\"", "Execute file if executable otherwise opened."),
+            new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SHELLEX %ID \"%W\"", "Debug stuff."),
+            new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SHELLEX %ID \"%D\"", "Debug stuff."),
+        ];
+
         #endregion
 
-        /// <summary>Where it all began.</summary>
+        /// <summary>Where it all begins.</summary>
         /// <param name="args"></param>
         public App(string[] args)
         {
-            Log($"Splunk command args:{string.Join(" ", args)}");
+
+
+            // Must do this first before initializing.
+            string appDir = MiscUtils.GetAppDataDir("ShellEx", "Ephemera");
+
+            _logFileName = Path.Join(appDir, "shellEx.txt");
+
+            // Gets the icon associated with the currently executing assembly.
+//            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+
+
+            Log($"ShellEx command args:{string.Join(" ", args)}");
 
             // I'm in charge of the pixels.
             WI.DisableDpiScaling();
@@ -57,18 +133,18 @@ namespace Splunk
                 Environment.ExitCode = 0;
                 CB.SetText(_stdout);
             }
-            catch (SplunkException ex)
+            catch (ShellExException ex)
             {
                 if (ex.IsError)
                 {
                     Environment.ExitCode = 1;
-                    Log($"Splunk ERROR: {ex.Message}");
+                    Log($"ShellEx ERROR: {ex.Message}");
                     CB.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                     WI.MessageBox(ex.Message, "See the clipboard", true);
                 }
                 else // just notify
                 {
-                    Log($"Splunk INFO: {ex.Message}");
+                    Log($"ShellEx INFO: {ex.Message}");
                     Environment.ExitCode = 0;
                     WI.MessageBox(ex.Message, "You should know");
                 }
@@ -107,14 +183,24 @@ namespace Splunk
         /// <param name="args"></param>
         public void Run(List<string> args)
         {
-            // Process the args => Splunk.exe id path
-            if (args.Count != 2) { throw new SplunkException($"Invalid command line format", true); }
+            // Process the args => ShellEx.exe id path
+            if (args.Count != 2)
+            {
+                throw new ShellExException($"Invalid command line format", true);
+            }
+
             var id = Environment.ExpandEnvironmentVariables(args[0]);
             var path = Environment.ExpandEnvironmentVariables(args[1]);
 
             // Check for valid path.
-            if (path.StartsWith("::")) { throw new SplunkException($"Can't use magic system folders e.g. Home", false); }
-            else if (!Path.Exists(path)) { throw new SplunkException($"Invalid path [{path}]", true); }
+            if (path.StartsWith("::"))
+            {
+                throw new ShellExException($"Can't use magic system folders e.g. Home", false);
+            }
+            else if (!Path.Exists(path))
+            {
+                throw new ShellExException($"Invalid path [{path}]", true);
+            }
 
             // Final details.
             FileAttributes attr = File.GetAttributes(path);
@@ -122,6 +208,15 @@ namespace Splunk
             var isdir = attr.HasFlag(FileAttributes.Directory);
 
             Log($"Run() id:{id} path:{path} wdir:{wdir} isdir:{isdir}", true);
+
+
+            // Misc ui clickers.
+//            btnDump.Click += (sender, e) => { WM.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
+
+            // Manage commands in registry.
+//            btnInitReg.Click += (sender, e) => { _commands.ForEach(c => c.CreateRegistryEntry(Path.Join(Environment.CurrentDirectory, "ShellEx.exe"))); };
+//            btnClearReg.Click += (sender, e) => { _commands.ForEach(c => c.RemoveRegistryEntry()); };
+
 
             switch (id)
             {
@@ -142,16 +237,22 @@ namespace Splunk
                         var wins = WM.GetAppWindows("explorer");
                         rightPane = wins.Where(w => w.Title == path).FirstOrDefault();
                     }
-                    if (rightPane is null) throw new SplunkException($"Couldn't create right pane for [{path}]", true);
+
+                    if (rightPane is null)
+                    {
+                        throw new ShellExException($"Couldn't create right pane for [{path}]", true);
+                    }
 
                     // Relocate/resize the windows to fit available real estate. TODO configurable? full screen?
                     WM.AppWindowInfo desktop = WM.GetAppWindowInfo(WM.ShellWindow);
                     Point loc = new(50, 50);
                     Size sz = new(desktop.DisplayRectangle.Width * 45 / 100, desktop.DisplayRectangle.Height * 80 / 100);
+
                     // Left pane.
                     WM.MoveWindow(fgHandle, loc);
                     WM.ResizeWindow(fgHandle, sz);
                     WM.ForegroundWindow = fgHandle;
+
                     // Right pane.
                     loc.Offset(sz.Width, 0);
                     WM.MoveWindow(rightPane.Handle, loc);
@@ -163,7 +264,10 @@ namespace Splunk
                 case "tree":
                 {
                     int code = ExecuteCommand("cmd", wdir, $"/c tree /a /f \"{wdir}\"");
-                    if (code != 0) { throw new Win32Exception(code); }
+                    if (code != 0)
+                    {
+                        throw new Win32Exception(code);
+                    }
                 }
                 break;
 
@@ -180,7 +284,10 @@ namespace Splunk
                             ".py" => ExecuteCommand("python", wdir, $"\"{path}\""),
                             _ => ExecuteCommand("cmd", wdir, $"/c \"{path}\"") // default just open.
                         };
-                        if (code != 0) { throw new Win32Exception(code); }
+                        if (code != 0)
+                        {
+                            throw new Win32Exception(code);
+                        }
                     }
                     // else ignore selection of dir
                 }
@@ -195,7 +302,7 @@ namespace Splunk
                 break;
 
                 default:
-                    throw new SplunkException($"Invalid id:{id}", true);
+                    throw new ShellExException($"Invalid id:{id}", true);
             }
         }
 
@@ -235,101 +342,11 @@ namespace Splunk
             return proc.ExitCode;
         }
 
-        /// <summary>Simple logging, don't need or want a full-blown logger.</summary>
-        void Log(string msg, bool debug = false)
-        {
-            if (_debug || !debug)
-            {
-                File.AppendAllText(_logFileName, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {(debug ? "DEBUG " : "")}{msg}{Environment.NewLine}");
-            }
-        }
-    }
 
-    public class Manager //: IDisposable
-    {
-        #region Fields
-        /// <summary>Measure performance.</summary>
-        readonly Stopwatch _sw = new();
-
-        /// <summary>Hook message processing.</summary>
-        readonly int _hookMsg;
-
-        /// <summary>All the commands.</summary>
-        List<ExplorerCommand> _commands =
-        [
-            new("cmder", ExplorerContext.Dir, "Commander", "%SPLUNK %ID \"%D\"", "Open a new explorer next to the current."),
-            new("tree", ExplorerContext.Dir, "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
-            new("openst", ExplorerContext.Dir, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
-            new("findev", ExplorerContext.Dir, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."),
-            new("tree", ExplorerContext.DirBg, "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."),
-            new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."),
-            new("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."),
-            new("exec", ExplorerContext.File, "Execute", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."),
-            new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SPLUNK %ID \"%W\"", "Debug stuff."),
-            new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SPLUNK %ID \"%D\"", "Debug stuff."),
-        ];
-        #endregion
-
-
-
-        /// <summary>Constructor.</summary>
-        public Manager()
-        {
-            //_sw.Start();
-
-            // Must do this first before initializing.
-            string appDir = MiscUtils.GetAppDataDir("WBOT", "Ephemera");
-
-            // Gets the icon associated with the currently executing assembly.
-//            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
-
-
-            // Misc ui clickers.
-//            btnDump.Click += (sender, e) => { WM.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
-
-            // Manage commands in registry.
-//            btnInitReg.Click += (sender, e) => { _commands.ForEach(c => c.CreateRegistryEntry(Path.Join(Environment.CurrentDirectory, "Splunk.exe"))); };
-//            btnClearReg.Click += (sender, e) => { _commands.ForEach(c => c.RemoveRegistryEntry()); };
-
-        }
-    }
-
-    /// <summary>See README#Commands. File to support specific extensions?</summary>
-    public enum ExplorerContext { Dir, DirBg, DeskBg, Folder, File }
-
-
-    public class ExplorerCommand
-    {
-        #region Fields
-        /// <summary>Dry run the registry writes.</summary>
-        static readonly bool _fake = true;
-
-        public string Id { get; init; } = "???";
-
-        public ExplorerContext Context { get; init; } = ExplorerContext.Dir;
-
-        public string Text { get; init; } = "???";
-
-        public string CommandLine { get; init; } = "";
-
-        public string Description { get; init; } = "";
-        #endregion
-
-        public ExplorerCommand(string id, ExplorerContext context, string text, string cmdLine, string desc)
-        {
-            var ss = new List<string> { "edit", "explore", "find", "open", "print", "properties", "runas" };
-            if (ss.Contains(id)) { throw new ArgumentException($"Reserved id:{id}"); }
-
-            Id = id;
-            Context = context;
-            Text = text;
-            CommandLine = cmdLine;
-            Description = desc;
-        }
 
         /// <summary>Write command to the registry.</summary>
-        /// <param name="splunkPath"></param>
-        public void CreateRegistryEntry(string splunkPath)
+        /// <param name="shellExPath"></param>
+        void CreateRegistryEntry(string shellExPath)
         {
             using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
             using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
@@ -337,7 +354,7 @@ namespace Splunk
             // Key names etc.
             var ssubkey1 = $"{GetRegPath(Context)}\\shell\\{Id}";
             var ssubkey2 = $"{ssubkey1}\\command";
-            var expCmd = CommandLine.Replace("%SPLUNK", $"\"{splunkPath}\"").Replace("%ID", Id);
+            var expCmd = CommandLine.Replace("%SHELLEX", $"\"{shellExPath}\"").Replace("%ID", Id);
             expCmd = Environment.ExpandEnvironmentVariables(expCmd);
 
             if (_fake)
@@ -356,7 +373,7 @@ namespace Splunk
         }
 
         /// <summary>Delete registry entry.</summary>
-        public void RemoveRegistryEntry()
+        void RemoveRegistryEntry()
         {
             using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
             using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
@@ -375,27 +392,41 @@ namespace Splunk
         }
 
 
+        /// <summary>Convert the shellEx context to registry key.</summary>
+        string GetRegPath(ExplorerContext context)
+        {
+            return context switch
+            {
+                ExplorerContext.Dir => "Directory",
+                ExplorerContext.DirBg => "Directory\\Background",
+                ExplorerContext.DeskBg => "DesktopBackground",
+                ExplorerContext.Folder => "Folder",
+                ExplorerContext.File => "*",
+                _ => throw new ArgumentException("Impossible")
+            };
+        }
+
 
         // Create [Directory\shell\cmder]  MUIVerb=Commander
-        // Create [Directory\shell\cmder\command]  @="C:\Dev\Apps\Splunk\Ui\bin\x64\Debug\net8.0-windows\Splunk.exe" cmder "%D"
+        // Create [Directory\shell\cmder\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" cmder "%D"
         // Create [Directory\shell\tree]  MUIVerb=Tree
-        // Create [Directory\shell\tree\command]  @="C:\Dev\Apps\Splunk\Ui\bin\x64\Debug\net8.0-windows\Splunk.exe" tree "%D"
+        // Create [Directory\shell\tree\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" tree "%D"
         // Create [Directory\shell\openst]  MUIVerb=Open in Sublime
         // Create [Directory\shell\openst\command]  @="C:\Program Files\Sublime Text\subl" --launch-or-new-window "%D"
         // Create [Directory\shell\findev]  MUIVerb=Find in Everything
         // Create [Directory\shell\findev\command]  @=C:\Program Files\Everything\everything -parent "%D"
         // Create [Directory\Background\shell\tree]  MUIVerb=Tree
-        // Create [Directory\Background\shell\tree\command]  @="C:\Dev\Apps\Splunk\Ui\bin\x64\Debug\net8.0-windows\Splunk.exe" tree "%W"
+        // Create [Directory\Background\shell\tree\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" tree "%W"
         // Create [Directory\Background\shell\openst]  MUIVerb=Open in Sublime
         // Create [Directory\Background\shell\openst\command]  @="C:\Program Files\Sublime Text\subl" --launch-or-new-window "%W"
         // Create [Directory\Background\shell\findev]  MUIVerb=Find in Everything
         // Create [Directory\Background\shell\findev\command]  @=C:\Program Files\Everything\everything -parent "%W"
         // Create [*\shell\exec]  MUIVerb=Execute
-        // Create [*\shell\exec\command]  @="C:\Dev\Apps\Splunk\Ui\bin\x64\Debug\net8.0-windows\Splunk.exe" exec "%D"
+        // Create [*\shell\exec\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" exec "%D"
         // Create [DesktopBackground\shell\test_deskbg]  MUIVerb=!! Test DeskBg
-        // Create [DesktopBackground\shell\test_deskbg\command]  @="C:\Dev\Apps\Splunk\Ui\bin\x64\Debug\net8.0-windows\Splunk.exe" test_deskbg "%W"
+        // Create [DesktopBackground\shell\test_deskbg\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" test_deskbg "%W"
         // Create [Folder\shell\test_folder]  MUIVerb=!! Test Folder
-        // Create [Folder\shell\test_folder\command]  @="C:\Dev\Apps\Splunk\Ui\bin\x64\Debug\net8.0-windows\Splunk.exe" test_folder "%D"
+        // Create [Folder\shell\test_folder\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" test_folder "%D"
 
 
         // Delete [Directory\shell\cmder]
@@ -409,24 +440,17 @@ namespace Splunk
         // Delete [DesktopBackground\shell\test_deskbg]
         // Delete [Folder\shell\test_folder]
 
-        /// <summary>Readable version for property grid label.</summary>
-        public override string ToString()
-        {
-            return $"{Id}: {Text}";
-        }
 
-        /// <summary>Convert the splunk context to registry key.</summary>
-        public static string GetRegPath(ExplorerContext context)
+
+
+
+        /// <summary>Simple logging, don't need or want a full-blown logger.</summary>
+        void Log(string msg, bool debug = false)
         {
-            return context switch
+            if (_debug || !debug)
             {
-                ExplorerContext.Dir => "Directory",
-                ExplorerContext.DirBg => "Directory\\Background",
-                ExplorerContext.DeskBg => "DesktopBackground",
-                ExplorerContext.Folder => "Folder",
-                ExplorerContext.File => "*",
-                _ => throw new ArgumentException("Impossible")
-            };
+                File.AppendAllText(_logFileName, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {(debug ? "DEBUG " : "")}{msg}{Environment.NewLine}");
+            }
         }
     }
 }
