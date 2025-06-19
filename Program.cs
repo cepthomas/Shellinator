@@ -1,6 +1,6 @@
 using System;
 
-namespace ShellEx
+namespace Shellinator
 {
     internal class Program
     {

@@ -13,12 +13,10 @@ using WM = Ephemera.Win32.WindowManagement;
 using CB = Ephemera.Win32.Clipboard;
 
 
-?? Computer\HKEY_CURRENT_USER\Software\Classes\Directory\shellex\ContextMenuHandlers
 
-
-namespace ShellEx
+namespace Shellinator
 {
-    class ShellExException(string msg, bool isError) : Exception(msg)
+    class ShellinatorException(string msg, bool isError) : Exception(msg)
     {
         public bool IsError { get; } = isError;
     }
@@ -88,16 +86,16 @@ namespace ShellEx
         /// <summary>All the commands.</summary>
         List<ExplorerCommand> _commands =
         [
-            new("cmder", ExplorerContext.Dir, "Commander", "%SHELLEX %ID \"%D\"", "Open a new explorer next to the current."),
-            new("tree", ExplorerContext.Dir, "Tree", "%SHELLEX %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
+            new("cmder", ExplorerContext.Dir, "Commander", "%SHELLINATOR %ID \"%D\"", "Open a new explorer next to the current."),
+            new("tree", ExplorerContext.Dir, "Tree", "%SHELLINATOR %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
             new("openst", ExplorerContext.Dir, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
             new("findev", ExplorerContext.Dir, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."),
-            new("tree", ExplorerContext.DirBg, "Tree", "%SHELLEX %ID \"%W\"", "Copy a tree here to clipboard."),
+            new("tree", ExplorerContext.DirBg, "Tree", "%SHELLINATOR %ID \"%W\"", "Copy a tree here to clipboard."),
             new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."),
             new("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."),
-            new("exec", ExplorerContext.File, "Execute", "%SHELLEX %ID \"%D\"", "Execute file if executable otherwise opened."),
-            new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SHELLEX %ID \"%W\"", "Debug stuff."),
-            new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SHELLEX %ID \"%D\"", "Debug stuff."),
+            new("exec", ExplorerContext.File, "Execute", "%SHELLINATOR %ID \"%D\"", "Execute file if executable otherwise opened."),
+            new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SHELLINATOR %ID \"%W\"", "Debug stuff."),
+            new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SHELLINATOR %ID \"%D\"", "Debug stuff."),
         ];
 
         #endregion
@@ -109,15 +107,15 @@ namespace ShellEx
 
 
             // Must do this first before initializing.
-            string appDir = MiscUtils.GetAppDataDir("ShellEx", "Ephemera");
+            string appDir = MiscUtils.GetAppDataDir("Shellinator", "Ephemera");
 
-            _logFileName = Path.Join(appDir, "shellEx.txt");
+            _logFileName = Path.Join(appDir, "Shellinator.txt");
 
             // Gets the icon associated with the currently executing assembly.
 //            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 
 
-            Log($"ShellEx command args:{string.Join(" ", args)}");
+            Log($"Shellinator command args:{string.Join(" ", args)}");
 
             // I'm in charge of the pixels.
             WI.DisableDpiScaling();
@@ -133,18 +131,18 @@ namespace ShellEx
                 Environment.ExitCode = 0;
                 CB.SetText(_stdout);
             }
-            catch (ShellExException ex)
+            catch (ShellinatorException ex)
             {
                 if (ex.IsError)
                 {
                     Environment.ExitCode = 1;
-                    Log($"ShellEx ERROR: {ex.Message}");
+                    Log($"Shellinator ERROR: {ex.Message}");
                     CB.SetText($"{ex.Message}{Environment.NewLine}{ex.StackTrace}");
                     WI.MessageBox(ex.Message, "See the clipboard", true);
                 }
                 else // just notify
                 {
-                    Log($"ShellEx INFO: {ex.Message}");
+                    Log($"Shellinator INFO: {ex.Message}");
                     Environment.ExitCode = 0;
                     WI.MessageBox(ex.Message, "You should know");
                 }
@@ -183,10 +181,10 @@ namespace ShellEx
         /// <param name="args"></param>
         public void Run(List<string> args)
         {
-            // Process the args => ShellEx.exe id path
+            // Process the args => Shellinator.exe id path
             if (args.Count != 2)
             {
-                throw new ShellExException($"Invalid command line format", true);
+                throw new ShellinatorException($"Invalid command line format", true);
             }
 
             var id = Environment.ExpandEnvironmentVariables(args[0]);
@@ -195,11 +193,11 @@ namespace ShellEx
             // Check for valid path.
             if (path.StartsWith("::"))
             {
-                throw new ShellExException($"Can't use magic system folders e.g. Home", false);
+                throw new ShellinatorException($"Can't use magic system folders e.g. Home", false);
             }
             else if (!Path.Exists(path))
             {
-                throw new ShellExException($"Invalid path [{path}]", true);
+                throw new ShellinatorException($"Invalid path [{path}]", true);
             }
 
             // Final details.
@@ -214,7 +212,7 @@ namespace ShellEx
 //            btnDump.Click += (sender, e) => { WM.GetAppWindows("explorer").ForEach(w => tvInfo.AppendLine(w.ToString())); };
 
             // Manage commands in registry.
-//            btnInitReg.Click += (sender, e) => { _commands.ForEach(c => c.CreateRegistryEntry(Path.Join(Environment.CurrentDirectory, "ShellEx.exe"))); };
+//            btnInitReg.Click += (sender, e) => { _commands.ForEach(c => c.CreateRegistryEntry(Path.Join(Environment.CurrentDirectory, "Shellinator.exe"))); };
 //            btnClearReg.Click += (sender, e) => { _commands.ForEach(c => c.RemoveRegistryEntry()); };
 
 
@@ -226,7 +224,7 @@ namespace ShellEx
                     WM.AppWindowInfo fginfo = WM.GetAppWindowInfo(fgHandle);
 
                     // New explorer -> right pane.
-                    WI.ShellExecute("explore", path);
+                    WI.Shellinatorecute("explore", path);
 
                     // Locate the new explorer window. Wait for it to be created. This is a bit klunky but there does not appear to be a more direct method.
                     int tries = 0; // ~4
@@ -240,7 +238,7 @@ namespace ShellEx
 
                     if (rightPane is null)
                     {
-                        throw new ShellExException($"Couldn't create right pane for [{path}]", true);
+                        throw new ShellinatorException($"Couldn't create right pane for [{path}]", true);
                     }
 
                     // Relocate/resize the windows to fit available real estate. TODO configurable? full screen?
@@ -302,7 +300,7 @@ namespace ShellEx
                 break;
 
                 default:
-                    throw new ShellExException($"Invalid id:{id}", true);
+                    throw new ShellinatorException($"Invalid id:{id}", true);
             }
         }
 
@@ -322,7 +320,7 @@ namespace ShellEx
                 FileName = exe,
                 Arguments = args,
                 WorkingDirectory = wdir, // needed?
-                UseShellExecute = false,
+                UseShellinatorecute = false,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
                 //RedirectStandardInput = true,
@@ -345,8 +343,8 @@ namespace ShellEx
 
 
         /// <summary>Write command to the registry.</summary>
-        /// <param name="shellExPath"></param>
-        void CreateRegistryEntry(string shellExPath)
+        /// <param name="shellinatorPath"></param>
+        void CreateRegistryEntry(string shellinatorPath)
         {
             using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
             using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
@@ -354,7 +352,7 @@ namespace ShellEx
             // Key names etc.
             var ssubkey1 = $"{GetRegPath(Context)}\\shell\\{Id}";
             var ssubkey2 = $"{ssubkey1}\\command";
-            var expCmd = CommandLine.Replace("%SHELLEX", $"\"{shellExPath}\"").Replace("%ID", Id);
+            var expCmd = CommandLine.Replace("%SHELLINATOR", $"\"{shellinatorPath}\"").Replace("%ID", Id);
             expCmd = Environment.ExpandEnvironmentVariables(expCmd);
 
             if (_fake)
@@ -392,7 +390,7 @@ namespace ShellEx
         }
 
 
-        /// <summary>Convert the shellEx context to registry key.</summary>
+        /// <summary>Convert the shell context to registry key.</summary>
         string GetRegPath(ExplorerContext context)
         {
             return context switch
@@ -408,25 +406,25 @@ namespace ShellEx
 
 
         // Create [Directory\shell\cmder]  MUIVerb=Commander
-        // Create [Directory\shell\cmder\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" cmder "%D"
+        // Create [Directory\shell\cmder\command]  @="C:\Dev\Apps\Shellinator\Ui\bin\x64\Debug\net8.0-windows\Shellinator.exe" cmder "%D"
         // Create [Directory\shell\tree]  MUIVerb=Tree
-        // Create [Directory\shell\tree\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" tree "%D"
+        // Create [Directory\shell\tree\command]  @="C:\Dev\Apps\Shellinator\Ui\bin\x64\Debug\net8.0-windows\Shellinator.exe" tree "%D"
         // Create [Directory\shell\openst]  MUIVerb=Open in Sublime
         // Create [Directory\shell\openst\command]  @="C:\Program Files\Sublime Text\subl" --launch-or-new-window "%D"
         // Create [Directory\shell\findev]  MUIVerb=Find in Everything
         // Create [Directory\shell\findev\command]  @=C:\Program Files\Everything\everything -parent "%D"
         // Create [Directory\Background\shell\tree]  MUIVerb=Tree
-        // Create [Directory\Background\shell\tree\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" tree "%W"
+        // Create [Directory\Background\shell\tree\command]  @="C:\Dev\Apps\Shellinator\Ui\bin\x64\Debug\net8.0-windows\Shellinator.exe" tree "%W"
         // Create [Directory\Background\shell\openst]  MUIVerb=Open in Sublime
         // Create [Directory\Background\shell\openst\command]  @="C:\Program Files\Sublime Text\subl" --launch-or-new-window "%W"
         // Create [Directory\Background\shell\findev]  MUIVerb=Find in Everything
         // Create [Directory\Background\shell\findev\command]  @=C:\Program Files\Everything\everything -parent "%W"
         // Create [*\shell\exec]  MUIVerb=Execute
-        // Create [*\shell\exec\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" exec "%D"
+        // Create [*\shell\exec\command]  @="C:\Dev\Apps\Shellinator\Ui\bin\x64\Debug\net8.0-windows\Shellinator.exe" exec "%D"
         // Create [DesktopBackground\shell\test_deskbg]  MUIVerb=!! Test DeskBg
-        // Create [DesktopBackground\shell\test_deskbg\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" test_deskbg "%W"
+        // Create [DesktopBackground\shell\test_deskbg\command]  @="C:\Dev\Apps\Shellinator\Ui\bin\x64\Debug\net8.0-windows\Shellinator.exe" test_deskbg "%W"
         // Create [Folder\shell\test_folder]  MUIVerb=!! Test Folder
-        // Create [Folder\shell\test_folder\command]  @="C:\Dev\Apps\ShellEx\Ui\bin\x64\Debug\net8.0-windows\ShellEx.exe" test_folder "%D"
+        // Create [Folder\shell\test_folder\command]  @="C:\Dev\Apps\Shellinator\Ui\bin\x64\Debug\net8.0-windows\Shellinator.exe" test_folder "%D"
 
 
         // Delete [Directory\shell\cmder]

@@ -1,5 +1,5 @@
 
-# ShellEx
+# Shellinator
 Playing with shell extensions to provide some custom context menus.
 
 Consists of two parts:
@@ -50,12 +50,12 @@ always redirected to `HKEY_LOCAL_MACHINE`\Software\Classes.
 
 >>>>> In general, write directly to `HKEY_LOCAL_MACHINE\Software\Classes` or `HKEY_CURRENT_USER\Software\Classes` and read from `HKEY_CLASSES_ROOT`.
 
-ShellEx bases all registry accesses (R/W) at `HKEY_CURRENT_USER\Software\Classes` aka `REG_ROOT`.
+Shellinator bases all registry accesses (R/W) at `HKEY_CURRENT_USER\Software\Classes` aka `REG_ROOT`.
 
 
-## ShellEx Commands
+## Shellinator Commands
 
-ShellEx command specifications contain these properties:
+Shellinator command specifications contain these properties:
 
 | Property      | Description |
 | --------      | ----------- |
@@ -102,12 +102,12 @@ Built in macros:
 | %~        | Replace with all parameters starting with the second parameter. |  |
 
 
-ShellEx-specific macros:
+Shellinator-specific macros:
 
 | Macro     | Description |
 | ----      | ----------- |
 | %ID       | The Id property value. |
-| %SPLUNK   | Path to the ShellEx executable. |
+| %SHELLINATOR   | Path to the Shellinator executable. |
 
 !! Note that all paths and macros that expand to paths must be wrapped in double quotes.
 
@@ -115,7 +115,7 @@ The usual env vars like `%ProgramFiles%` are also supported.
 
 ## Submenus
 
-Not used currently in ShellEx but could be useful later.
+Not used currently in Shellinator but could be useful later.
 
 Note!! Must use `MUIVerb`, not default value `@="text"`. A hard learn.
 
