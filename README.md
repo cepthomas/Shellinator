@@ -1,14 +1,14 @@
 
 # Shellinator
-Playing with shell extensions to provide some custom context menus.
+Playing with shell extensions to provide some custom context menus. TODO1 can this be a generic tool?
 
-Consists of two parts:
-- A simple command line client that is called from registry commands. It executes the requested operation.
-- A UI companion that can configure registry commands, and some other stuff.
+Consists of a simple command line client that is called from registry commands. It executes the requested operation.
+It is also used to configure registry commands, and some other stuff.
 
-A few limitations that could be reconsidered:
+If the command fails, code/stdout/stderr is logged and user gets a message box.
+
+Caveats:
 - Operations on files are enabled generically, eventually specific extensions could be supported.
-- If the commands produce output (stdout/stderr) it is placed in the clipboard for the user.
 
 Built with VS2022 and .NET8.
 
@@ -29,10 +29,9 @@ These are the builtin commands. It's stuff I've wanted to add to an explorer con
 
 | Menu Item          | Context   | Action |
 | ---------          | ------    | ------ |
-| Commander          | Dir       | Open a new explorer next to the current. Simulates old school Commander. |
 | Tree               | Dir       | Copy a tree of selected directory to clipboard. |
 | Open in Sublime    | Dir/DirBg | Open selected directory/here in Sublime Text. |
-| Find in Everything | Dir/DirBg | Open selected directory/here in Everything. |
+| Open in Everything | Dir/DirBg | Open selected directory/here in Everything. |
 | Execute            | File      | Execute if executable otherwise open. Suppresses console window creation. |
 
 
@@ -76,7 +75,6 @@ Supported `RegPath`s are:
 | File      | HKCU\*                     |
 
 
-
 This generates registry entries that look like:
 ```ini
 [REG_ROOT\spec.RegPath\shell\spec.Id]
@@ -111,11 +109,11 @@ Shellinator-specific macros:
 
 !! Note that all paths and macros that expand to paths must be wrapped in double quotes.
 
-The usual env vars like `%ProgramFiles%` are also supported.
+The builtin env vars like `%ProgramFiles%` are also supported.
 
 ## Submenus
 
-Not used currently in Shellinator but could be useful later.
+Not used currently in Shellinator but could be implemented later.
 
 Note!! Must use `MUIVerb`, not default value `@="text"`. A hard learn.
 

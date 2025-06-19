@@ -33,8 +33,13 @@
         <!-- <DefineConstants>DEBUG;TRACE</DefineConstants> -->
         <WarningLevel>4</WarningLevel>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <ApplicationIcon>Marco.ico</ApplicationIcon>
 
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Marco.ico" />
+  </ItemGroup>
 
   <ItemGroup>
 
