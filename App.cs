@@ -13,6 +13,7 @@ using WM = Ephemera.Win32.WindowManagement;
 using CB = Ephemera.Win32.Clipboard;
 
 
+TODO1 can this be a generic tool?
 
 namespace Shellinator
 {

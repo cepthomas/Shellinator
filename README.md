@@ -1,6 +1,6 @@
 
 # Shellinator
-Playing with shell extensions to provide some custom context menus. TODO1 can this be a generic tool?
+Playing with shell extensions to provide some custom context menus.
 
 Consists of a simple command line client that is called from registry commands. It executes the requested operation.
 It is also used to configure registry commands, and some other stuff.
