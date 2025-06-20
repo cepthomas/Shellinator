@@ -2,18 +2,15 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
-using Ephemera.NBagOfTricks;
-using System.Linq;
-using System.Drawing;
-using System.ComponentModel;
 using System.Text;
-using System.Runtime.InteropServices;
+using Ephemera.NBagOfTricks;
 using WI = Ephemera.Win32.Internals;
-using WM = Ephemera.Win32.WindowManagement;
-using CB = Ephemera.Win32.Clipboard;
+//using WM = Ephemera.Win32.WindowManagement;
+//using CB = Ephemera.Win32.Clipboard;
 
+// TODO1 finish
 
-TODO1 can this be a generic tool?
+// TODO can this be a generic tool?  _commands,  Run() cmds,  help??
 
 namespace Shellinator
 {
@@ -88,12 +85,12 @@ namespace Shellinator
             catch (ShellinatorException ex)
             {
                 Environment.ExitCode = 100;
-                Log($ex.Message, true);
+                Log(ex.Message, true);
             }
             catch (Exception ex) // something else
             {
                 Environment.ExitCode = 200;
-                Log($ex.Message, true);
+                Log(ex.Message, true);
             }
 
             if (Environment.ExitCode != 0)

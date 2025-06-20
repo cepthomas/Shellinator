@@ -14,7 +14,7 @@
     <!-- <NoWarn>CA1816;CA1822</NoWarn> -->
     <Company>Ephemera Inc</Company>
     <Product>Shellinator</Product>
-    <Description>Fancy tree command.</Description>
+    <Description>Play with shell stuff.</Description>
     <Copyright>MIT License</Copyright>
     <SatelliteResourceLanguages>none</SatelliteResourceLanguages>
     <Deterministic>False</Deterministic>
@@ -28,9 +28,16 @@
     <OutputPath>bin\</OutputPath>
     <!-- <TargetFramework>net8.0-windows</TargetFramework> -->
     <Platforms>x64</Platforms>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
 
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="lib\**" />
+    <EmbeddedResource Remove="lib\**" />
+    <None Remove="lib\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="Marco.ico" />
