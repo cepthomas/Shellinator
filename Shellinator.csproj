@@ -1,39 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Platforms>x64</Platforms>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <StartupObject>Shellinator.Program</StartupObject>
-        <Version>2.0.0</Version>
+    <Version>2.0.0</Version>
+    <UseWindowsForms>false</UseWindowsForms>
+    <AssemblyName>shellinator</AssemblyName>
+    <RootNamespace>Shellinator</RootNamespace>
+    <NoWarn>CA1806</NoWarn>
+    <!-- <NoWarn>CA1816;CA1822</NoWarn> -->
+    <Company>Ephemera Inc</Company>
+    <Product>Shellinator</Product>
+    <Description>Fancy tree command.</Description>
+    <Copyright>MIT License</Copyright>
+    <SatelliteResourceLanguages>none</SatelliteResourceLanguages>
+    <Deterministic>False</Deterministic>
+    <SelfContained>false</SelfContained>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ApplicationIcon>Marco.ico</ApplicationIcon>
+    <!-- <GenerateAssemblyInfo>true</GenerateAssemblyInfo> -->
+    <!-- <DefineConstants>DEBUG;TRACE</DefineConstants> -->
+    <WarningLevel>4</WarningLevel>
 
-        <UseWindowsForms>false</UseWindowsForms>
-        <AssemblyName>shellinator</AssemblyName>
-        <RootNamespace>Shellinator</RootNamespace>
-
-        <NoWarn>CA1806</NoWarn>
-        <!-- <NoWarn>CA1816;CA1822</NoWarn> -->
-
-        <Company>Ephemera Inc</Company>
-        <Product>Shellinator</Product>
-        <Description>Fancy tree command.</Description>
-        <Copyright>MIT License</Copyright>
-
-        <SatelliteResourceLanguages>none</SatelliteResourceLanguages>
-
-        <Deterministic>False</Deterministic>
-        <SelfContained>false</SelfContained>
-        <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
-        <!-- <GenerateAssemblyInfo>true</GenerateAssemblyInfo> -->
-
-
-        <!-- <OutputPath>bin\</OutputPath> -->
-        <!-- <DefineConstants>DEBUG;TRACE</DefineConstants> -->
-        <WarningLevel>4</WarningLevel>
-        <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <ApplicationIcon>Marco.ico</ApplicationIcon>
+    <OutputPath>bin\</OutputPath>
+    <!-- <TargetFramework>net8.0-windows</TargetFramework> -->
+    <Platforms>x64</Platforms>
+    <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
 
   </PropertyGroup>
 

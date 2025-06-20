@@ -68,7 +68,7 @@
         </member>
         <member name="M:Ephemera.Win32.Internals.ShellExecute(System.String,System.String,System.Boolean)">
             <summary>
-            Streamlined version of the real function. TODO1 clean up all ShellExecute()
+            Streamlined version of the real function. TODO clean up all ShellExecute()
             </summary>
             <param name="verb">Standard verb</param>
             <param name="path">Where</param>
