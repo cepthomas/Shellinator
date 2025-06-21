@@ -26,9 +26,10 @@
     <WarningLevel>4</WarningLevel>
 
     <OutputPath>bin\</OutputPath>
-    <!-- <TargetFramework>net8.0-windows</TargetFramework> -->
-    <Platforms>x64</Platforms>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <Platforms>x64</Platforms>
+    <!-- <PlatformTarget>x64</PlatformTarget> 
+    PlatformTarget doesn't work, use Platforms -->
     <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
 
   </PropertyGroup>
