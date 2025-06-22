@@ -41,9 +41,6 @@
         <Reference Include="Ephemera.NBagOfTricks">
             <HintPath>lib\Ephemera.NBagOfTricks.dll</HintPath>
         </Reference>
-        <Reference Include="Ephemera.Win32">
-            <HintPath>lib\Ephemera.Win32.dll</HintPath>
-        </Reference>
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(DEV_BIN_PATH)' != ''">

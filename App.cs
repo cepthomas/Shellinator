@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using Ephemera.NBagOfTricks;
-using WI = Ephemera.Win32.Internals;
+//using WI = Ephemera.Win32.Internals;
 //using WM = Ephemera.Win32.WindowManagement;
 //using CB = Ephemera.Win32.Clipboard;
 
@@ -95,7 +95,7 @@ namespace Shellinator
 
             if (Environment.ExitCode != 0)
             {
-                WI.MessageBox("Shellinator error", "See the log", true);
+                // TODO1 notifications WI.MessageBox("Shellinator error", "See the log", true);
             }
 
             _tmit.Snap("All done");
