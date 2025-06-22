@@ -1,52 +1,55 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    
-    <OutputType>Exe</OutputType>
-    <UseWindowsForms>false</UseWindowsForms>
-    <OutputPath>bin\</OutputPath>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PropertyGroup>
 
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <StartupObject>Shellinator.Program</StartupObject>
-    <Version>2.0.0</Version>
-    <AssemblyName>shellinator</AssemblyName>
-    <RootNamespace>Shellinator</RootNamespace>
-    <NoWarn>CA1806</NoWarn>
-    <!-- <NoWarn>CA1816;CA1822</NoWarn> -->
-    <Company>Ephemera Inc</Company>
-    <Product>Shellinator</Product>
-    <Description>Play with shell stuff.</Description>
-    <Copyright>MIT License</Copyright>
-    <SatelliteResourceLanguages>none</SatelliteResourceLanguages>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <ApplicationIcon>Marco.ico</ApplicationIcon>
-    <!-- <DefineConstants>DEBUG;TRACE</DefineConstants> -->
-    <WarningLevel>4</WarningLevel>
+        <OutputType>Exe</OutputType>
+        <UseWindowsForms>false</UseWindowsForms>
+        <OutputPath>bin\</OutputPath>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
 
-  </PropertyGroup>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <StartupObject>Shellinator.Program</StartupObject>
+        <Version>2.0.0</Version>
+        <AssemblyName>shellinator</AssemblyName>
+        <RootNamespace>Shellinator</RootNamespace>
+        <NoWarn>CA1806</NoWarn>
+        <Company>Ephemera Inc</Company>
+        <Product>Shellinator</Product>
+        <Description>Play with shell stuff.</Description>
+        <Copyright>MIT License</Copyright>
+        <SatelliteResourceLanguages>none</SatelliteResourceLanguages>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <ApplicationIcon>Marco.ico</ApplicationIcon>
+        <!-- <DefineConstants>DEBUG;TRACE</DefineConstants> -->
+        <WarningLevel>4</WarningLevel>
 
-  <ItemGroup>
-    <Compile Remove="lib\**" />
-    <EmbeddedResource Remove="lib\**" />
-    <None Remove="lib\**" />
-  </ItemGroup>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Content Include="Marco.ico" />
-  </ItemGroup>
+    <ItemGroup>
+        <Compile Remove="lib\**" />
+        <EmbeddedResource Remove="lib\**" />
+        <None Remove="lib\**" />
+    </ItemGroup>
 
-  <ItemGroup>
+    <ItemGroup>
+        <Content Include="Marco.ico" />
+    </ItemGroup>
 
-    <Reference Include="Ephemera.NBagOfTricks">
-      <HintPath>lib\Ephemera.NBagOfTricks.dll</HintPath>
-    </Reference>
-    <Reference Include="Ephemera.Win32">
-      <HintPath>lib\Ephemera.Win32.dll</HintPath>
-    </Reference>
+    <ItemGroup>
+        <Reference Include="Ephemera.NBagOfTricks">
+            <HintPath>lib\Ephemera.NBagOfTricks.dll</HintPath>
+        </Reference>
+        <Reference Include="Ephemera.Win32">
+            <HintPath>lib\Ephemera.Win32.dll</HintPath>
+        </Reference>
+    </ItemGroup>
 
-  </ItemGroup>
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(DEV_BIN_PATH)' != ''">
+        <Exec Command="copy /Y $(OutputPath)*.exe $(DEV_BIN_PATH)" />
+        <Exec Command="copy /Y $(OutputPath)*.dll $(DEV_BIN_PATH)" />
+        <Exec Command="copy /Y $(OutputPath)*.runtimeconfig.json $(DEV_BIN_PATH)" />
+    </Target>
 
 </Project>
