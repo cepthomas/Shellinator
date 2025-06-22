@@ -3,11 +3,15 @@
   <PropertyGroup>
     
     <OutputType>Exe</OutputType>
+    <UseWindowsForms>false</UseWindowsForms>
+    <OutputPath>bin\</OutputPath>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <StartupObject>Shellinator.Program</StartupObject>
     <Version>2.0.0</Version>
-    <UseWindowsForms>false</UseWindowsForms>
     <AssemblyName>shellinator</AssemblyName>
     <RootNamespace>Shellinator</RootNamespace>
     <NoWarn>CA1806</NoWarn>
@@ -17,20 +21,10 @@
     <Description>Play with shell stuff.</Description>
     <Copyright>MIT License</Copyright>
     <SatelliteResourceLanguages>none</SatelliteResourceLanguages>
-    <Deterministic>False</Deterministic>
-    <SelfContained>false</SelfContained>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <ApplicationIcon>Marco.ico</ApplicationIcon>
-    <!-- <GenerateAssemblyInfo>true</GenerateAssemblyInfo> -->
     <!-- <DefineConstants>DEBUG;TRACE</DefineConstants> -->
     <WarningLevel>4</WarningLevel>
-
-    <OutputPath>bin\</OutputPath>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Platforms>x64</Platforms>
-    <!-- <PlatformTarget>x64</PlatformTarget> 
-    PlatformTarget doesn't work, use Platforms -->
-    <!-- <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
 
   </PropertyGroup>
 
