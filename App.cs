@@ -8,7 +8,6 @@ using Ephemera.NBagOfTricks;
 //using WM = Ephemera.Win32.WindowManagement;
 //using CB = Ephemera.Win32.Clipboard;
 
-// TODO1 finish
 
 // TODO can this be a generic tool?  _commands,  Run() cmds,  help??
 
@@ -95,7 +94,7 @@ namespace Shellinator
 
             if (Environment.ExitCode != 0)
             {
-                // TODO1 notifications WI.MessageBox("Shellinator error", "See the log", true);
+                // TODO notifications WI.MessageBox("Shellinator error", "See the log", true);
             }
 
             _tmit.Snap("All done");
