@@ -4,10 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using Ephemera.NBagOfTricks;
-//using WI = Ephemera.Win32.Internals;
-//using WM = Ephemera.Win32.WindowManagement;
-//using CB = Ephemera.Win32.Clipboard;
-
 
 // TODO can this be a generic tool?  _commands,  Run() cmds,  help??
 
@@ -45,17 +41,17 @@ namespace Shellinator
         /// <summary>Dry run the registry writes.</summary>
         readonly bool _fake = true;
 
-        /// <summary>All the commands. Don't use reserved ids: edit, explore, find, open, print, properties, runas</summary>
+        /// <summary>All the commands. Don't use reserved ids: edit, explore, find, open, print, properties, runas!!</summary>
         readonly List<ExplorerCommand> _commands =
         [
-            //new("cmder", ExplorerContext.Dir, "Commander", "%SHELLINATOR %ID \"%D\"", "Open a new explorer next to the current."),
-            new("tree", ExplorerContext.Dir, "Tree", "%SHELLINATOR %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
-            new("openst", ExplorerContext.Dir, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
-            new("findev", ExplorerContext.Dir, "Open in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."),
-            new("tree", ExplorerContext.DirBg, "Tree", "%SHELLINATOR %ID \"%W\"", "Copy a tree here to clipboard."),
-            new("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."),
+            new("treex",  ExplorerContext.Dir,   "Treex",              "%SHELLINATOR %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
+            new("openst", ExplorerContext.Dir,   "Open in Sublime",    "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
+            new("findev", ExplorerContext.Dir,   "Open in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."),
+            new("tree",   ExplorerContext.DirBg, "Tree",               "%SHELLINATOR %ID \"%W\"", "Copy a tree here to clipboard."),
+            new("openst", ExplorerContext.DirBg, "Open in Sublime",    "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."),
             new("findev", ExplorerContext.DirBg, "Open in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."),
-            new("exec", ExplorerContext.File, "Execute", "%SHELLINATOR %ID \"%D\"", "Execute file if executable otherwise opened."),
+            new("exec",   ExplorerContext.File,  "Execute",            "%SHELLINATOR %ID \"%D\"", "Execute file if executable otherwise opened."),
+            //new("cmder", ExplorerContext.Dir, "Commander", "%SHELLINATOR %ID \"%D\"", "Open a new explorer next to the current."),
             //new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SHELLINATOR %ID \"%W\"", "Debug stuff."),
             //new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SHELLINATOR %ID \"%D\"", "Debug stuff."),
         ];
@@ -63,14 +59,19 @@ namespace Shellinator
 
         /// <summary>Where it all begins.</summary>
         /// <param name="args"></param>
+        static void Main(string[] args)
+        {
+            _ = new App(args);
+        }
+
+        /// <summary>Do the work.</summary>
+        /// <param name="args"></param>
         public App(string[] args)
         {
             string appDir = MiscUtils.GetAppDataDir("Shellinator", "Ephemera");
 
-            _logFileName = Path.Join(appDir, "Shellinator.txt");
-
-            // Gets the icon associated with the currently executing assembly.
-            //Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+            _logFileName = Path.Join(appDir, "Shellinator.log");
+            _shellinatorPath = Environment.ExpandEnvironmentVariables("DEV_BIN_PATH");
 
             Log($"Shellinator command args:{string.Join(" ", args)}");
 
@@ -80,21 +81,17 @@ namespace Shellinator
             try
             {
                 Environment.ExitCode = Run([.. args]);
+                // Info already logged.
             }
-            catch (ShellinatorException ex)
+            catch (ShellinatorException ex) // app error
             {
                 Environment.ExitCode = 100;
-                Log(ex.Message, true);
+                Log($"ShellinatorException: {ex.Message}", true);
             }
             catch (Exception ex) // something else
             {
-                Environment.ExitCode = 200;
-                Log(ex.Message, true);
-            }
-
-            if (Environment.ExitCode != 0)
-            {
-                // TODO notifications WI.MessageBox("Shellinator error", "See the log", true);
+                Environment.ExitCode = 101;
+                Log($"Other Exception: {ex.Message}", true);
             }
 
             _tmit.Snap("All done");
@@ -199,7 +196,7 @@ namespace Shellinator
 
             if (ret.code != 0)
             {
-                Log($"Run() retCode:[{ret.code}]");
+                Log($"Operation failed with [{ret.code}]");
                 if (ret.stdout != "")
                 {
                     Log($"stdout: [{ret.stdout}]");

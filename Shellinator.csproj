@@ -10,7 +10,6 @@
 
         <ImplicitUsings>disable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <StartupObject>Shellinator.Program</StartupObject>
         <Version>2.0.0</Version>
         <AssemblyName>shellinator</AssemblyName>
         <RootNamespace>Shellinator</RootNamespace>
