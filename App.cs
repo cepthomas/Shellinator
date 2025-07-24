@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using Ephemera.NBagOfTricks;
+using System.Runtime.InteropServices;
 
 // TODO can this be a generic tool?  _commands,  Run() cmds,  help??
 
@@ -44,16 +45,59 @@ namespace Shellinator
         /// <summary>All the commands. Don't use reserved ids: edit, explore, find, open, print, properties, runas!!</summary>
         readonly List<ExplorerCommand> _commands =
         [
-            new("treex",  ExplorerContext.Dir,   "Treex",              "%SHELLINATOR %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
-            new("openst", ExplorerContext.Dir,   "Open in Sublime",    "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
-            new("findev", ExplorerContext.Dir,   "Open in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."),
-            new("tree",   ExplorerContext.DirBg, "Tree",               "%SHELLINATOR %ID \"%W\"", "Copy a tree here to clipboard."),
-            new("openst", ExplorerContext.DirBg, "Open in Sublime",    "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."),
-            new("findev", ExplorerContext.DirBg, "Open in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."),
-            new("exec",   ExplorerContext.File,  "Execute",            "%SHELLINATOR %ID \"%D\"", "Execute file if executable otherwise opened."),
-            //new("cmder", ExplorerContext.Dir, "Commander", "%SHELLINATOR %ID \"%D\"", "Open a new explorer next to the current."),
-            //new("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SHELLINATOR %ID \"%W\"", "Debug stuff."),
-            //new("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SHELLINATOR %ID \"%D\"", "Debug stuff."),
+            new("treex",
+                ExplorerContext.Dir,
+                "Treex",
+                "%SHELLINATOR %ID \"%D\"",
+                "Copy a tree of selected directory to clipboard"),
+
+            new("openst",
+                ExplorerContext.Dir,
+                "Open in Sublime",
+                "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"",
+                "Open selected directory in Sublime Text."),
+
+            new("findev",
+                ExplorerContext.Dir,
+                "Open in Everything",
+                "%ProgramFiles%\\Everything\\everything -parent \"%D\"",
+                "Open selected directory in Everything."),
+
+            new("tree",
+                ExplorerContext.DirBg,
+                "Tree",
+                "%SHELLINATOR %ID \"%W\"",
+                "Copy a tree here to clipboard."),
+
+            new("openst",
+                ExplorerContext.DirBg,
+                "Open in Sublime",
+                "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"",
+                "Open here in Sublime Text."),
+
+            new("findev",
+                ExplorerContext.DirBg,
+                "Open in Everything",
+                "%ProgramFiles%\\Everything\\everything -parent \"%W\"",
+                "Open here in Everything."),
+
+            new("exec",
+                ExplorerContext.File,
+                "Execute",
+                "%SHELLINATOR %ID \"%D\"",
+                "Execute file if executable otherwise opened."),
+
+            //new("test_deskbg",
+            //    ExplorerContext.DeskBg,
+            //    "!! Test DeskBg",
+            //    "%SHELLINATOR %ID \"%W\"",
+            //    "Debug stuff."),
+
+            //new("test_folder",
+            //    ExplorerContext.Folder,
+            //    "!! Test Folder",
+            //    "%SHELLINATOR %ID \"%D\"",
+            //    "Debug stuff."),
         ];
         #endregion
 
@@ -97,8 +141,6 @@ namespace Shellinator
             _tmit.Snap("All done");
             _tmit.Captures.ForEach(c => Log(c));
 
-            //Log($"Exit code:{Environment.ExitCode} msec:{sw.ElapsedMilliseconds}");
-
             // Before we end, manage log file.
             FileInfo fi = new(_logFileName);
             if (fi.Exists && fi.Length > 10000)
@@ -107,7 +149,7 @@ namespace Shellinator
                 int start = lines.Length / 3;
                 var trunc = lines.Subset(start, lines.Length - start);
                 File.WriteAllLines(_logFileName, trunc);
-                Log($"============================ Trimmed log file ============================");
+                //Log($"============================ Trimmed log file ============================");
             }
         }
 
@@ -170,23 +212,23 @@ namespace Shellinator
                 }
                 break;
 
-                case "_config":
+                case "_config": !!!!
+                    {
+                        // Internal management commands.
 
-                    // Internal management commands.
+                        // write
+                        _commands.ForEach(CreateRegistryEntry);
 
-                    // write
-                    _commands.ForEach(CreateRegistryEntry);
-
-                    // delete
-                    _commands.ForEach(RemoveRegistryEntry);
-
+                        // delete
+                        _commands.ForEach(RemoveRegistryEntry);
+                    }
                     break;
 
                 //case "test_deskbg":
                 //case "test_folder":
                 //{
                 //    Log($"!!! Got {id}:{path}");
-                //    WI.MessageBox($"!!! Got {id}:{path}", "Debug");
+                //    Notify($"!!! Got {id}:{path}", "Debug");
                 //}
                 //break;
 
@@ -196,7 +238,8 @@ namespace Shellinator
 
             if (ret.code != 0)
             {
-                Log($"Operation failed with [{ret.code}]");
+                // Record any outputs.
+                Log($"Run failed with [{ret.code}]");
                 if (ret.stdout != "")
                 {
                     Log($"stdout: [{ret.stdout}]");
@@ -259,8 +302,8 @@ namespace Shellinator
 
             if (_fake)
             {
-                Debug.WriteLine($"Create [{ssubkey1}]  MUIVerb={ecmd.Text}");
-                Debug.WriteLine($"Create [{ssubkey2}]  @={expCmd}");
+                Debug.WriteLine($"SetValue [{ssubkey1}]  [MUIVerb={ecmd.Text}]");
+                Debug.WriteLine($"SetValue [{ssubkey2}]  [@={expCmd}]");
             }
             else
             {
@@ -283,7 +326,7 @@ namespace Shellinator
 
             if (_fake)
             {
-                Debug.WriteLine($"Delete [{ssubkey}]");
+                Debug.WriteLine($"DeleteSubKeyTree [{ssubkey}]");
             }
             else
             {
@@ -306,10 +349,23 @@ namespace Shellinator
         }
 
         /// <summary>Simple logging, don't need a full-blown logger.</summary>
-        void Log(string msg, bool error = false)
+        void Log(string msg, bool show = false)
         {
-            string cat = error ? " ERR " : " ";
-            File.AppendAllText(_logFileName, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff}{cat}{msg}{Environment.NewLine}");
+            File.AppendAllText(_logFileName, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff}{msg}{Environment.NewLine}");
+            if (show)
+            {
+                Notify(msg);
+            }
         }
+
+        /// <summary>Tell the user.</summary>
+        void Notify(string message, string caption = "")
+        {
+            MessageBox(IntPtr.Zero, msg, "caption!!", 0);
+        }
+
+        /// <summary>Rudimentary UI notification for use in a console application.</summary>
+        [DllImport("user32.dll", CharSet = CharSet.Ansi)]
+        static extern int MessageBox(IntPtr hWnd, string msg, string caption, uint type);
     }
 }
