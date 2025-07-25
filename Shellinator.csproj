@@ -33,6 +33,10 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Remove="Commands.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Content Include="Marco.ico" />
     </ItemGroup>
 
