@@ -142,12 +142,9 @@ namespace Shellinator
         /// <param name="args"></param>
         public App(string[] args)
         {
-            //string appDir = MiscUtils.GetAppDataDir("Shellinator", "Ephemera");
-            //_logFileName = Path.Join(appDir, "Shellinator.log");
-            _logPath = Path.Join("\\", "Dev", "bin", "shellinator.log"); // TODO where?
-
-            // This requires an env var named `DEV_BIN_PATH` - a known directory for the executable.
+            // This requires an env var named `DEV_BIN_PATH` - a known directory for the app.
             _shellinatorPath = Environment.ExpandEnvironmentVariables("DEV_BIN_PATH");
+            _logPath = Path.Join(_shellinatorPath, "shellinator.log");
 
             Log($"Shellinator command args:{string.Join(" ", args)}");
 
