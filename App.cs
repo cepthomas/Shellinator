@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Text;
 using Ephemera.NBagOfTricks;
 using System.Runtime.InteropServices;
+using System.Linq;
+using System.Runtime.Intrinsics;
 
 
 namespace Shellinator
@@ -33,27 +35,24 @@ namespace Shellinator
     }
 
     /// <summary>Describes one menu command.</summary>
-    /// <param name="Id">Short name for internal id and registry key.</param>
+    /// <param name="Id">Internal id and registry key. System reserved: edit, explore, find, open, print, properties, runas.</param>
     /// <param name="Context">Where to install in `REG_ROOT`</param>
     /// <param name="Text">As it appears in the context menu.</param>
-    /// <param name="CommandLine">Full command string to execute. Supported macros:
-    ///     Builtin macros:
-    ///     %L     : Selected file or directory name. Only Dir, File.
-    ///     %D     : Selected file or directory with expanded named folders. Only Dir, File, Folder.
-    ///     %V     : The directory of the selection, maybe unreliable? All except Folder.
-    ///     %W     : The working directory. All except Folder.
-    ///     %<0-9> : Positional arg.                                                
-    ///     %*     : Replace with all parameters.                                   
-    ///     %~     : Replace with all parameters starting with the second parameter.
-    /// 
-    ///     Shellinator-specific macros:
-    ///     %ID : The Id property value
-    ///     %SHELLINATOR : Path to the Shellinator executable
-    /// 
-    ///     All paths and macros that expand to paths must be wrapped in double quotes.
-    ///     The builtin env vars like `%ProgramFiles%` are also supported.
-    /// </param>
-    readonly record struct ExplorerCommand(string Id, ExplorerContext Context, string Text, string Description, string CommandLine);
+    /// <param name="Description">As it appears in the context menu.</param>
+    /// <param name="Handler">Handle command.</param>
+    readonly record struct ExplorerCommand(string Id, ExplorerContext Context, string Text, string Description, CommandHandler Handler);
+
+    /// <summary>Command handler.</summary>
+    /// <param name="context"></param>
+    /// <param name="sel"></param>
+    /// <param name="wdir"></param>
+    delegate ExecResult CommandHandler(ExplorerContext context, string sel, string wdir);
+
+    /// <summary>Convenience container.</summary>
+    /// <param name="Code">Return code</param>
+    /// <param name="Stdout">stdout if any</param>
+    /// <param name="Stderr">stderr if any</param>
+    readonly record struct ExecResult(int Code, string? Stdout, string? Stderr);
     #endregion
 
     /// <summary>Main app.</summary>
@@ -64,7 +63,7 @@ namespace Shellinator
         readonly TimeIt _tmit = new();
 
         /// <summary>Where the exe lives.</summary>
-        string _shellinatorPath;
+        readonly string _shellinatorPath;
 
         /// <summary>Log file path name.</summary>
         readonly string _logPath;
@@ -72,89 +71,73 @@ namespace Shellinator
         /// <summary>Dry run the registry writes.</summary>
         readonly bool _fake = true;
 
-        /// <summary>All the builtin commands. Don't use reserved ids: edit, explore, find, open, print, properties, runas!!</summary>
-        readonly List<ExplorerCommand> _commands =
-        [
-            new("treex",
-                ExplorerContext.Dir,
-                "Treex",
-                "Copy a tree of selected directory to clipboard",
-                "%SHELLINATOR %ID \"%D\""),
-
-            new("tree",
-                ExplorerContext.DirBg,
-                "Tree",
-                "Copy a tree here to clipboard.",
-                "%SHELLINATOR %ID \"%W\""),
-
-            new("openst",
-                ExplorerContext.Dir,
-                "Open in Sublime",
-                "Open selected directory in Sublime Text.",
-                "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\""),
-
-            new("openst",
-                ExplorerContext.DirBg,
-                "Open in Sublime",
-                "Open here in Sublime Text.",
-                "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\""),
-
-            new("findev",
-                ExplorerContext.Dir,
-                "Open in Everything",
-                "Open selected directory in Everything.",
-                "%ProgramFiles%\\Everything\\everything -parent \"%D\""),
-
-            new("findev",
-                ExplorerContext.DirBg,
-                "Open in Everything",
-                "Open here in Everything.",
-                "%ProgramFiles%\\Everything\\everything -parent \"%W\""),
-
-            new("exec",
-                ExplorerContext.File,
-                "Execute",
-                "Execute file if executable otherwise opened.",
-                "%SHELLINATOR %ID \"%D\""),
-
-            //new("test_deskbg",
-            //    ExplorerContext.DeskBg,
-            //    "!! Test DeskBg",
-            //    "Debug stuff."),
-            //    "%SHELLINATOR %ID \"%W\"",
-
-            //new("test_folder",
-            //    ExplorerContext.Folder,
-            //    "!! Test Folder",
-            //    "Debug stuff."),
-            //    "%SHELLINATOR %ID \"%D\"",
-        ];
+        /// <summary>All the app commands.</summary>
+        readonly List<ExplorerCommand> _commands = [];
         #endregion
 
-        /// <summary>Where it all begins.</summary>
-        /// <param name="args"></param>
-        static void Main(string[] args)
-        {
-            new App(args);
-        }
-
+        #region The application
         /// <summary>Do the work.</summary>
         /// <param name="args"></param>
         public App(string[] args)
         {
-            // This requires an env var named `DEV_BIN_PATH` - a known directory for the app.
+            // Init stuff.
             _shellinatorPath = Environment.ExpandEnvironmentVariables("DEV_BIN_PATH");
             _logPath = Path.Join(_shellinatorPath, "shellinator.log");
 
-            Log($"Shellinator command args:{string.Join(" ", args)}");
+            _commands =
+            [
+                new("treex",  ExplorerContext.Dir,   "Treex",              "Copy a tree of selected directory to clipboard", TreexCmd),
+                new("treex",  ExplorerContext.DirBg, "Treex",              "Copy a tree here to clipboard.",                 TreexCmd),
+                new("openst", ExplorerContext.Dir,   "Open in Sublime",    "Open selected directory in Sublime Text.",       SublimeCmd),
+                new("openst", ExplorerContext.DirBg, "Open in Sublime",    "Open here in Sublime Text.",                     SublimeCmd),
+                new("findev", ExplorerContext.Dir,   "Open in Everything", "Open selected directory in Everything.",         EverythingCmd),
+                new("findev", ExplorerContext.DirBg, "Open in Everything", "Open here in Everything.",                       EverythingCmd),
+                new("exec",   ExplorerContext.File,  "Execute",            "Execute file if executable otherwise open it.",  ExecCmd),
+                // new("test", ExplorerContext.DeskBg, "!! Test DeskBg", "Debug stuff.", TestCmd),
+                // new("test", ExplorerContext.Folder, "!! Test Folder", "Debug stuff.", TestCmd)
+            ];
 
-            _tmit.Snap("Here we go!");
+            // Test code.
+            //_commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
+            //_commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
 
-            // Execute. Run throws various exceptions depending on the origin of the error.
+            // Process the args => Shellinator.exe id context sel wdir
             try
             {
-                Environment.ExitCode = Run([.. args]);
-                // Info already logged.
+                Log($"Shellinator command args:{string.Join(" ", args)}");
+
+                _tmit.Snap("Here we go!");
+
+                if (args.Length != 5)
+                {
+                    throw new ShellinatorException($"Invalid command line format");
+                }
+
+                var id = args[1];
+                var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[2]);
+                var sel = Environment.ExpandEnvironmentVariables(args[3]);
+                var wdir = Environment.ExpandEnvironmentVariables(args[4]);
+
+                var cmdProc = _commands.FirstOrDefault(c => c.Id == id); // can throw if invalid
+
+                // Run command.
+                var res = cmdProc.Handler(context, sel, wdir);
+
+
+                if (res.Code != 0)
+                {
+                    // Record any outputs.
+                    Log($"Run() failed with [{res.Code}]");
+
+                    if (res.Stdout is not null)
+                    {
+                        Log($"stdout: [{res.Stdout}]");
+                    }
+                    if (res.Stderr is not null)
+                    {
+                        Log($"stderr: [{res.Stderr}]");
+                    }
+                }
             }
             catch (ShellinatorException ex) // app error
             {
@@ -181,113 +164,81 @@ namespace Shellinator
                 Log($"============================ Trimmed log file ============================");
             }
         }
+        #endregion
 
-        /// <summary>Do the work.</summary>
-        /// <param name="args"></param>
-        /// <return>Execute return code.</return>
-        public int Run(List<string> args)
+        #region All commands
+        ExecResult TreexCmd(ExplorerContext context, string sel, string wdir)
         {
-            // Process the args => Shellinator.exe id path
-            if (args.Count != 2)
+            var res = context switch
             {
-                throw new ShellinatorException($"Invalid command line format");
-            }
+                ExplorerContext.Dir => ExecuteCommand("cmd", sel, $"/c treex -c \"{wdir}\""),
+                ExplorerContext.DirBg => ExecuteCommand("cmd", wdir, $"/c treex -c \"{wdir}\""),
+                _ => throw new ShellinatorException($"Invalid context: {context}"),
+            };
 
-            var id = Environment.ExpandEnvironmentVariables(args[0]);
-            var path = Environment.ExpandEnvironmentVariables(args[1]);
-
-            // Check for valid path.
-            if (path.StartsWith("::"))
-            {
-                throw new ShellinatorException($"Can't use magic system folders e.g. Home");
-            }
-            else if (!Path.Exists(path))
-            {
-                throw new ShellinatorException($"Invalid path [{path}]");
-            }
-
-            // Final details.
-            FileAttributes attr = File.GetAttributes(path);
-            var wdir = attr.HasFlag(FileAttributes.Directory) ? path : Path.GetDirectoryName(path)!;
-            var isdir = attr.HasFlag(FileAttributes.Directory);
-
-            Log($"Run() id:{id} path:{path} wdir:{wdir} isdir:{isdir}");
-
-            (int code, string stdout, string stderr) ret = new();
-
-            switch (id)
-            {
-                case "tree":
-                {
-                    ret = ExecuteCommand("cmd", wdir, $"/c tree /a /f \"{wdir}\"");
-                }
-                break;
-
-                case "exec":
-                {
-                    if (!isdir)
-                    {
-                        var ext = Path.GetExtension(path);
-                        ret = ext switch
-                        {
-                            ".cmd" or ".bat" => ExecuteCommand("cmd", wdir, $"/c \"{path}\""),
-                            ".ps1" => ExecuteCommand("powershell", wdir, $"-executionpolicy bypass -File \"{path}\""),
-                            ".lua" => ExecuteCommand("lua", wdir, $"\"{path}\""),
-                            ".py" => ExecuteCommand("python", wdir, $"\"{path}\""),
-                            _ => ExecuteCommand("cmd", wdir, $"/c \"{path}\"") // default just open.
-                        };
-                    }
-                    // else ignore selection of dir
-                }
-                break;
-
-                //case "_config":
-                //{
-                //    // Internal management commands.
-                //    // write
-                //    _commands.ForEach(CreateRegistryEntry);
-                //    // delete
-                //    _commands.ForEach(RemoveRegistryEntry);
-                //}
-                //break;
-
-                //case "test_deskbg":
-                //case "test_folder":
-                //{
-                //    Log($"!!! Got {id}:{path}");
-                //    Notify($"!!! Got {id}:{path}", "Debug");
-                //}
-                //break;
-
-                default:
-                    throw new ShellinatorException($"Invalid id:{id}");
-            }
-
-            if (ret.code != 0)
-            {
-                // Record any outputs.
-                Log($"Run failed with [{ret.code}]");
-                if (ret.stdout != "")
-                {
-                    Log($"stdout: [{ret.stdout}]");
-                }
-                if (ret.stderr != "")
-                {
-                    Log($"stderr: [{ret.stderr}]");
-                }
-            }
-
-            return ret.code;
+            return res;
         }
 
+        ExecResult SublimeCmd(ExplorerContext context, string sel, string wdir)
+        {
+            var stpath = Path.Join(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Sublime Text", "subl");
+
+            var res = context switch
+            {
+                ExplorerContext.Dir => ExecuteCommand("cmd", sel, $"/c {stpath} --launch-or-new-window \"{wdir}\""),
+                ExplorerContext.DirBg => ExecuteCommand("cmd", wdir, $"/c {stpath} --launch-or-new-window \"{wdir}\""),
+                _ => throw new ShellinatorException($"Invalid context: {context}"),
+            };
+
+            return res;
+        }
+
+        ExecResult EverythingCmd(ExplorerContext context, string sel, string wdir)
+        {
+            var evpath = Path.Join(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Everything", "everything");
+
+            var res = context switch
+            {
+                ExplorerContext.Dir => ExecuteCommand("cmd", sel, $"/c {evpath} \"{wdir}\""),
+                ExplorerContext.DirBg => ExecuteCommand("cmd", wdir, $"/c {evpath} \"{wdir}\""),
+                _ => throw new ShellinatorException($"Invalid context: {context}"),
+            };
+
+            return res;
+        }
+
+        ExecResult ExecCmd(ExplorerContext context, string sel, string wdir)
+        {
+            var ext = Path.GetExtension(sel);
+
+            var res = ext switch
+            {
+                ".cmd" or ".bat" => ExecuteCommand("cmd", wdir, $"/c \"{sel}\""),
+                ".ps1" => ExecuteCommand("powershell", wdir, $"-executionpolicy bypass -File \"{sel}\""),
+                ".lua" => ExecuteCommand("lua", wdir, $"\"{sel}\""),
+                ".py" => ExecuteCommand("python", wdir, $"\"{sel}\""),
+                _ => ExecuteCommand("cmd", wdir, $"/c \"{sel}\"") // default just open.
+            };
+
+            return res;
+        }
+
+        ExecResult TestCmd(ExplorerContext context, string sel, string wdir)
+        {
+            Notify($"!!! Got test [{context}] [{sel}] [{wdir}]", "Debug");
+            return new();
+        }
+        #endregion
+
+        #region Internals
         /// <summary>
         /// Generic command executor. Suppresses console window creation.
         /// </summary>
         /// <param name="exe"></param>
         /// <param name="wdir"></param>
         /// <param name="args"></param>
-        /// <returns>(code, stdout, stderr)</returns>
-        (int code, string stdout, string stderr) ExecuteCommand(string exe, string wdir, string args)
+        /// <returns>Result code, stdout, stderr</returns>
+        ExecResult ExecuteCommand(string exe, string wdir, string args)
         {
             Log($"ExecuteCommand() exe:[{exe}] wdir:[{wdir}] args:[{args}]");
 
@@ -307,11 +258,11 @@ namespace Shellinator
             using Process proc = new() { StartInfo = pinfo };
             proc.Start();
             // TIL: To avoid deadlocks, always read the output stream first and then wait.
-            string stdout = proc.StandardOutput.ReadToEnd();
-            string stderr = proc.StandardError.ReadToEnd();
+            string? stdout = proc.StandardOutput.ReadToEnd();
+            string? stderr = proc.StandardError.ReadToEnd();
             proc.WaitForExit();
 
-            return (proc.ExitCode, stdout, stderr);
+            return new(proc.ExitCode, stdout, stderr);
         }
 
         /// <summary>
@@ -322,8 +273,8 @@ namespace Shellinator
         /// [REG_ROOT\spec.RegPath\shell\Id\command]
         /// @=spec.CommandLine
         /// </summary>
-        /// <param name="ecmd">Which command</param>
-        void CreateRegistryEntry(ExplorerCommand ecmd)
+        /// <param name="id">Which command</param>
+        void Reg(string id)
         {
             // Registry sections of interest:
             // - `HKEY_LOCAL_MACHINE` (HKLM): defaults for all users using a machine (administrator)
@@ -337,51 +288,83 @@ namespace Shellinator
             // - Detailed registry editing: https://mrlixm.github.io/blog/windows-explorer-context-menu/
             // - Shell command vars: https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context
 
-            using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
-            using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+            //     Builtin macros:
+            //     %L     : Selected file or directory name. Only Dir, File.
+            //     %D     : Selected file or directory with expanded named folders. Only Dir, File, Folder.
+            //     %V     : The directory of the selection, maybe unreliable? All except Folder.
+            //     %W     : The working directory. All except Folder.
+            //     %<0-9> : Positional arg.                                                
+            //     %*     : Replace with all parameters.                                   
+            //     %~     : Replace with all parameters starting with the second parameter.
 
-            // Key names etc.
-            var ssubkey1 = $"{GetRegPath(ecmd.Context)}\\shell\\{ecmd.Id}";
-            var ssubkey2 = $"{ssubkey1}\\command";
-            var expCmd = ecmd.CommandLine.Replace("%SHELLINATOR", $"\"{_shellinatorPath}\"").Replace("%ID", ecmd.Id);
-            expCmd = Environment.ExpandEnvironmentVariables(expCmd);
+            // All paths and macros that expand to paths must be wrapped in double quotes.
+            // The builtin env vars like `%ProgramFiles%` are also supported.
 
-            if (_fake)
+            var cmds = _commands.Where(c => c.Id == id);
+            if (!cmds.Any())
             {
-                Debug.WriteLine($"SetValue [{ssubkey1}] -> [MUIVerb={ecmd.Text}]");
-                Debug.WriteLine($"SetValue [{ssubkey2}] -> [@={expCmd}]");
+                throw new ShellinatorException($"Invalid command: {id}");
             }
-            else
-            {
-                using var k1 = regRoot!.CreateSubKey(ssubkey1);
-                k1.SetValue("MUIVerb", ecmd.Text);
 
-                using var k2 = regRoot!.CreateSubKey(ssubkey2);
-                k2.SetValue("", expCmd);
+            foreach (var cmd in cmds)
+            {
+                using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
+                using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+
+                // Key names etc.
+                var ssubkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
+                var ssubkey2 = $"{ssubkey1}\\command";
+                // Assemble command: _shellinatorPath id context sel wdir
+                var expCmd = $"\"{_shellinatorPath}\" {cmd.Id} {cmd.Context} %D %W";
+                expCmd = Environment.ExpandEnvironmentVariables(expCmd);
+
+                if (_fake)
+                {
+                    Debug.WriteLine($"SetValue [{ssubkey1}] -> [MUIVerb={cmd.Text}]");
+                    Debug.WriteLine($"SetValue [{ssubkey2}] -> [@={expCmd}]");
+                }
+                else
+                {
+                    using var k1 = regRoot!.CreateSubKey(ssubkey1);
+                    k1.SetValue("MUIVerb", cmd.Text);
+
+                    using var k2 = regRoot!.CreateSubKey(ssubkey2);
+                    k2.SetValue("", expCmd);
+                }
             }
         }
 
         /// <summary>Delete existing registry entry.</summary>
-        void RemoveRegistryEntry(ExplorerCommand ecmd)
+        /// <param name="id">Which command</param>
+        void Unreg(string id)
         {
-            using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
-            using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
-
-            // Key name.
-            var ssubkey = $"{GetRegPath(ecmd.Context)}\\shell\\{ecmd.Id}";
-
-            if (_fake)
+            var cmds = _commands.Where(c => c.Id == id);
+            if (!cmds.Any())
             {
-                Debug.WriteLine($"DeleteSubKeyTree [{ssubkey}]");
+                throw new ShellinatorException($"Invalid command: {id}");
             }
-            else
+
+            foreach (var cmd in cmds)
             {
-                regRoot!.DeleteSubKeyTree(ssubkey);
+                using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
+                using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+
+                // Key name.
+                var ssubkey = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
+
+                if (_fake)
+                {
+                    Debug.WriteLine($"DeleteSubKeyTree [{ssubkey}]");
+                }
+                else
+                {
+                    regRoot!.DeleteSubKeyTree(ssubkey);
+                }
             }
         }
 
-        /// <summary>Convert the shell context to registry key.</summary>
-        string GetRegPath(ExplorerContext context)
+        /// <summary>Convert the context enum to registry key.</summary>
+        static string GetRegPath(ExplorerContext context)
         {
             return context switch
             {
@@ -394,7 +377,7 @@ namespace Shellinator
             };
         }
 
-        /// <summary>Simple logging, don't need a full-blown logger.</summary>
+        /// <summary>Simple logging.</summary>
         void Log(string msg, bool show = false)
         {
             File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff}{msg}{Environment.NewLine}");
@@ -404,8 +387,8 @@ namespace Shellinator
             }
         }
 
-        /// <summary>Tell the user.</summary>
-        void Notify(string msg, string caption = "")
+        /// <summary>Tell the user something.</summary>
+        static void Notify(string msg, string caption = "")
         {
             MessageBox(IntPtr.Zero, msg, caption, 0);
         }
@@ -413,5 +396,13 @@ namespace Shellinator
         /// <summary>Rudimentary UI notification for use in a console application.</summary>
         [DllImport("user32.dll", CharSet = CharSet.Ansi)]
         static extern int MessageBox(IntPtr hWnd, string msg, string caption, uint type);
+        #endregion
+
+        /// <summary>Where it all begins.</summary>
+        /// <param name="args"></param>
+        static void Main(string[] args)
+        {
+            new App(args);
+        }
     }
 }
