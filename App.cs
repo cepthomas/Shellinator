@@ -5,8 +5,8 @@ using System.Diagnostics;
 using System.Text;
 using Ephemera.NBagOfTricks;
 using System.Runtime.InteropServices;
-using System.Linq;
 using System.Runtime.Intrinsics;
+using System.Linq;
 
 
 namespace Shellinator
@@ -16,7 +16,7 @@ namespace Shellinator
     class ShellinatorException(string msg) : Exception(msg) { }
 
     /// <summary>
-    /// Commands vary depending on which part of the explorer they originate in. These are supported.
+    /// Commands vary depending on which part of explorer they originate in. These are supported.
     /// Operations on files are enabled generically, eventually specific extensions could be supported.
     /// </summary>
     [Flags]
@@ -63,7 +63,7 @@ namespace Shellinator
         readonly TimeIt _tmit = new();
 
         /// <summary>Where the exe lives.</summary>
-        readonly string _shellinatorPath;
+        readonly string _exePath;
 
         /// <summary>Log file path name.</summary>
         readonly string _logPath;
@@ -81,8 +81,8 @@ namespace Shellinator
         public App(string[] args)
         {
             // Init stuff.
-            _shellinatorPath = Environment.ExpandEnvironmentVariables("DEV_BIN_PATH");
-            _logPath = Path.Join(_shellinatorPath, "shellinator.log");
+            _exePath = Environment.GetEnvironmentVariable("DEV_BIN_PATH");
+            _logPath = Path.Join(_exePath, "shellinator.log");
 
             _commands =
             [
@@ -98,8 +98,8 @@ namespace Shellinator
             ];
 
             // Test code.
-            //_commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
-            //_commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
+            _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
+            _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
 
             // Process the args => Shellinator.exe id context sel wdir
             try
@@ -167,6 +167,7 @@ namespace Shellinator
         #endregion
 
         #region All commands
+        //--------------------------------------------------------//
         ExecResult TreexCmd(ExplorerContext context, string sel, string wdir)
         {
             var res = context switch
@@ -179,6 +180,7 @@ namespace Shellinator
             return res;
         }
 
+        //--------------------------------------------------------//
         ExecResult SublimeCmd(ExplorerContext context, string sel, string wdir)
         {
             var stpath = Path.Join(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Sublime Text", "subl");
@@ -193,6 +195,7 @@ namespace Shellinator
             return res;
         }
 
+        //--------------------------------------------------------//
         ExecResult EverythingCmd(ExplorerContext context, string sel, string wdir)
         {
             var evpath = Path.Join(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Everything", "everything");
@@ -207,6 +210,7 @@ namespace Shellinator
             return res;
         }
 
+        //--------------------------------------------------------//
         ExecResult ExecCmd(ExplorerContext context, string sel, string wdir)
         {
             var ext = Path.GetExtension(sel);
@@ -223,6 +227,7 @@ namespace Shellinator
             return res;
         }
 
+        //--------------------------------------------------------//
         ExecResult TestCmd(ExplorerContext context, string sel, string wdir)
         {
             Notify($"!!! Got test [{context}] [{sel}] [{wdir}]", "Debug");
@@ -314,14 +319,14 @@ namespace Shellinator
                 // Key names etc.
                 var ssubkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
                 var ssubkey2 = $"{ssubkey1}\\command";
-                // Assemble command: _shellinatorPath id context sel wdir
-                var expCmd = $"\"{_shellinatorPath}\" {cmd.Id} {cmd.Context} %D %W";
+                // Assemble command: _exePath id context sel wdir
+                var expCmd = $"\"{_exePath}\" {cmd.Id} {cmd.Context} %D %W";
                 expCmd = Environment.ExpandEnvironmentVariables(expCmd);
 
                 if (_fake)
                 {
-                    Debug.WriteLine($"SetValue [{ssubkey1}] -> [MUIVerb={cmd.Text}]");
-                    Debug.WriteLine($"SetValue [{ssubkey2}] -> [@={expCmd}]");
+                    Log($"SetValue [{ssubkey1}] -> [MUIVerb={cmd.Text}]");
+                    Log($"SetValue [{ssubkey2}] -> [@={expCmd}]");
                 }
                 else
                 {
@@ -354,7 +359,7 @@ namespace Shellinator
 
                 if (_fake)
                 {
-                    Debug.WriteLine($"DeleteSubKeyTree [{ssubkey}]");
+                    Log($"DeleteSubKeyTree [{ssubkey}]");
                 }
                 else
                 {
@@ -380,7 +385,7 @@ namespace Shellinator
         /// <summary>Simple logging.</summary>
         void Log(string msg, bool show = false)
         {
-            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff}{msg}{Environment.NewLine}");
+            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {msg}{Environment.NewLine}");
             if (show)
             {
                 Notify(msg);
