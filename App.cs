@@ -80,8 +80,8 @@ namespace Shellinator
         /// <param name="args"></param>
         public App(string[] args)
         {
-            // Init stuff.
-            _exePath = Environment.GetEnvironmentVariable("DEV_BIN_PATH");
+            // Init stuff. Implement or rename TOOLS_PATH here and in csproj file.
+            _exePath = Environment.GetEnvironmentVariable("TOOLS_PATH");
             _logPath = Path.Join(_exePath, "shellinator.log");
 
             _commands =

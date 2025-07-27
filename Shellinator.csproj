@@ -42,10 +42,10 @@
         </Reference>
     </ItemGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(DEV_BIN_PATH)' != ''">
-        <Exec Command="copy /Y $(OutputPath)*.exe $(DEV_BIN_PATH)" />
-        <Exec Command="copy /Y $(OutputPath)*.dll $(DEV_BIN_PATH)" />
-        <Exec Command="copy /Y $(OutputPath)*.runtimeconfig.json $(DEV_BIN_PATH)" />
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(TOOLS_PATH)' != ''">
+        <Exec Command="copy /Y $(OutputPath)*.exe $(TOOLS_PATH)" />
+        <Exec Command="copy /Y $(OutputPath)*.dll $(TOOLS_PATH)" />
+        <Exec Command="copy /Y $(OutputPath)*.runtimeconfig.json $(TOOLS_PATH)" />
     </Target>
 
 </Project>
