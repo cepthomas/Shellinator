@@ -13,7 +13,7 @@
         <Version>2.0.0</Version>
         <AssemblyName>shellinator</AssemblyName>
         <RootNamespace>Shellinator</RootNamespace>
-        <NoWarn>CA1806</NoWarn>
+        <NoWarn>CA1806;CA1822;IDE0051</NoWarn>
         <Company>Ephemera Inc</Company>
         <Product>Shellinator</Product>
         <Description>Play with shell stuff.</Description>
@@ -28,8 +28,11 @@
 
     <ItemGroup>
         <Compile Remove="lib\**" />
+        <Compile Remove="Splunk\**" />
         <EmbeddedResource Remove="lib\**" />
+        <EmbeddedResource Remove="Splunk\**" />
         <None Remove="lib\**" />
+        <None Remove="Splunk\**" />
     </ItemGroup>
 
     <ItemGroup>
