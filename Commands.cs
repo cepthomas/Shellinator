@@ -6,6 +6,10 @@ using System.Linq;
 //using CB = Ephemera.Win32.Clipboard;
 
 
+// var ss = new List<string> { "edit", "explore", "find", "open", "print", "properties", "runas" };
+// if (ss.Contains(id)) { throw new ArgumentException($"Reserved id:{id}"); }
+
+
 namespace Shellinator
 {
     /// <summary>The customized part of the app.</summary>
