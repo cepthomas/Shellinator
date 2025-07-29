@@ -19,19 +19,18 @@ namespace Shellinator
     /// Commands vary depending on which part of explorer they originate in. These are supported.
     /// Operations on files are enabled generically, eventually specific extensions could be supported.
     /// </summary>
-    //[Flags]
     enum ExplorerContext
     {
-        /// <summary>Right click in explorer right pane or windows desktop with a directory selected.</summary>
-        Dir,// = 0x01,
+        /// <summary>Right click in explorer with a directory selected.</summary>
+        Dir,
         /// <summary>Right click in explorer right pane with nothing selected (background).</summary>
-        DirBg,// = 0x02,
+        DirBg,
         /// <summary>Right click in windows desktop with nothing selected (background).</summary>
-        DeskBg,// = 0x04,
-        /// <summary>Right click in explorer left pane (navigation) with a folder selected.</summary>
-        Folder,// = 0x08,
-        /// <summary>Right click in explorer right pane or windows desktop with a file selected.</summary>
-        File,// = 0x10
+        DeskBg,
+        /// <summary>Right click in explorer with a file selected.</summary>
+        File,
+        ///// <summary>Seems to appear for any directory selection. Probably meant for system use.</summary>
+        //Folder,
     }
 
     /// <summary>Describes one menu command.</summary>
@@ -168,14 +167,13 @@ namespace Shellinator
         /// Generic command executor. Suppresses console window creation.
         /// </summary>
         /// <param name="exe"></param>
-        ///// <param name="wdir"></param>
         /// <param name="args"></param>
         /// <returns>Result code, stdout, stderr</returns>
-        ExecResult ExecuteCommand(string exe, List<string> args)//, string wdir)
+        ExecResult ExecuteCommand(string exe, List<string> args)
         {
             //var sargs = new List<string>();
             //args.ForEach(a =>  sargs.Add($"[{a}]"));
-            Log($"ExecuteCommand() exe:[{exe}] args:{string.Join(" ", args)}");// wdir:[{wdir}]");
+            Log($"ExecuteCommand() exe:[{exe}] args:[{string.Join(" ", args)}]");
 
             return new();
 
@@ -223,17 +221,14 @@ namespace Shellinator
             // Shellinator bases all registry accesses (R/W) at `HKEY_CURRENT_USER\Software\Classes` aka `REG_ROOT`.
             // - General how to: https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers
             // - Detailed registry editing: https://mrlixm.github.io/blog/windows-explorer-context-menu/
-            // - Shell command vars: https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context
 
-            //     Builtin macros:
-            //     %L     : Selected file or directory name. Only Dir, File.
-            //     %D     : Selected file or directory with expanded named folders. Only Dir, File, Folder.
-            //     %W     : The working directory. All except Folder.
-            //     %V     : The directory of the selection, maybe unreliable? All except Folder.
-            //     %<0-9> : Positional arg.                                                
-            //     %*     : Replace with all parameters.                                   
-            //     %~     : Replace with all parameters starting with the second parameter.
-            //  Dir - %D  DirBg - %W  File - %D  DeskBg - %W  Folder - %D
+            // Nuances of shell command vars:
+            // https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context
+            // Ones possibly of interest:
+            // - %D: Selected file or directory with expanded named folders. Only Dir, File, Folder.
+            // - %W: The working directory. All except Folder.
+            // - %L: Selected file or directory name. Only Dir, File.
+            // - %V: The directory of the selection, maybe unreliable? All except Folder.
 
             // All paths and macros that expand to paths must be wrapped in double quotes.
             // The builtin env vars like `%ProgramFiles%` are also supported.
@@ -254,7 +249,7 @@ namespace Shellinator
                 var ssubkey2 = $"{ssubkey1}\\command";
                 // Assemble command: _exePath id context target
 
-                //  Dir - %D  DirBg - %W  File - %D  DeskBg - %W  Folder - %D
+                // Dir:%D DirBg:%W File:%D DeskBg:%W Folder:%D
                 var target = cmd.Context switch
                 {
                     ExplorerContext.DirBg => "%W",
@@ -319,7 +314,7 @@ namespace Shellinator
                 ExplorerContext.Dir => "Directory",
                 ExplorerContext.DirBg => "Directory\\Background",
                 ExplorerContext.DeskBg => "DesktopBackground",
-                ExplorerContext.Folder => "Folder",
+                //ExplorerContext.Folder => "Folder",
                 ExplorerContext.File => "*",
                 _ => throw new ArgumentException("Impossible")
             };

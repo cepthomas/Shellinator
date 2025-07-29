@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+//using WI = Ephemera.Win32.Internals;
+//using CB = Ephemera.Win32.Clipboard;
 
 
 namespace Shellinator
@@ -14,21 +16,21 @@ namespace Shellinator
         {
             _commands =
             [
-                new("treex",  ExplorerContext.Dir,    "Treex",              "Copy a tree of selected directory to clipboard",   TreexCmd),
-                new("treex",  ExplorerContext.DirBg,  "Treex",              "Copy a tree here to clipboard.",                   TreexCmd),
-                new("openst", ExplorerContext.Dir,    "Open in Sublime",    "Open selected directory in Sublime Text.",         SublimeCmd),
-                new("openst", ExplorerContext.DirBg,  "Open in Sublime",    "Open here in Sublime Text.",                       SublimeCmd),
-                new("findev", ExplorerContext.Dir,    "Open in Everything", "Open selected directory in Everything.",           EverythingCmd),
-                new("findev", ExplorerContext.DirBg,  "Open in Everything", "Open here in Everything.",                         EverythingCmd),
-                new("exec",   ExplorerContext.File,   "Execute",            "Execute file if executable otherwise open it.",    ExecCmd),
-                new("test",   ExplorerContext.Dir,    "==Test Dir==",       "Debug stuff.",                                     TestCmd),
-                new("test",   ExplorerContext.DirBg,  "==Test DirBg==",     "Debug stuff.",                                     TestCmd),
-                new("test",   ExplorerContext.DeskBg, "==Test DeskBg==",    "Debug stuff.",                                     TestCmd),
-                new("test",   ExplorerContext.File,   "==Test File==",      "Debug stuff.",                                     TestCmd),
-                new("test",   ExplorerContext.Folder, "==Test Folder==",    "Debug stuff.",                                     TestCmd)
+                new("treex",  ExplorerContext.Dir,    "Treex Dir",              "Copy a tree of selected directory to clipboard",   TreexCmd),
+                new("treex",  ExplorerContext.DirBg,  "Treex DirBg",              "Copy a tree here to clipboard.",                   TreexCmd),
+                new("openst", ExplorerContext.Dir,    "Open in Sublime Dir",    "Open selected directory in Sublime Text.",         SublimeCmd),
+                new("openst", ExplorerContext.DirBg,  "Open in Sublime DirBg",    "Open here in Sublime Text.",                       SublimeCmd),
+                new("findev", ExplorerContext.Dir,    "Open in Everything Dir", "Open selected directory in Everything.",           EverythingCmd),
+                new("findev", ExplorerContext.DirBg,  "Open in Everything DirBg", "Open here in Everything.",                         EverythingCmd),
+                new("exec",   ExplorerContext.File,   "Execute File",            "Execute file if executable otherwise open it.",    ExecCmd),
+                //new("test",   ExplorerContext.Dir,    "==Test Dir==",       "Debug stuff.",                                     TestCmd),
+                //new("test",   ExplorerContext.DirBg,  "==Test DirBg==",     "Debug stuff.",                                     TestCmd),
+                //new("test",   ExplorerContext.DeskBg, "==Test DeskBg==",    "Debug stuff.",                                     TestCmd),
+                //new("test",   ExplorerContext.File,   "==Test File==",      "Debug stuff.",                                     TestCmd),
+                ///////////new("test",   ExplorerContext.Folder, "==Test Folder==",    "Debug stuff.",                                     TestCmd)
             ];
         }
-        //Dir - %D  DirBg - %W  File - %D  DeskBg - %W  Folder - %D
+        //Old version:
         //new ("tree", ExplorerContext.Dir, "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
         //new ("tree", ExplorerContext.DirBg, "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."),
         //new ("openst", ExplorerContext.Dir, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
@@ -42,24 +44,27 @@ namespace Shellinator
 
 
         //--------------------------------------------------------//
-        ExecResult TreexCmd(ExplorerContext context, string target)//, string wdir)
+        ExecResult TreexCmd(ExplorerContext context, string target)
         {
             var res = context switch
             {
-                ExplorerContext.Dir => ExecuteCommand("cmd", ["/C", "treex", "-c", target, "| clip"]),//, sel),
-                ExplorerContext.DirBg => ExecuteCommand("cmd", ["/C", "treex", "-c", target, "| clip"]),//, wdir),
+                //ExplorerContext.Dir => ExecuteCommand("cmd", ["/C", "tree", target]),
+               // ExplorerContext.Dir => ExecuteCommand("cmd", ["/C", "treex", "-c", target, "| clip"]),
+                ExplorerContext.Dir => ExecuteCommand("tree", [target, "| clip"]),
+                ExplorerContext.DirBg => ExecuteCommand("cmd", ["/C", "treex", "-c", target, "| clip"]),
                 _ => throw new ShellinatorException($"Invalid context: {context}"),
             };
+
+            Notify(res.Stdout??"null");
 
             return res;
         }
 
         //--------------------------------------------------------//
-        ExecResult SublimeCmd(ExplorerContext context, string target)//, string wdir)
+        ExecResult SublimeCmd(ExplorerContext context, string target)
         {
             var stpath = Path.Join(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Sublime Text", "subl");
 
-            //Console.WriteLine($"{context}  \"{stpath}\" --launch-or-new-window \"{wdir}\"");
             return new();
 
 
@@ -77,7 +82,7 @@ namespace Shellinator
         }
 
         //--------------------------------------------------------//
-        ExecResult EverythingCmd(ExplorerContext context, string target)//, string wdir)
+        ExecResult EverythingCmd(ExplorerContext context, string target)
         {
             var evpath = Path.Join(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Everything", "everything");
 
@@ -93,7 +98,7 @@ namespace Shellinator
         }
 
         //--------------------------------------------------------//
-        ExecResult ExecCmd(ExplorerContext context, string target)//, string wdir)
+        ExecResult ExecCmd(ExplorerContext context, string target)
         {
             var ext = Path.GetExtension(target);
 
@@ -111,19 +116,8 @@ namespace Shellinator
         }
 
         //--------------------------------------------------------//
-        ExecResult TestCmd(ExplorerContext context, string target)//, string wdir)
+        ExecResult TestCmd(ExplorerContext context, string target)
         {
-            ///// <summary>Right click in explorer right pane or windows desktop with a directory selected.</summary>
-            //Dir = 0x01,
-            ///// <summary>Right click in explorer right pane with nothing selected (background).</summary>
-            //DirBg = 0x02,
-            ///// <summary>Right click in windows desktop with nothing selected (background).</summary>
-            //DeskBg = 0x04,
-            ///// <summary>Right click in explorer left pane (navigation) with a folder selected.</summary>
-            //Folder = 0x08,
-            ///// <summary>Right click in explorer right pane or windows desktop with a file selected.</summary>
-            //File = 0x10
-
             Log($"!!! Test context:[{context}] target:[{target}]");// wdir:[{wdir}]");
             return new();
         }
