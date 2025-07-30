@@ -2,8 +2,8 @@
 
     <PropertyGroup>
 
-        <OutputType>Exe</OutputType>
-        <UseWindowsForms>false</UseWindowsForms>
+        <OutputType>WinExe</OutputType>
+        <UseWindowsForms>true</UseWindowsForms>
         <OutputPath>bin\</OutputPath>
         <TargetFramework>net8.0-windows</TargetFramework>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>

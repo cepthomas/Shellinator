@@ -2,12 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-//using WI = Ephemera.Win32.Internals;
-//using CB = Ephemera.Win32.Clipboard;
-
-
-// var ss = new List<string> { "edit", "explore", "find", "open", "print", "properties", "runas" };
-// if (ss.Contains(id)) { throw new ArgumentException($"Reserved id:{id}"); }
+using System.Windows.Forms;
 
 
 namespace Shellinator
@@ -34,32 +29,16 @@ namespace Shellinator
                 ///////////new("test",   ExplorerContext.Folder, "==Test Folder==",    "Debug stuff.",                                     TestCmd)
             ];
         }
-        //Old version:
-        //new ("tree", ExplorerContext.Dir, "Tree", "%SPLUNK %ID \"%D\"", "Copy a tree of selected directory to clipboard"),
-        //new ("tree", ExplorerContext.DirBg, "Tree", "%SPLUNK %ID \"%W\"", "Copy a tree here to clipboard."),
-        //new ("openst", ExplorerContext.Dir, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%D\"", "Open selected directory in Sublime Text."),
-        //new ("openst", ExplorerContext.DirBg, "Open in Sublime", "\"%ProgramFiles%\\Sublime Text\\subl\" --launch-or-new-window \"%W\"", "Open here in Sublime Text."),
-        //new ("findev", ExplorerContext.Dir, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%D\"", "Open selected directory in Everything."),
-        //new ("findev", ExplorerContext.DirBg, "Find in Everything", "%ProgramFiles%\\Everything\\everything -parent \"%W\"", "Open here in Everything."),
-        //new ("exec", ExplorerContext.File, "Execute", "%SPLUNK %ID \"%D\"", "Execute file if executable otherwise opened."),
-        //new ("test_deskbg", ExplorerContext.DeskBg, "!! Test DeskBg", "%SPLUNK %ID \"%W\"", "Debug stuff."),
-        //new ("test_folder", ExplorerContext.Folder, "!! Test Folder", "%SPLUNK %ID \"%D\"", "Debug stuff."),
-
-
 
         //--------------------------------------------------------//
         ExecResult TreexCmd(ExplorerContext context, string target)
         {
             var res = context switch
             {
-                //ExplorerContext.Dir => ExecuteCommand("cmd", ["/C", "tree", target]),
-               // ExplorerContext.Dir => ExecuteCommand("cmd", ["/C", "treex", "-c", target, "| clip"]),
-                ExplorerContext.Dir => ExecuteCommand("tree", [target, "| clip"]),
-                ExplorerContext.DirBg => ExecuteCommand("cmd", ["/C", "treex", "-c", target, "| clip"]),
+                ExplorerContext.Dir => ExecuteCommand(["treex", "-c", target]),
+                ExplorerContext.DirBg => ExecuteCommand(["treex", "-c", target]),
                 _ => throw new ShellinatorException($"Invalid context: {context}"),
             };
-
-            Notify(res.Stdout??"null");
 
             return res;
         }
@@ -69,16 +48,10 @@ namespace Shellinator
         {
             var stpath = Path.Join(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Sublime Text", "subl");
 
-            return new();
-
-
             var res = context switch
             {
-                ExplorerContext.Dir => ExecuteCommand("cmd", ["/C", stpath, "--launch-or-new-window", target]),// sel),
-                ExplorerContext.DirBg => ExecuteCommand("cmd", ["/C", stpath, "--launch-or-new-window", target]),// wdir),
-                //ExplorerContext.Dir => ExecuteCommand($"\"{stpath}\"", $"--launch-or-new-window \"{wdir}\"", sel),
-                //ExplorerContext.DirBg => ExecuteCommand("cmd", $"/C \"{stpath}\" --launch-or-new-window \"{wdir}\"", wdir),
-                //ExplorerContext.DirBg => ExecuteCommand($"\"{stpath}\"", $"--launch-or-new-window \"{wdir}\"", wdir),
+                ExplorerContext.Dir => ExecuteCommand([stpath, "--launch-or-new-window", target]),
+                ExplorerContext.DirBg => ExecuteCommand([stpath, "--launch-or-new-window", target]),
                 _ => throw new ShellinatorException($"Invalid context: {context}"),
             };
 
@@ -90,39 +63,44 @@ namespace Shellinator
         {
             var evpath = Path.Join(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Everything", "everything");
 
-            // var res = context switch
-            // {
-            //     ExplorerContext.Dir => ExecuteCommand("cmd", $"/C \"{evpath}\" \"{wdir}\"", sel),
-            //     ExplorerContext.DirBg => ExecuteCommand("cmd", $"/C \"{evpath}\" \"{wdir}\"", wdir),
-            //     _ => throw new ShellinatorException($"Invalid context: {context}"),
-            // };
+            var res = context switch
+            {
+                ExplorerContext.Dir => ExecuteCommand([evpath, target]),
+                ExplorerContext.DirBg => ExecuteCommand([evpath, target]),
+                _ => throw new ShellinatorException($"Invalid context: {context}"),
+            };
 
-            // return res;
-            return new();
+            return res;
         }
 
         //--------------------------------------------------------//
         ExecResult ExecCmd(ExplorerContext context, string target)
         {
-            var ext = Path.GetExtension(target);
+            if (context == ExplorerContext.File)
+            {
+                var ext = Path.GetExtension(target);
 
-            // var res = ext switch
-            // {
-            //     ".cmd" or ".bat" => ExecuteCommand("cmd", $"/C \"{sel}\"", wdir),
-            //     ".ps1" => ExecuteCommand("powershell", $"-executionpolicy bypass -File \"{sel}\"", wdir),
-            //     ".lua" => ExecuteCommand("lua", $"\"{sel}\"", wdir),
-            //     ".py" => ExecuteCommand("python", $"\"{sel}\"", wdir),
-            //     _ => ExecuteCommand("cmd", $"/C \"{sel}\"", wdir) // default just open.
-            // };
+                var res = ext switch
+                {
+                    ".cmd" or ".bat" => ExecuteCommand([target]),
+                    ".ps1" => ExecuteCommand(["powershell", "-executionpolicy", "bypass", "-File", target]),
+                    ".lua" => ExecuteCommand(["lua", target]),
+                    ".py" => ExecuteCommand(["python", target]),
+                    _ => ExecuteCommand([target]) // default just open.
+                };
 
-            // return res;
-            return new();
+                return res;
+            }
+            else
+            {
+                throw new ShellinatorException($"Invalid context: {context}");
+            }
         }
 
         //--------------------------------------------------------//
         ExecResult TestCmd(ExplorerContext context, string target)
         {
-            Log($"!!! Test context:[{context}] target:[{target}]");// wdir:[{wdir}]");
+            LogInfo($"!!! Test context:[{context}] target:[{target}]");
             return new();
         }
     }
