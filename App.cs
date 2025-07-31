@@ -7,8 +7,8 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Linq;
-using Ephemera.NBagOfTricks;
 using System.Collections;
+using Ephemera.NBagOfTricks;
 
 
 namespace Shellinator
@@ -63,7 +63,7 @@ namespace Shellinator
         readonly TimeIt _tmit = new();
 
         /// <summary>Where the exe lives.</summary>
-        readonly string? _exePath = Environment.GetEnvironmentVariable("TOOLS_PATH");
+        readonly string _exePath;
 
         /// <summary>Log file path name.</summary>
         readonly string _logPath;
@@ -75,110 +75,129 @@ namespace Shellinator
         List<ExplorerCommand> _commands = [];
         #endregion
 
-        #region The application
+        /// <summary>Where it all begins.</summary>
+        /// <param name="args"></param>
+        [STAThread]
+        static void Main(string[] args)
+        {
+            new App(args);
+        }
+
+        #region The command line application
         /// <summary>Do the work.</summary>
         /// <param name="args"></param>
         public App(string[] args)
         {
-            // Init stuff.
-            if (_exePath is null)
-            {
-                LogInfo($"TOOLS_PATH not found, using current directory [{Environment.CurrentDirectory}]");
-                _exePath = Environment.CurrentDirectory;
-            }
+            int code = 0;
 
-            // Init log.
-            _logPath = Path.Join(_exePath, "shellinator.log");
-            FileInfo fi = new(_logPath);
-            if (fi.Exists && fi.Length > 10000)
-            {
-                var newfn = _logPath.Replace(".log", "_old.log");
-                File.Delete(newfn);
-                File.Move(_logPath, newfn);
-            }
-
-            InitCommands();
-
-            // Check for running in visual studio.
-            if (Environment.GetEnvironmentVariable("VisualStudioVersion") is not null)
-            {
-                // Dev code.
-                _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
-                _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
-                Environment.Exit(0);
-            }
-
-            // Called by system via our commands.
-            // Process the args => Shellinator.exe id context target.
             try
             {
-                LogInfo($"Shellinator command args:{string.Join(" ", args)}");
+                ///// Init internal stuff.
 
-                _tmit.Snap("Here we go!");
+                // Standard path supplied?
+                string? path = Environment.GetEnvironmentVariable("TOOLS_PATH");
+                _exePath = path is not null ? path : Environment.CurrentDirectory;
 
-                if (args.Length != 3)
+                // Init log.
+                _logPath = Path.Join(_exePath, "shellinator.log");
+                FileInfo fi = new(_logPath);
+                if (fi.Exists && fi.Length > 10000)
                 {
-                    throw new ShellinatorException($"Invalid command line format: [{string.Join(" ", args)}]");
+                    var newfn = _logPath.Replace(".log", "_old.log");
+                    File.Delete(newfn);
+                    File.Move(_logPath, newfn);
                 }
 
-                var id = args[0];
-                var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[1]);
-                var target = Environment.ExpandEnvironmentVariables(args[2]);
-
-                var cmdProc = _commands.FirstOrDefault(c => c.Id == id); // can throw if invalid
-
-                // Run command.
-                var res = cmdProc.Handler(context, target);
-
-                if (res.Code == 0)
+                // Logging ok now.
+                if (path is null)
                 {
-                    // Success. Capture any stdout.
-                    if (res.Stdout.Length > 0)
+                    LogInfo($"TOOLS_PATH not found, using [{_exePath}]");
+                }
+
+                ///// Set up commands.
+                InitCommands();
+
+                ///// Check for running in visual studio. That indicates mode.
+                if (Environment.GetEnvironmentVariable("VisualStudioVersion") is null)
+                {
+                    // Normal mode called from system/registry.
+                    LogInfo($"Shellinator command args:{string.Join(" ", args)}");
+
+                    _tmit.Snap("Here we go!");
+
+                    // Process the args: sellinator.exe id context target.
+                    if (args.Length != 3)
                     {
-                        Clipboard.SetText(res.Stdout);
+                        throw new ShellinatorException($"Invalid command line format: [{string.Join(" ", args)}]");
+                    }
+
+                    var id = args[0];
+                    var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[1]);
+                    var target = Environment.ExpandEnvironmentVariables(args[2]);
+
+                    var cmdProc = _commands.FirstOrDefault(c => c.Id == id); // can throw if invalid
+
+                    // Run command.
+                    var res = cmdProc.Handler(context, target);
+
+                    if (res.Code == 0)
+                    {
+                        // Success. Capture any stdout. TIL don't set clipboard to an empty string.
+                        if (res.Stdout.Length > 0)
+                        {
+                            Clipboard.SetText(res.Stdout);
+                        }
+                        else
+                        {
+                            Clipboard.Clear();
+                        }
                     }
                     else
                     {
-                        Clipboard.Clear();
+                        // Command failed. Capture everything useful.
+                        List<string> ls = [];
+                        ls.Append($"=== code: {res.Code}");
+
+                        if (res.Stdout.Length > 0)
+                        {
+                            ls.Append($"=== stdout:");
+                            ls.Append($"{res.Stdout}");
+                        }
+
+                        if (res.Stderr.Length > 0)
+                        {
+                            ls.Append($"=== stderr:");
+                            ls.Append($"{res.Stderr}");
+                        }
+
+                        Clipboard.SetText(string.Join(Environment.NewLine, string.Join(Environment.NewLine, ls)));
+                        code = 1;
                     }
                 }
                 else
                 {
-                    // Failure. Capture everything useful.
-                    List<string> ls = [];
-                    ls.Append($"=== code: {res.Code}");
-
-                    if (res.Stdout.Length > 0)
-                    {
-                        ls.Append($"=== stdout:");
-                        ls.Append($"{res.Stdout}");
-                    }
-
-                    if (res.Stderr.Length > 0)
-                    {
-                        ls.Append($"=== stderr:");
-                        ls.Append($"{res.Stderr}");
-                    }
-
-                    Clipboard.SetText(string.Join(Environment.NewLine, string.Join(Environment.NewLine, ls)));
+                     // VS management mode. Default is to rewrite the commands to the registry.
+                    _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
+                    _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
                 }
             }
             catch (ShellinatorException ex) // app error
             {
                 LogError($"{ex}");
                 Clipboard.SetText(ex.ToString());
-                Environment.Exit(1);
+                code = 2;
             }
             catch (Exception ex) // something else
             {
                 LogError($"{ex}");
                 Clipboard.SetText(ex.ToString());
-                Environment.Exit(2);
+                code = 3;
             }
 
             _tmit.Snap("All done");
             _tmit.Captures.ForEach(c => LogInfo(c));
-            Environment.Exit(0);
+            
+            Environment.Exit(code);
         }
         #endregion
 
@@ -187,7 +206,7 @@ namespace Shellinator
         /// Generic command executor. Called by commands handlers. Suppresses console window creation.
         /// </summary>
         /// <param name="args">All args including command first.</param>
-        /// <param name="cmd">True for command line commands.</param>
+        /// <param name="cmd">True for command line commands. Wraps the call in 'cmd /C'.</param>
         /// <returns>Result code, stdout, stderr</returns>
         ExecResult ExecuteCommand(List<string> args, bool cmd = false)
         {
@@ -217,8 +236,8 @@ namespace Shellinator
             proc.Start();
 
             // TIL: To avoid deadlocks, always read the output stream first and then wait.
-            string stdout = proc.StandardOutput.ReadToEnd();
-            string stderr = proc.StandardError.ReadToEnd();
+            var stdout = proc.StandardOutput.ReadToEnd();
+            var stderr = proc.StandardError.ReadToEnd();
 
             //LogInfo("Wait for process to exit...");
             proc.WaitForExit();
@@ -226,7 +245,9 @@ namespace Shellinator
 
             return new(proc.ExitCode, stdout, stderr);
         }
+        #endregion
 
+        #region Registry editing
         /// <summary>
         /// Write command to the registry. This generates registry entries that look like:
         /// [REG_ROOT\spec.RegPath\shell\spec.Id]
@@ -268,15 +289,16 @@ namespace Shellinator
 
             foreach (var cmd in cmds)
             {
+                // Assemble command: _exePath id context target
+
                 using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
                 using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
 
                 // Key names etc.
                 var ssubkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
                 var ssubkey2 = $"{ssubkey1}\\command";
-                // Assemble command: _exePath id context target
 
-                // Dir:%D DirBg:%W File:%D DeskBg:%W Folder:%D
+                // Determine target based on origin. Dir/File/Folder:%D DirBg/DeskBg:%W.
                 var target = cmd.Context switch
                 {
                     ExplorerContext.DirBg => "%W",
@@ -333,7 +355,7 @@ namespace Shellinator
             }
         }
 
-        /// <summary>Convert the context enum to registry key.</summary>
+        /// <summary>Convert the internal enum to registry key.</summary>
         static string GetRegPath(ExplorerContext context)
         {
             return context switch
@@ -345,7 +367,9 @@ namespace Shellinator
                 _ => throw new ArgumentException("Impossible")
             };
         }
+        #endregion
 
+        #region Common infrastructure
         /// <summary>Simple logging and notification.</summary>
         void LogInfo(string msg)
         {
@@ -361,13 +385,5 @@ namespace Shellinator
             MessageBox.Show(msg);
         }
         #endregion
-
-        /// <summary>Where it all begins.</summary>
-        /// <param name="args"></param>
-        [STAThread]
-        static void Main(string[] args)
-        {
-            new App(args);
-        }
     }
 }

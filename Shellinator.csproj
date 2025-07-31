@@ -28,11 +28,8 @@
 
     <ItemGroup>
         <Compile Remove="lib\**" />
-        <Compile Remove="Splunk\**" />
         <EmbeddedResource Remove="lib\**" />
-        <EmbeddedResource Remove="Splunk\**" />
         <None Remove="lib\**" />
-        <None Remove="Splunk\**" />
     </ItemGroup>
 
     <ItemGroup>
