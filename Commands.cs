@@ -15,18 +15,13 @@ namespace Shellinator
         {
             _commands =
             [
-                new("treex",  ExplorerContext.Dir,    "Treex Dir",              "Copy a tree of selected directory to clipboard",   TreexCmd),
-                new("treex",  ExplorerContext.DirBg,  "Treex DirBg",              "Copy a tree here to clipboard.",                   TreexCmd),
-                new("openst", ExplorerContext.Dir,    "Open in Sublime Dir",    "Open selected directory in Sublime Text.",         SublimeCmd),
-                new("openst", ExplorerContext.DirBg,  "Open in Sublime DirBg",    "Open here in Sublime Text.",                       SublimeCmd),
-                new("findev", ExplorerContext.Dir,    "Open in Everything Dir", "Open selected directory in Everything.",           EverythingCmd),
-                new("findev", ExplorerContext.DirBg,  "Open in Everything DirBg", "Open here in Everything.",                         EverythingCmd),
-                new("exec",   ExplorerContext.File,   "Execute File",            "Execute file if executable otherwise open it.",    ExecCmd),
-                //new("test",   ExplorerContext.Dir,    "==Test Dir==",       "Debug stuff.",                                     TestCmd),
-                //new("test",   ExplorerContext.DirBg,  "==Test DirBg==",     "Debug stuff.",                                     TestCmd),
-                //new("test",   ExplorerContext.DeskBg, "==Test DeskBg==",    "Debug stuff.",                                     TestCmd),
-                //new("test",   ExplorerContext.File,   "==Test File==",      "Debug stuff.",                                     TestCmd),
-                ///////////new("test",   ExplorerContext.Folder, "==Test Folder==",    "Debug stuff.",                                     TestCmd)
+                new("treex",  ExplorerContext.Dir,    "Treex",              "Copy a tree of selected directory to clipboard",   TreexCmd),
+                new("treex",  ExplorerContext.DirBg,  "Treex",              "Copy a tree here to clipboard.",                   TreexCmd),
+                new("openst", ExplorerContext.Dir,    "Open in Sublime",    "Open selected directory in Sublime Text.",         SublimeCmd),
+                new("openst", ExplorerContext.DirBg,  "Open in Sublime",    "Open here in Sublime Text.",                       SublimeCmd),
+                new("findev", ExplorerContext.Dir,    "Open in Everything", "Open selected directory in Everything.",           EverythingCmd),
+                new("findev", ExplorerContext.DirBg,  "Open in Everything", "Open here in Everything.",                         EverythingCmd),
+                new("exec",   ExplorerContext.File,   "Execute",            "Execute file if executable otherwise open it.",    ExecCmd),
             ];
         }
 
@@ -65,8 +60,8 @@ namespace Shellinator
 
             var res = context switch
             {
-                ExplorerContext.Dir => ExecuteCommand([evpath, target]),
-                ExplorerContext.DirBg => ExecuteCommand([evpath, target]),
+                ExplorerContext.Dir => ExecuteCommand([evpath, "-parent", target]),
+                ExplorerContext.DirBg => ExecuteCommand([evpath, "-parent", target]),
                 _ => throw new ShellinatorException($"Invalid context: {context}"),
             };
 
@@ -82,11 +77,11 @@ namespace Shellinator
 
                 var res = ext switch
                 {
-                    ".cmd" or ".bat" => ExecuteCommand([target]),
+                    ".cmd" or ".bat" => ExecuteCommand([target], true),
                     ".ps1" => ExecuteCommand(["powershell", "-executionpolicy", "bypass", "-File", target]),
                     ".lua" => ExecuteCommand(["lua", target]),
-                    ".py" => ExecuteCommand(["python", target]),
-                    _ => ExecuteCommand([target]) // default just open.
+                    ".py" => ExecuteCommand(["py", target]),
+                    _ => ExecuteCommand([target], true) // default just open.
                 };
 
                 return res;

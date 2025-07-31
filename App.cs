@@ -59,9 +59,6 @@ namespace Shellinator
     internal partial class App
     {
         #region Fields
-        /// <summary>Optional UI.</summary>
-        readonly UI _ui = new();
-
         /// <summary>Simple profiling.</summary>
         readonly TimeIt _tmit = new();
 
@@ -86,7 +83,7 @@ namespace Shellinator
             // Init stuff.
             if (_exePath is null)
             {
-                LogInfo($">>>>> TOOLS_PATH not found, using current directory [{Environment.CurrentDirectory}]");
+                LogInfo($"TOOLS_PATH not found, using current directory [{Environment.CurrentDirectory}]");
                 _exePath = Environment.CurrentDirectory;
             }
 
@@ -102,33 +99,16 @@ namespace Shellinator
 
             InitCommands();
 
-            // Check for running in visual studio. TODO1
-            //[VisualStudioDir, C:\Users\cepth\OneDrive\OneDriveDocuments\Visual Studio 2022]
-            //[VisualStudioEdition, Microsoft Visual Studio Community 2022]
-            //[VisualStudioVersion, 17.0]
-            //[VS_Perf_Session_GCHeapCount, 2]
-            //[VSAPPIDDIR, C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\]
-            //[VSAPPIDNAME, devenv.exe]
-            //[VSLANG, 1033]
-            //[VsPerMonitorDpiAwarenessEnabled.23744, TRUE]
-            //[VSSKUEDITION, Community]
-
-            var evs = Environment.GetEnvironmentVariables();
-            foreach (var ev in evs)
+            // Check for running in visual studio.
+            if (Environment.GetEnvironmentVariable("VisualStudioVersion") is not null)
             {
-                //Debug.WriteLine(ev);
-            }
-
-            if (args.Length == 1 && args[0] == "__vsdev__")
-            {
-                _ui.Show();
-
                 // Dev code.
                 _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
                 _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
                 Environment.Exit(0);
             }
 
+            // Called by system via our commands.
             // Process the args => Shellinator.exe id context target.
             try
             {
@@ -153,8 +133,14 @@ namespace Shellinator
                 if (res.Code == 0)
                 {
                     // Success. Capture any stdout.
-                    LogInfo($">>>10 [{res.Stdout == null}]");
-                    Clipboard.SetText("res.Stdout");
+                    if (res.Stdout.Length > 0)
+                    {
+                        Clipboard.SetText(res.Stdout);
+                    }
+                    else
+                    {
+                        Clipboard.Clear();
+                    }
                 }
                 else
                 {
@@ -162,33 +148,31 @@ namespace Shellinator
                     List<string> ls = [];
                     ls.Append($"=== code: {res.Code}");
 
-                    if (res.Stdout != "")
+                    if (res.Stdout.Length > 0)
                     {
                         ls.Append($"=== stdout:");
                         ls.Append($"{res.Stdout}");
                     }
 
-                    if (res.Stderr != "")
+                    if (res.Stderr.Length > 0)
                     {
                         ls.Append($"=== stderr:");
                         ls.Append($"{res.Stderr}");
                     }
 
-                    var s = string.Join(Environment.NewLine, ls);
-                    LogInfo($">>>20 {string.Join("|", ls)}");
-                    Clipboard.SetText(string.Join(Environment.NewLine, ls));
+                    Clipboard.SetText(string.Join(Environment.NewLine, string.Join(Environment.NewLine, ls)));
                 }
             }
             catch (ShellinatorException ex) // app error
             {
-                LogError($"ShellinatorException: {ex.Message}");
-                LogInfo(ex.ToString());
+                LogError($"{ex}");
+                Clipboard.SetText(ex.ToString());
                 Environment.Exit(1);
             }
             catch (Exception ex) // something else
             {
-                LogError($"{ex.GetType()}: {ex.Message}");
-                LogInfo(ex.ToString());
+                LogError($"{ex}");
+                Clipboard.SetText(ex.ToString());
                 Environment.Exit(2);
             }
 
@@ -200,26 +184,14 @@ namespace Shellinator
 
         #region Internals
         /// <summary>
-        /// Generic command executor. Suppresses console window creation.
+        /// Generic command executor. Called by commands handlers. Suppresses console window creation.
         /// </summary>
-        ///// <param name="exe"></param>
-        /// <param name="args"></param>
-        /// <param name="cmd"></param>
+        /// <param name="args">All args including command first.</param>
+        /// <param name="cmd">True for command line commands.</param>
         /// <returns>Result code, stdout, stderr</returns>
-        // ExecResult ExecuteCommand(string exe, List<string> args)
         ExecResult ExecuteCommand(List<string> args, bool cmd = false)
         {
             LogInfo($"ExecuteCommand():[{string.Join(" ", args)}] cmd:{cmd}");
-
-            // This works:
-            //var res = ExecuteCommand(["cmd", "/C", "dir", @"C:\Dev\Apps\Treex\Test"]);
-            // This fails:
-            //var res = ExecuteCommand(["dir", @"C:\Dev\Apps\Treex\Test"]);
-
-            // This works:
-            //var res = ExecuteCommand(["cmd", "/C", "treex", @"C:\Dev\Apps\Treex\Test"]);
-            // This works:
-            //var res = ExecuteCommand(["treex", @"C:\Dev\Apps\Treex\Test"]);
 
             if (cmd)
             {
@@ -231,7 +203,6 @@ namespace Shellinator
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
-                //RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
             };
@@ -240,20 +211,18 @@ namespace Shellinator
             // pinfo.EnvironmentVariables["MY_VAR"] = "Hello!";
 
             using Process proc = new() { StartInfo = pinfo };
+            //proc.Exited += (sender, e) => { LogInfo("Process exit event."); };
 
-            proc.Exited += (sender, e) => { LogInfo("Process exit event."); };
-
-            LogInfo("Start process...");
+            //LogInfo("Start process...");
             proc.Start();
 
             // TIL: To avoid deadlocks, always read the output stream first and then wait.
             string stdout = proc.StandardOutput.ReadToEnd();
             string stderr = proc.StandardError.ReadToEnd();
 
-            LogInfo("Wait for process to exit...");
+            //LogInfo("Wait for process to exit...");
             proc.WaitForExit();
-
-            LogInfo("Exited.");
+            //LogInfo("Exited.");
 
             return new(proc.ExitCode, stdout, stderr);
         }
@@ -382,11 +351,6 @@ namespace Shellinator
         {
             // Always log.
             File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {msg}{Environment.NewLine}");
-
-            if (_ui.Visible)
-            {
-                _ui.AppendLine(msg);
-            }
         }
 
         /// <summary>Simple logging and notification.</summary>
@@ -394,18 +358,13 @@ namespace Shellinator
         {
             // Always log.
             File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} ERROR {msg}{Environment.NewLine}");
-
-            if (_ui.Visible)
-            {
-                _ui.AppendLine(msg);
-            }
-
             MessageBox.Show(msg);
         }
         #endregion
 
         /// <summary>Where it all begins.</summary>
         /// <param name="args"></param>
+        [STAThread]
         static void Main(string[] args)
         {
             new App(args);
