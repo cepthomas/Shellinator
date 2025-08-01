@@ -21,7 +21,7 @@ namespace Shellinator
                 new("openst", ExplorerContext.DirBg,  "Open in Sublime",    "Open here in Sublime Text.",                       SublimeCmd),
                 new("findev", ExplorerContext.Dir,    "Open in Everything", "Open selected directory in Everything.",           EverythingCmd),
                 new("findev", ExplorerContext.DirBg,  "Open in Everything", "Open here in Everything.",                         EverythingCmd),
-                new("exec",   ExplorerContext.File,   "Execute",            "Execute file if executable otherwise open it.",    ExecCmd),
+                new("click",  ExplorerContext.File,   "Click",              "Like double click the file.",                      ClickCmd),
             ];
         }
 
@@ -69,7 +69,7 @@ namespace Shellinator
         }
 
         //--------------------------------------------------------//
-        ExecResult ExecCmd(ExplorerContext context, string target)
+        ExecResult ClickCmd(ExplorerContext context, string target)
         {
             if (context == ExplorerContext.File)
             {

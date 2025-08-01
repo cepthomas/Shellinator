@@ -9,6 +9,7 @@ using System.Runtime.Intrinsics;
 using System.Linq;
 using System.Collections;
 using Ephemera.NBagOfTricks;
+using System.Runtime.CompilerServices;
 
 
 namespace Shellinator
@@ -118,7 +119,13 @@ namespace Shellinator
                 InitCommands();
 
                 ///// Check for running in visual studio. That indicates mode.
-                if (Environment.GetEnvironmentVariable("VisualStudioVersion") is null)
+                if (Environment.GetEnvironmentVariable("VisualStudioVersion") is not null)
+                {
+                    // VS management mode. Default is to rewrite the commands to the registry.
+                    _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
+                    _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
+                }
+                else
                 {
                     // Normal mode called from system/registry.
                     LogInfo($"Shellinator command args:{string.Join(" ", args)}");
@@ -156,29 +163,26 @@ namespace Shellinator
                     {
                         // Command failed. Capture everything useful.
                         List<string> ls = [];
-                        ls.Append($"=== code: {res.Code}");
+                        ls.Add($"=== code: {res.Code}");
 
                         if (res.Stdout.Length > 0)
                         {
-                            ls.Append($"=== stdout:");
-                            ls.Append($"{res.Stdout}");
+                            ls.Add($"=== stdout:");
+                            ls.Add($"{res.Stdout}");
                         }
 
                         if (res.Stderr.Length > 0)
                         {
-                            ls.Append($"=== stderr:");
-                            ls.Append($"{res.Stderr}");
+                            ls.Add($"=== stderr:");
+                            ls.Add($"{res.Stderr}");
                         }
 
-                        Clipboard.SetText(string.Join(Environment.NewLine, string.Join(Environment.NewLine, ls)));
+                        var sres = string.Join(Environment.NewLine, ls);
+                        LogError(sres);
+
+                        Clipboard.SetText(sres);
                         code = 1;
                     }
-                }
-                else
-                {
-                     // VS management mode. Default is to rewrite the commands to the registry.
-                    _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
-                    _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
                 }
             }
             catch (ShellinatorException ex) // app error
@@ -232,7 +236,7 @@ namespace Shellinator
             using Process proc = new() { StartInfo = pinfo };
             //proc.Exited += (sender, e) => { LogInfo("Process exit event."); };
 
-            //LogInfo("Start process...");
+            LogInfo("Start process...");
             proc.Start();
 
             // TIL: To avoid deadlocks, always read the output stream first and then wait.
@@ -241,7 +245,7 @@ namespace Shellinator
 
             //LogInfo("Wait for process to exit...");
             proc.WaitForExit();
-            //LogInfo("Exited.");
+            LogInfo("Exited.");
 
             return new(proc.ExitCode, stdout, stderr);
         }
@@ -371,18 +375,20 @@ namespace Shellinator
 
         #region Common infrastructure
         /// <summary>Simple logging and notification.</summary>
-        void LogInfo(string msg)
+        void LogInfo(string msg, [CallerFilePath] string file = "", [CallerLineNumber] int line = -1)
         {
             // Always log.
-            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {msg}{Environment.NewLine}");
+            var fspec = file != "" ? $"{Path.GetFileName(file)}({line}) " : " ";
+            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {fspec}{msg}{Environment.NewLine}");
         }
 
         /// <summary>Simple logging and notification.</summary>
-        void LogError(string msg)
+        void LogError(string msg, [CallerFilePath] string file = "", [CallerLineNumber] int line = -1)
         {
             // Always log.
-            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} ERROR {msg}{Environment.NewLine}");
-            MessageBox.Show(msg);
+            var fspec = file != "" ? $"{Path.GetFileName(file)}({line}) " : " ";
+            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} ERROR {fspec}{msg}{Environment.NewLine}");
+            MessageBox.Show("See the log", "Command failed");
         }
         #endregion
     }
