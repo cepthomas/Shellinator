@@ -132,7 +132,7 @@ namespace Shellinator
 
                     _tmit.Snap("Here we go!");
 
-                    // Process the args: sellinator.exe id context target.
+                    // Process the args: shellinator.exe id context target.
                     if (args.Length != 3)
                     {
                         throw new ShellinatorException($"Invalid command line format: [{string.Join(" ", args)}]");
