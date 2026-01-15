@@ -96,8 +96,11 @@ namespace Shellinator
                 ///// Init internal stuff.
 
                 // Standard path supplied?
-                string? path = Environment.GetEnvironmentVariable("TOOLS_PATH");
-                _exePath = path is not null ? path : Environment.CurrentDirectory;
+                var toolsPath = Environment.GetEnvironmentVariable("TOOLS_PATH");
+                if (toolsPath is null) { throw new ShellinatorException("Environment missing TOOLS_PATH"); }
+
+                _exePath = Path.Combine(toolsPath, "Apps");
+                if (!Path.Exists(_exePath)) { throw new ShellinatorException($"Missing folder {_exePath}"); }
 
                 // Init log.
                 _logPath = Path.Join(_exePath, "shellinator.log");
@@ -109,12 +112,6 @@ namespace Shellinator
                     File.Move(_logPath, newfn);
                 }
 
-                // Logging ok now.
-                if (path is null)
-                {
-                    LogInfo($"TOOLS_PATH not found, using [{_exePath}]");
-                }
-
                 ///// Set up commands.
                 InitCommands();
 
@@ -122,8 +119,8 @@ namespace Shellinator
                 if (Environment.GetEnvironmentVariable("VisualStudioVersion") is not null)
                 {
                     // VS management mode. Default is to rewrite the commands to the registry.
-                    _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
-                    _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
+                    //_commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id, toolsPath));
+                    //_commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id, _exePath));
                 }
                 else
                 {
@@ -189,12 +186,14 @@ namespace Shellinator
             {
                 LogError($"{ex}");
                 Clipboard.SetText(ex.ToString());
+                MessageBox.Show(ex.ToString());
                 code = 2;
             }
             catch (Exception ex) // something else
             {
                 LogError($"{ex}");
                 Clipboard.SetText(ex.ToString());
+                MessageBox.Show(ex.ToString());
                 code = 3;
             }
 
@@ -261,7 +260,8 @@ namespace Shellinator
         /// @=spec.CommandLine
         /// </summary>
         /// <param name="id">Which command</param>
-        void Reg(string id)
+        /// <param name="path">Exe location</param>
+        void Reg(string id, string path)
         {
             // Registry sections of interest:
             // - `HKEY_LOCAL_MACHINE` (HKLM): defaults for all users using a machine (administrator)
@@ -332,7 +332,8 @@ namespace Shellinator
 
         /// <summary>Delete existing registry entry.</summary>
         /// <param name="id">Which command</param>
-        void Unreg(string id)
+        /// <param name="path">Exe location</param>
+        void Unreg(string id, string path)
         {
             var cmds = _commands.Where(c => c.Id == id);
             if (!cmds.Any())
