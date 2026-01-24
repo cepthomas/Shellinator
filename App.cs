@@ -389,7 +389,7 @@ namespace Shellinator
             // Always log.
             var fspec = file != "" ? $"{Path.GetFileName(file)}({line}) " : " ";
             File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} ERROR {fspec}{msg}{Environment.NewLine}");
-            MessageBox.Show("See the log", "Command failed");
+            MessageBox.Show($"{fspec}{msg}", "Command failed");
         }
         #endregion
     }

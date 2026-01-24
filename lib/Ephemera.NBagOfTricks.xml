@@ -147,9 +147,6 @@
             <param name="y"></param>
             <returns></returns>
         </member>
-        <member name="T:Ephemera.NBagOfTricks.ConsoleColorEx">
-            <summary>ConsoleColor variation with None added.</summary>
-        </member>
         <member name="M:Ephemera.NBagOfTricks.ColorUtils.ColorFromAnsi(System.String)">
             <summary>
             Decode ansi escape sequence arguments. TODO AnsiFromColor()
@@ -1130,12 +1127,6 @@
         </member>
         <member name="P:Ephemera.NBagOfTricks.LogManager.MinLevelNotif">
             <summary>Event filter for callback event.</summary>
-        </member>
-        <member name="P:Ephemera.NBagOfTricks.LogManager.Timestamp">
-            <summary>Add a timestamp.</summary>
-        </member>
-        <member name="P:Ephemera.NBagOfTricks.LogManager.SourceInfo">
-            <summary>Add source file/line.</summary>
         </member>
         <member name="P:Ephemera.NBagOfTricks.LogManager.TimeFormat">
             <summary>Format for file records.</summary>
