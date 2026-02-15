@@ -99,7 +99,8 @@ namespace Shellinator
                 var toolsPath = Environment.GetEnvironmentVariable("TOOLS_PATH");
                 if (toolsPath is null) { throw new ShellinatorException("Environment missing TOOLS_PATH"); }
 
-                _exePath = Path.Combine(toolsPath, "Apps");
+                //_exePath = Path.Combine(toolsPath, "Apps");
+                _exePath = toolsPath;
                 if (!Path.Exists(_exePath)) { throw new ShellinatorException($"Missing folder {_exePath}"); }
 
                 // Init log.
