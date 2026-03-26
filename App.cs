@@ -38,7 +38,7 @@ namespace Shellinator
 
     /// <summary>Describes one menu command.</summary>
     /// <param name="Id">Internal id and registry key. Don't use: edit, explore, find, open, print, properties, runas.</param>
-    /// <param name="Context">Where to install in `REG_ROOT`</param>
+    /// <param name="Context">Where to install in REG_ROOT</param>
     /// <param name="Text">As it appears in the context menu.</param>
     /// <param name="Description">As it appears in the context menu.</param>
     /// <param name="Handler">Handle command.</param>
@@ -70,7 +70,7 @@ namespace Shellinator
         readonly string _logPath;
 
         /// <summary>Dry run the registry writes.</summary>
-        readonly bool _fake = false;
+        readonly bool _fake = true;
 
         /// <summary>All the app commands.</summary>
         List<ExplorerCommand> _commands = [];
@@ -120,8 +120,30 @@ namespace Shellinator
                 if (Environment.GetEnvironmentVariable("VisualStudioVersion") is not null)
                 {
                     // VS management mode. Default is to rewrite the commands to the registry.
-                    //_commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id, toolsPath));
-                    //_commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id, _exePath));
+                //    _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id, toolsPath));
+                    //  App.cs(358) DeleteSubKeyTree [Directory\shell\treex]
+                    //  App.cs(358) DeleteSubKeyTree [Directory\Background\shell\treex]
+                    //  App.cs(358) DeleteSubKeyTree [Directory\shell\openst]
+                    //  App.cs(358) DeleteSubKeyTree [Directory\Background\shell\openst]
+                    //  App.cs(358) DeleteSubKeyTree [Directory\shell\findev]
+                    //  App.cs(358) DeleteSubKeyTree [Directory\Background\shell\findev]
+                    //  App.cs(358) DeleteSubKeyTree [*\shell\run]
+
+                //    _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id, _exePath));
+                    //  App.cs(323) SetValue [Directory\shell\treex] -> [MUIVerb=Treex]
+                    //  App.cs(324) SetValue [Directory\shell\treex\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" treex Dir "%D"]
+                    //  App.cs(323) SetValue [Directory\Background\shell\treex] -> [MUIVerb=Treex]
+                    //  App.cs(324) SetValue [Directory\Background\shell\treex\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" treex DirBg "%W"]
+                    //  App.cs(323) SetValue [Directory\shell\openst] -> [MUIVerb=Open in Sublime]
+                    //  App.cs(324) SetValue [Directory\shell\openst\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" openst Dir "%D"]
+                    //  App.cs(323) SetValue [Directory\Background\shell\openst] -> [MUIVerb=Open in Sublime]
+                    //  App.cs(324) SetValue [Directory\Background\shell\openst\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" openst DirBg "%W"]
+                    //  App.cs(323) SetValue [Directory\shell\findev] -> [MUIVerb=Open in Everything]
+                    //  App.cs(324) SetValue [Directory\shell\findev\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" findev Dir "%D"]
+                    //  App.cs(323) SetValue [Directory\Background\shell\findev] -> [MUIVerb=Open in Everything]
+                    //  App.cs(324) SetValue [Directory\Background\shell\findev\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" findev DirBg "%W"]
+                    //  App.cs(323) SetValue [*\shell\run] -> [MUIVerb=Run]
+                    //  App.cs(324) SetValue [*\shell\run\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" run File "%D"]
                 }
                 else
                 {
@@ -161,17 +183,17 @@ namespace Shellinator
                     {
                         // Command failed. Capture everything useful.
                         List<string> ls = [];
-                        ls.Add($"=== code: {res.Code}");
+                        ls.Add($">>> code: {res.Code}");
 
                         if (res.Stdout.Length > 0)
                         {
-                            ls.Add($"=== stdout:");
+                            ls.Add($">>> stdout:");
                             ls.Add($"{res.Stdout}");
                         }
 
                         if (res.Stderr.Length > 0)
                         {
-                            ls.Add($"=== stderr:");
+                            ls.Add($">>> stderr:");
                             ls.Add($"{res.Stderr}");
                         }
 
@@ -243,7 +265,7 @@ namespace Shellinator
             var stdout = proc.StandardOutput.ReadToEnd();
             var stderr = proc.StandardError.ReadToEnd();
 
-            //LogInfo("Wait for process to exit...");
+            // LogInfo("Wait for process to exit...");
             proc.WaitForExit();
             LogInfo("Exited.");
 
@@ -264,28 +286,30 @@ namespace Shellinator
         /// <param name="path">Exe location</param>
         void Reg(string id, string path)
         {
+            // From MS:
             // Registry sections of interest:
-            // - `HKEY_LOCAL_MACHINE` (HKLM): defaults for all users using a machine (administrator)
-            // - `HKEY_CURRENT_USER` (HKCU): user specific settings (not administrator)
-            // - `HKEY_CLASSES_ROOT` (HKCR): virtual hive of `HKEY_LOCAL_MACHINE` with `HKEY_CURRENT_USER` overrides (administrator)
-            // `HKEY_CLASSES_ROOT` should be used only for reading currently effective settings. A write to `HKEY_CLASSES_ROOT` is
-            //   always redirected to `HKEY_LOCAL_MACHINE`\Software\Classes.
-            // In general, write directly to `HKEY_LOCAL_MACHINE\Software\Classes` or `HKEY_CURRENT_USER\Software\Classes` and read
-            //   from `HKEY_CLASSES_ROOT`.
-            // Shellinator bases all registry accesses (R/W) at `HKEY_CURRENT_USER\Software\Classes` aka `REG_ROOT`.
+            //   - HKEY_LOCAL_MACHINE (HKLM): defaults for all users using a machine (administrator)
+            //   - HKEY_CURRENT_USER (HKCU): user specific settings (not administrator)
+            //   - HKEY_CLASSES_ROOT (HKCR): virtual hive of HKEY_LOCAL_MACHINE with HKEY_CURRENT_USER overrides (administrator)
+            // HKEY_CLASSES_ROOT should be used only for reading currently effective settings. A write to
+            //   HKEY_CLASSES_ROOT is always redirected to HKEY_LOCAL_MACHINE\Software\Classes.
+            // In general, write directly to HKEY_LOCAL_MACHINE\Software\Classes or
+            //   HKEY_CURRENT_USER\Software\Classes and read from HKEY_CLASSES_ROOT.
+            //
+            // Shellinator bases all registry accesses (R/W) at HKEY_CURRENT_USER\Software\Classes aka REG_ROOT.
             // - General how to: https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers
             // - Detailed registry editing: https://mrlixm.github.io/blog/windows-explorer-context-menu/
 
             // Nuances of shell command vars:
             // https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context
             // Ones possibly of interest:
-            // - %D: Selected file or directory with expanded named folders. Only Dir, File, Folder.
-            // - %W: The working directory. All except Folder.
-            // - %L: Selected file or directory name. Only Dir, File.
-            // - %V: The directory of the selection, maybe unreliable? All except Folder.
+            //   - %D: Selected file or directory with expanded named folders. Only Dir, File, Folder.
+            //   - %W: The working directory. All except Folder.
+            //   - %L: Selected file or directory name. Only Dir, File.
+            //   - %V: The directory of the selection, maybe unreliable? All except Folder.
 
             // All paths and macros that expand to paths must be wrapped in double quotes.
-            // The builtin env vars like `%ProgramFiles%` are also supported.
+            // The builtin env vars like %ProgramFiles% are also supported.
 
             var cmds = _commands.Where(c => c.Id == id);
             if (!cmds.Any())
