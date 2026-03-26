@@ -269,8 +269,9 @@ namespace Shellinator
             // - `HKEY_CURRENT_USER` (HKCU): user specific settings (not administrator)
             // - `HKEY_CLASSES_ROOT` (HKCR): virtual hive of `HKEY_LOCAL_MACHINE` with `HKEY_CURRENT_USER` overrides (administrator)
             // `HKEY_CLASSES_ROOT` should be used only for reading currently effective settings. A write to `HKEY_CLASSES_ROOT` is
-            // always redirected to `HKEY_LOCAL_MACHINE`\Software\Classes.
-            // In general, write directly to `HKEY_LOCAL_MACHINE\Software\Classes` or `HKEY_CURRENT_USER\Software\Classes` and read from `HKEY_CLASSES_ROOT`.
+            //   always redirected to `HKEY_LOCAL_MACHINE`\Software\Classes.
+            // In general, write directly to `HKEY_LOCAL_MACHINE\Software\Classes` or `HKEY_CURRENT_USER\Software\Classes` and read
+            //   from `HKEY_CLASSES_ROOT`.
             // Shellinator bases all registry accesses (R/W) at `HKEY_CURRENT_USER\Software\Classes` aka `REG_ROOT`.
             // - General how to: https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers
             // - Detailed registry editing: https://mrlixm.github.io/blog/windows-explorer-context-menu/
