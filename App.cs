@@ -70,7 +70,7 @@ namespace Shellinator
         readonly string _logPath;
 
         /// <summary>Dry run the registry writes.</summary>
-        readonly bool _fake = true;
+        readonly bool _fake = false;
 
         /// <summary>All the app commands.</summary>
         List<ExplorerCommand> _commands = [];
@@ -94,7 +94,6 @@ namespace Shellinator
             try
             {
                 ///// Init internal stuff.
-
                 // Standard path supplied?
                 var toolsPath = Environment.GetEnvironmentVariable("TOOLS_PATH");
                 if (toolsPath is null) { throw new ShellinatorException("Environment missing TOOLS_PATH"); }
@@ -116,93 +115,57 @@ namespace Shellinator
                 ///// Set up commands.
                 InitCommands();
 
-                ///// Check for running in visual studio. That indicates mode.
-                if (Environment.GetEnvironmentVariable("VisualStudioVersion") is not null)
+                ///// Process the args: shellinator.exe id context target.
+                string id = args.Length > 0 ? args[0].ToLower() : "No args!";
+                switch (args.Length, id)
                 {
-                    // VS management mode. Default is to rewrite the commands to the registry.
-                //    _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id, toolsPath));
-                    //  App.cs(358) DeleteSubKeyTree [Directory\shell\treex]
-                    //  App.cs(358) DeleteSubKeyTree [Directory\Background\shell\treex]
-                    //  App.cs(358) DeleteSubKeyTree [Directory\shell\openst]
-                    //  App.cs(358) DeleteSubKeyTree [Directory\Background\shell\openst]
-                    //  App.cs(358) DeleteSubKeyTree [Directory\shell\findev]
-                    //  App.cs(358) DeleteSubKeyTree [Directory\Background\shell\findev]
-                    //  App.cs(358) DeleteSubKeyTree [*\shell\run]
+                    case (1, "reg"):
+                        LogInfo($"Shellinator register all");
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id, _exePath));
+                        break;
 
-                //    _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id, _exePath));
-                    //  App.cs(323) SetValue [Directory\shell\treex] -> [MUIVerb=Treex]
-                    //  App.cs(324) SetValue [Directory\shell\treex\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" treex Dir "%D"]
-                    //  App.cs(323) SetValue [Directory\Background\shell\treex] -> [MUIVerb=Treex]
-                    //  App.cs(324) SetValue [Directory\Background\shell\treex\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" treex DirBg "%W"]
-                    //  App.cs(323) SetValue [Directory\shell\openst] -> [MUIVerb=Open in Sublime]
-                    //  App.cs(324) SetValue [Directory\shell\openst\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" openst Dir "%D"]
-                    //  App.cs(323) SetValue [Directory\Background\shell\openst] -> [MUIVerb=Open in Sublime]
-                    //  App.cs(324) SetValue [Directory\Background\shell\openst\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" openst DirBg "%W"]
-                    //  App.cs(323) SetValue [Directory\shell\findev] -> [MUIVerb=Open in Everything]
-                    //  App.cs(324) SetValue [Directory\shell\findev\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" findev Dir "%D"]
-                    //  App.cs(323) SetValue [Directory\Background\shell\findev] -> [MUIVerb=Open in Everything]
-                    //  App.cs(324) SetValue [Directory\Background\shell\findev\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" findev DirBg "%W"]
-                    //  App.cs(323) SetValue [*\shell\run] -> [MUIVerb=Run]
-                    //  App.cs(324) SetValue [*\shell\run\command] -> [@="C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" run File "%D"]
-                }
-                else
-                {
-                    // Normal mode called from system/registry.
-                    LogInfo($"Shellinator command args:{string.Join(" ", args)}");
+                    case (1, "unreg"):
+                        LogInfo($"Shellinator unregister all");
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id, toolsPath));
+                        break;
 
-                    _tmit.Snap("Here we go!");
+                    case (1, "dev"):
+                        LogInfo($"Shellinator dev mode");
+                        var resd = TestCmd(ExplorerContext.Dir, "Do stuff...");
+                        break;
 
-                    // Process the args: shellinator.exe id context target.
-                    if (args.Length != 3)
-                    {
-                        throw new ShellinatorException($"Invalid command line format: [{string.Join(" ", args)}]");
-                    }
+                    case (3, _):
+                        // Normal mode called from system using registry entry.
+                        LogInfo($"Shellinator command args:{string.Join(" ", args)}");
+                        _tmit.Snap("Here we go!");
 
-                    var id = args[0];
-                    var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[1]);
-                    var target = Environment.ExpandEnvironmentVariables(args[2]);
+                        var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[1]);
+                        var target = Environment.ExpandEnvironmentVariables(args[2]);
+                        var cmdProc = _commands.FirstOrDefault(c => c.Id == id); // throws if invalid
+                        // Run command.
+                        var res = cmdProc.Handler(context, target);
 
-                    var cmdProc = _commands.FirstOrDefault(c => c.Id == id); // can throw if invalid
-
-                    // Run command.
-                    var res = cmdProc.Handler(context, target);
-
-                    if (res.Code == 0)
-                    {
-                        // Success. Capture any stdout. TIL don't set clipboard to an empty string.
-                        if (res.Stdout.Length > 0)
+                        if (res.Code == 0)
                         {
-                            Clipboard.SetText(res.Stdout);
+                            // Success. Capture any stdout. TIL don't set clipboard to an empty string.
+                            Clipboard.SetText(res.Stdout.Length > 0 ? res.Stdout : "Success");
                         }
                         else
                         {
-                            Clipboard.Clear();
+                            // Command failed. Capture everything useful.
+                            List<string> ls = [];
+                            ls.Add($">>> FAILED!!!{Environment.NewLine}code: {res.Code}");
+                            ls.Add($">>> stdout:{Environment.NewLine}{(res.Stdout.Length > 0 ? res.Stdout : "None")}");
+                            ls.Add($">>> stderr:{Environment.NewLine}{(res.Stderr.Length > 0 ? res.Stderr : "None")}");
+                            var sres = string.Join(Environment.NewLine, ls);
+                            LogError(sres);
+                            Clipboard.SetText(sres);
+                            code = 1;
                         }
-                    }
-                    else
-                    {
-                        // Command failed. Capture everything useful.
-                        List<string> ls = [];
-                        ls.Add($">>> code: {res.Code}");
+                        break;
 
-                        if (res.Stdout.Length > 0)
-                        {
-                            ls.Add($">>> stdout:");
-                            ls.Add($"{res.Stdout}");
-                        }
-
-                        if (res.Stderr.Length > 0)
-                        {
-                            ls.Add($">>> stderr:");
-                            ls.Add($"{res.Stderr}");
-                        }
-
-                        var sres = string.Join(Environment.NewLine, ls);
-                        LogError(sres);
-
-                        Clipboard.SetText(sres);
-                        code = 1;
-                    }
+                    default:
+                        throw new ShellinatorException($"Invalid command line args: [{string.Join(" ", args)}]");
                 }
             }
             catch (ShellinatorException ex) // app error
@@ -415,7 +378,7 @@ namespace Shellinator
             // Always log.
             var fspec = file != "" ? $"{Path.GetFileName(file)}({line}) " : " ";
             File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} ERROR {fspec}{msg}{Environment.NewLine}");
-            MessageBox.Show($"{fspec}{msg}", "Command failed");
+            //MessageBox.Show($"{fspec}{msg}", "Command failed");
         }
         #endregion
     }
