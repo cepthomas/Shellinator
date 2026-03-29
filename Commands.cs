@@ -7,7 +7,7 @@ using System.Windows.Forms;
 
 namespace Shellinator
 {
-    /// <summary>The customized part of the app.</summary>
+    /// <summary>The customized part of the app. TODO make scriptable by user - C# or lua.</summary>
     internal partial class App
     {
         /// <summary>Set up commands.</summary>

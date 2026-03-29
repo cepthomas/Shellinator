@@ -32,6 +32,9 @@ namespace Shellinator
 
         /// <summary>All the app commands.</summary>
         List<ExplorerCommand> _commands = [];
+
+        /// <summary>Don't use reserved commands.</summary>
+        List<string> _reserved = [ "edit", "explore", "find", "open", "print", "properties", "runas" ];
         #endregion
 
         /// <summary>Where it all begins.</summary>
@@ -233,10 +236,8 @@ namespace Shellinator
             // The builtin env vars like %ProgramFiles% are also supported.
 
             var cmds = _commands.Where(c => c.Id == id);
-            if (!cmds.Any())
-            {
-                throw new ShellinatorException($"Invalid command: {id}");
-            }
+            if (!cmds.Any()) { throw new ShellinatorException($"Invalid command: {id}"); }
+            if (!_reserved.Contains(id)) { throw new ArgumentException($"Invalid command: {id}"); }
 
             foreach (var cmd in cmds)
             {
