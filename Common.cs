@@ -1,15 +1,4 @@
 using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using System.Windows.Forms;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
-using System.Linq;
-using System.Collections;
-using System.Runtime.CompilerServices;
-using Ephemera.NBagOfTricks;
 
 
 namespace Shellinator
