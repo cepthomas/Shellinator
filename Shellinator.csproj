@@ -33,10 +33,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Content Include="Marco.ico" />
-    </ItemGroup>
-
-    <ItemGroup>
         <Reference Include="Ephemera.NBagOfTricks">
             <HintPath>lib\Ephemera.NBagOfTricks.dll</HintPath>
         </Reference>
