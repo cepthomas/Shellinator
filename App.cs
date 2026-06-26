@@ -31,7 +31,7 @@ namespace Shellinator
         List<ExplorerCommand> _commands = [];
 
         /// <summary>Don't use reserved commands.</summary>
-        List<string> _reserved = [ "edit", "explore", "find", "open", "print", "properties", "runas" ];
+        List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
         #endregion
 
         /// <summary>Where it all begins.</summary>
@@ -89,7 +89,13 @@ namespace Shellinator
 
                     case (1, "dev"):
                         LogInfo($"Shellinator dev mode");
-                        var resd = TestCmd(ExplorerContext.Dir, "Do stuff...");
+                        //var resd = TestCmd(ExplorerContext.Dir, "Do stuff...");
+
+                        _fake = true;
+                        LogInfo($"Shellinator register all");
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id, _exePath));
+                        LogInfo($"Shellinator unregister all");
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id, toolsPath));
                         break;
 
                     case (3, _):
@@ -100,7 +106,7 @@ namespace Shellinator
                         var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[1]);
                         var target = Environment.ExpandEnvironmentVariables(args[2]);
                         var cmdProc = _commands.FirstOrDefault(c => c.Id == id); // throws if invalid
-                        // Run command.
+                                                                                 // Run command.
                         var res = cmdProc.Handler(context, target);
 
                         if (res.Code == 0)
@@ -142,8 +148,8 @@ namespace Shellinator
             }
 
             _tmit.Snap("All done");
-            _tmit.Captures.ForEach(c => LogInfo(c));
-            
+            //_tmit.Captures.ForEach(c => LogInfo(c));
+
             Environment.Exit(code);
         }
         #endregion
@@ -157,7 +163,7 @@ namespace Shellinator
         /// <returns>Result code, stdout, stderr</returns>
         ExecResult ExecuteCommand(List<string> args, bool cmd = false)
         {
-            LogInfo($"ExecuteCommand():[{string.Join(" ", args)}] cmd:{cmd}");
+            //LogInfo($"ExecuteCommand():[{string.Join(" ", args)}] cmd:{cmd}");
 
             if (cmd)
             {
@@ -179,7 +185,7 @@ namespace Shellinator
             using Process proc = new() { StartInfo = pinfo };
             //proc.Exited += (sender, e) => { LogInfo("Process exit event."); };
 
-            LogInfo("Start process...");
+            //LogInfo("Start process...");
             proc.Start();
 
             // TIL: To avoid deadlocks, always read the output stream first and then wait.
@@ -188,7 +194,7 @@ namespace Shellinator
 
             // LogInfo("Wait for process to exit...");
             proc.WaitForExit();
-            LogInfo("Exited.");
+            //LogInfo("Exited.");
 
             return new(proc.ExitCode, stdout, stderr);
         }
@@ -234,7 +240,7 @@ namespace Shellinator
 
             var cmds = _commands.Where(c => c.Id == id);
             if (!cmds.Any()) { throw new ShellinatorException($"Invalid command: {id}"); }
-            if (!_reserved.Contains(id)) { throw new ArgumentException($"Invalid command: {id}"); }
+            if (_reserved.Contains(id)) { throw new ArgumentException($"Invalid command: {id}"); }
 
             foreach (var cmd in cmds)
             {
