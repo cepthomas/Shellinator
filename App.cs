@@ -54,6 +54,7 @@ namespace Shellinator
                 ///// Init internal stuff.
                 // Standard path supplied?
                 var toolsPath = Environment.GetEnvironmentVariable("TOOLS_PATH");
+                //TODO1?? 
                 if (toolsPath is null) { throw new ShellinatorException("Environment missing TOOLS_PATH"); }
 
                 //_exePath = Path.Combine(toolsPath, "Apps");
@@ -73,29 +74,36 @@ namespace Shellinator
                 ///// Set up commands.
                 InitCommands();
 
-                ///// Process the args: shellinator.exe id context target.
+                ///// Process the args: shellinator.exe id context target. TODO1
                 string id = args.Length > 0 ? args[0].ToLower() : "No args!";
                 switch (args.Length, id)
                 {
                     case (1, "reg"):
                         LogInfo($"Shellinator register all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id, _exePath));
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
                         break;
 
                     case (1, "unreg"):
                         LogInfo($"Shellinator unregister all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id, toolsPath));
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
                         break;
 
                     case (1, "dev"):
                         LogInfo($"Shellinator dev mode");
+
+                        // dev1
                         //var resd = TestCmd(ExplorerContext.Dir, "Do stuff...");
 
+                        // dev2
+                        //var d = new Dev();
+                        //d.Go();
+
+                        // dev3
                         _fake = true;
                         LogInfo($"Shellinator register all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id, _exePath));
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
                         LogInfo($"Shellinator unregister all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id, toolsPath));
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
                         break;
 
                     case (3, _):
@@ -105,8 +113,8 @@ namespace Shellinator
 
                         var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[1]);
                         var target = Environment.ExpandEnvironmentVariables(args[2]);
-                        var cmdProc = _commands.FirstOrDefault(c => c.Id == id); // throws if invalid
-                                                                                 // Run command.
+                        var cmdProc = _commands.FirstOrDefault(c => c.Id == id);
+                        // Run command.
                         var res = cmdProc.Handler(context, target);
 
                         if (res.Code == 0)
@@ -202,41 +210,17 @@ namespace Shellinator
 
         #region Registry editing
         /// <summary>
-        /// Write command to the registry. This generates registry entries that look like:
-        /// [REG_ROOT\spec.RegPath\shell\spec.Id]
-        /// @=""
-        /// "MUIVerb"=spec.Text
-        /// [REG_ROOT\spec.RegPath\shell\Id\command]
-        /// @=spec.CommandLine
+        /// Write a command to the registry.
         /// </summary>
         /// <param name="id">Which command</param>
-        /// <param name="path">Exe location</param>
-        void Reg(string id, string path)
+        void Reg(string id)
         {
-            // From MS:
-            // Registry sections of interest:
-            //   - HKEY_LOCAL_MACHINE (HKLM): defaults for all users using a machine (administrator)
-            //   - HKEY_CURRENT_USER (HKCU): user specific settings (not administrator)
-            //   - HKEY_CLASSES_ROOT (HKCR): virtual hive of HKEY_LOCAL_MACHINE with HKEY_CURRENT_USER overrides (administrator)
-            // HKEY_CLASSES_ROOT should be used only for reading currently effective settings. A write to
-            //   HKEY_CLASSES_ROOT is always redirected to HKEY_LOCAL_MACHINE\Software\Classes.
-            // In general, write directly to HKEY_LOCAL_MACHINE\Software\Classes or
-            //   HKEY_CURRENT_USER\Software\Classes and read from HKEY_CLASSES_ROOT.
-            //
-            // Shellinator bases all registry accesses (R/W) at HKEY_CURRENT_USER\Software\Classes aka REG_ROOT.
-            // - General how to: https://learn.microsoft.com/en-us/windows/win32/shell/context-menu-handlers
-            // - Detailed registry editing: https://mrlixm.github.io/blog/windows-explorer-context-menu/
-
-            // Nuances of shell command vars:
-            // https://superuser.com/questions/136838/which-special-variables-are-available-when-writing-a-shell-command-for-a-context
-            // Ones possibly of interest:
-            //   - %D: Selected file or directory with expanded named folders. Only Dir, File, Folder.
-            //   - %W: The working directory. All except Folder.
-            //   - %L: Selected file or directory name. Only Dir, File.
-            //   - %V: The directory of the selection, maybe unreliable? All except Folder.
-
-            // All paths and macros that expand to paths must be wrapped in double quotes.
-            // The builtin env vars like %ProgramFiles% are also supported.
+            // This generates registry entries that look like:
+            // [REG_ROOT\command.RegPath\shell\command.Id]
+            // @=""
+            // "MUIVerb"=command.Text
+            // [REG_ROOT\command.RegPath\shell\Id\command]
+            // @=command.CommandLine
 
             var cmds = _commands.Where(c => c.Id == id);
             if (!cmds.Any()) { throw new ShellinatorException($"Invalid command: {id}"); }
@@ -261,6 +245,8 @@ namespace Shellinator
                     _ => "%D",
                 };
 
+                // All paths and macros that expand to paths must be wrapped in double quotes.
+                // The builtin env vars like %ProgramFiles% are also supported.
                 var exec = Path.Join(_exePath, "shellinator.exe");
                 var expCmd = $"\"{exec}\" {cmd.Id} {cmd.Context} \"{target}\"";
                 expCmd = Environment.ExpandEnvironmentVariables(expCmd);
@@ -283,8 +269,7 @@ namespace Shellinator
 
         /// <summary>Delete existing registry entry.</summary>
         /// <param name="id">Which command</param>
-        /// <param name="path">Exe location</param>
-        void Unreg(string id, string path)
+        void Unreg(string id)
         {
             var cmds = _commands.Where(c => c.Id == id);
             if (!cmds.Any())
