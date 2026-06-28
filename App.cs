@@ -91,19 +91,19 @@ namespace Shellinator
                     case (1, "dev"):
                         LogInfo($"Shellinator dev mode");
 
-                        // dev1
+                        //// dev1
                         //var resd = TestCmd(ExplorerContext.Dir, "Do stuff...");
 
                         // dev2
-                        //var d = new Dev();
-                        //d.Go();
+                        var d = new Dev();
+                        d.Go();
 
-                        // dev3
-                        _fake = true;
-                        LogInfo($"Shellinator register all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
-                        LogInfo($"Shellinator unregister all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
+                        //// dev3
+                        //_fake = true;
+                        //LogInfo($"Shellinator register all");
+                        //_commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
+                        //LogInfo($"Shellinator unregister all");
+                        //_commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
                         break;
 
                     case (3, _):

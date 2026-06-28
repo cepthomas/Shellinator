@@ -28,7 +28,7 @@ namespace Shellinator
     /// <param name="Id">Internal id and registry key. Don't use: edit, explore, find, open, print, properties, runas.</param>
     /// <param name="Context">Where to install in REG_ROOT</param>
     /// <param name="Text">As it appears in the context menu.</param>
-    /// <param name="Description">As it appears in the context menu.</param>
+    /// <param name="Description">As it appears in the context menu. TODO1 not used</param>
     /// <param name="Handler">Handle command.</param>
     readonly record struct ExplorerCommand(string Id, ExplorerContext Context, string Text, string Description, CommandHandler Handler);
 
