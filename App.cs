@@ -29,6 +29,7 @@ namespace Shellinator
 
         /// <summary>All the app commands.</summary>
         List<ExplorerCommand> _commands = [];
+        List<ExplorerCommand2> _commands2 = [];
 
         /// <summary>Don't use reserved commands.</summary>
         List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
@@ -80,12 +81,12 @@ namespace Shellinator
                 {
                     case (1, "reg"):
                         LogInfo($"Shellinator register all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Register(c.Id));
                         break;
 
                     case (1, "unreg"):
                         LogInfo($"Shellinator unregister all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
+                        _commands.DistinctBy(p => p.Id).ForEach(c => Unregister(c.Id));
                         break;
 
                     case (1, "dev"):
@@ -95,8 +96,7 @@ namespace Shellinator
                         //var resd = TestCmd(ExplorerContext.Dir, "Do stuff...");
 
                         // dev2
-                        var d = new Dev();
-                        d.Go();
+                        DevGo();
 
                         //// dev3
                         //_fake = true;
@@ -164,7 +164,7 @@ namespace Shellinator
 
         #region Internals
         /// <summary>
-        /// Generic command executor. Called by commands handlers. Suppresses console window creation.
+        /// Generic command executor. Called by command handlers. Suppresses console window creation.
         /// </summary>
         /// <param name="args">All args including command first.</param>
         /// <param name="cmd">True for command line commands. Wraps the call in 'cmd /C'.</param>
@@ -213,7 +213,7 @@ namespace Shellinator
         /// Write a command to the registry.
         /// </summary>
         /// <param name="id">Which command</param>
-        void Reg(string id)
+        void Register(string id)
         {
             // This generates registry entries that look like:
             // [REG_ROOT\command.RegPath\shell\command.Id]
@@ -269,7 +269,7 @@ namespace Shellinator
 
         /// <summary>Delete existing registry entry.</summary>
         /// <param name="id">Which command</param>
-        void Unreg(string id)
+        void Unregister(string id)
         {
             var cmds = _commands.Where(c => c.Id == id);
             if (!cmds.Any())

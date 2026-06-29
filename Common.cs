@@ -25,17 +25,25 @@ namespace Shellinator
     }
 
     /// <summary>Describes one menu command.</summary>
-    /// <param name="Id">Internal id and registry key. Don't use: edit, explore, find, open, print, properties, runas.</param>
-    /// <param name="Context">Where to install in REG_ROOT</param>
+    /// <param name="Key">Registry key/command. Don't use reserved: edit, explore, find, open, print, properties, runas.</param>
+    /// <param name="Context">Where to install.</param>
     /// <param name="Text">As it appears in the context menu.</param>
-    /// <param name="Description">As it appears in the context menu. TODO1 not used</param>
-    /// <param name="Handler">Handle command.</param>
-    readonly record struct ExplorerCommand(string Id, ExplorerContext Context, string Text, string Description, CommandHandler Handler);
+    /// <param name="Command">Command to execute.</param>
+    readonly record struct ExplorerCommand2(string Key, ExplorerContext Context, string Text, string Command);
 
-    /// <summary>Command handler.</summary>
-    /// <param name="context">ExplorerContext</param>
-    /// <param name="target">Selected item</param>
-    delegate ExecResult CommandHandler(ExplorerContext context, string target);
+
+/// <summary>Describes one menu command.</summary>
+/// <param name="Id">Internal id and registry key. Don't use: edit, explore, find, open, print, properties, runas.</param>
+/// <param name="Context">Where to install in REG_ROOT</param>
+/// <param name="Text">As it appears in the context menu.</param>
+/// <param name="Description">As it appears in the context menu. TODO1 not used</param>
+/// <param name="Handler">Handle command.</param>
+readonly record struct ExplorerCommand(string Id, ExplorerContext Context, string Text, string Description, CommandHandler Handler);
+
+/// <summary>Command handler.</summary>
+/// <param name="context">ExplorerContext</param>
+/// <param name="target">Selected item</param>
+delegate ExecResult CommandHandler(ExplorerContext context, string target);
 
     /// <summary>Convenience container.</summary>
     /// <param name="Code">Return code</param>

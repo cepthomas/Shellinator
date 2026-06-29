@@ -70,35 +70,38 @@ It associates the file extension with the default compiler, IDE, or text editor,
 [HKEY_CURRENT_USER\Software\Classes\cpp_auto_file\shell\open\command]
 @="C:\\Program Files\\Sublime Text\\sublime_text.exe \"%1\""
 
-File associations:
+?? File associations:
 It used to be that setting the two keys:
     HKCR\.ext (default) = Identifier
     Identifier (default) = "File Description"
         \DefaultIcon (default) = Some icon
         \Shell\Open\Command (default) = Some editor
-
 But now it appears there is an override elsewhere, which is what gets displayed in the Default Programs listing.
-???
 HKEY_LOCAL_MACHINE\SOFTWARE\Classes and HKCU\SOFTWARE\Classes
 And I don't believe that this has changed recently.
-The priority is for current user, then local machine (aliased I believe to classes root).
+>>>>
 Explorer uses a different set of registry keys that can be found at:
-HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\ <<<<< this looks ok
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\
 
 */
 
 namespace Shellinator
 {
-    internal class Dev
+    internal partial class App
     {
         /// <summary>Do some work.</summary>
-        public void Go()
+        public void DevGo()
         {
             try
             {
-                DumpHive(RegistryHive.CurrentUser);
+                LoadIni(@"C:\Dev\Apps\Shellinator\commands.ini");
 
-                DumpHive(RegistryHive.LocalMachine);
+                DumpHive(RegistryHive.CurrentUser, @"\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts");
+
+                // DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
+
+                // DumpHive(RegistryHive.LocalMachine, @"Software\Classes");
+
 
             }
             catch (ShellinatorException ex)
@@ -111,13 +114,95 @@ namespace Shellinator
             }
         }
 
-        void LoadIni()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="fn"></param>
+        /// <exception cref="IniSyntaxException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        void LoadIni(string fn)
         {
             // Init runtime values from ini file.
             var inrdr = new IniReader();
-            inrdr.ParseFile(@"C:\Dev\Apps\Shellinator\commands.ini");
+            inrdr.ParseFile(fn);
+
+            foreach (var sectName in inrdr.GetSectionNames())
+            {
+                var nameParts = sectName.SplitByTokens(" ");
+                if (nameParts.Count < 2) throw new IniSyntaxException($"Invalid section name [{sectName}]", -1);
+
+                var sectVals = inrdr.GetValues(sectName);
 
 
+                if (!sectVals.TryGetValue("menu", out var menu))
+                {
+                    throw new IniSyntaxException($"Missing menu item in section [{sectName}]", -1);
+                }
+                if (!sectVals.TryGetValue("command", out var command))
+                {
+                    throw new IniSyntaxException($"Missing command item in section [{sectName}]", -1);
+                }
+
+                var ctxt = nameParts[0];
+                var key = nameParts[1];
+
+                if (_reserved.Contains(key)) { throw new ArgumentException($"Invalid key: {key}"); }
+
+                switch (ctxt.ToLower())
+                {
+                    case "dir":
+                        _commands2.Add(new(key, ExplorerContext.Dir, menu, command));
+                        break;
+
+                    case "dirbg":
+
+                        break;
+
+                    case "deskbg":
+
+                        break;
+
+                    case "file":
+
+                        break;
+
+                    //case "folder":
+                    //    break;
+
+                    default:
+                        throw new ArgumentException($"Invalid context: {nameParts[0]}");
+                        break;
+
+                }
+
+                // ExplorerCommand2(string Key, ExplorerContext Context, string Text, string Command);
+
+                //[DirBg findev]
+                //menu = Open here with Everything
+                //command = % ProgramFiles %\Everything\everything - parent $target
+
+                //[File bat cmd]
+                //menu = Execute
+                //command = cmd / C $target
+
+
+                // ExplorerContext
+                // Dir => Right click in explorer with a directory selected.
+                // DirBg => Right click in explorer right pane with nothing selected(background).
+                // DeskBg => Right click in windows desktop with nothing selected(background).
+                // File => Right click in explorer with a file selected.
+                // Folder => ?? Seems to appear for any directory selection.Probably meant for system use.
+
+
+                var vals = inrdr.GetValues("string name");
+
+
+
+
+
+                // readonly record struct ExplorerCommand2(string Key, ExplorerContext Context, string Text, string Command);
+
+            }
 
             //var section = inrdr.GetValues("treex");
 
@@ -153,23 +238,23 @@ namespace Shellinator
             //}
         }
 
-        void DumpHive(RegistryHive hive, bool recursive = true)
+        void DumpHive(RegistryHive hive, string subkey, bool recursive = true)
         {
             Console.WriteLine($"");
-            Console.WriteLine($"============================== {hive} ==============================");
+            Console.WriteLine($"====================== {hive} {subkey} ======================");
             Console.WriteLine($"");
 
             using var hkcr = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
-            using var regRoot = hkcr.OpenSubKey(@"Software\Classes", writable: false);
+            using var regRoot = hkcr.OpenSubKey(subkey, writable: false);
 
             List<string> contexts = ["Directory", "DesktopBackground", "Folder", "*"]; // "Directory\\Background"
 
             foreach (var ctx in contexts)
             {
-                DoSubkey(regRoot, ctx, 0);
+                DoSubkey(regRoot, ctx);
             }
 
-            void DoSubkey(RegistryKey key, string sname, int indent)
+            void DoSubkey(RegistryKey key, string sname, int indent = 0)
             {
                 string sind = new(' ', indent * 4);
                 Console.WriteLine($"{sind}[{sname}]");
