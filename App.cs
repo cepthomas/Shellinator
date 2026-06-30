@@ -36,10 +36,10 @@ namespace Shellinator
 
         /// <summary>New flavor - All the app commands.</summary>
         readonly List<ExplorerCommandNuevo> _commandsNuevo = [];
-        #endregion
 
         /// <summary>Determine mode.</summary>
         bool _inDev = false;
+        #endregion
 
         /// <summary>Where it all begins.</summary>
         /// <param name="args"></param>
@@ -77,18 +77,24 @@ namespace Shellinator
                 }
 
                 // Set up commands.
+                // old style
                 InitCommands();
+
+                // Nuevo style. Config file is assumed to be next to the executable.
+                var cfn = Path.Combine(Environment.CurrentDirectory, _inDev ? "default.ini" : "shellinator.ini");
+                LoadIni(cfn);
+
 
                 ///// Process the args: shellinator.exe id context target.
                 string id = args.Length > 0 ? args[0].ToLower() : "No args!";
                 switch (args.Length, id)
                 {
                     case (1, "reg"):
-                        //RegisterAll();
+                        RegisterAll();
                         break;
 
                     case (1, "unreg"):
-                        //UnregisterAll();
+                        UnregisterAll();
                         break;
 
                     case (1, "dev"):
