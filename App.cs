@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using System.Linq;
 using System.Collections;
 using System.Runtime.CompilerServices;
+using Microsoft.Win32;
 using Ephemera.NBagOfTricks;
 
 
@@ -27,13 +28,18 @@ namespace Shellinator
         /// <summary>Dry run the registry writes.</summary>
         readonly bool _fake = false;
 
+        /// <summary>Don't use reserved commands.</summary>
+        readonly List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
+
         /// <summary>All the app commands.</summary>
         List<ExplorerCommand> _commands = [];
-        List<ExplorerCommand2> _commands2 = [];
 
-        /// <summary>Don't use reserved commands.</summary>
-        List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
+        /// <summary>New flavor - All the app commands.</summary>
+        readonly List<ExplorerCommandNuevo> _commandsNuevo = [];
         #endregion
+
+        /// <summary>Determine mode.</summary>
+        bool _inDev = false;
 
         /// <summary>Where it all begins.</summary>
         /// <param name="args"></param>
@@ -53,12 +59,10 @@ namespace Shellinator
             try
             {
                 ///// Init internal stuff.
-                // Standard path supplied?
-                var toolsPath = Environment.GetEnvironmentVariable("TOOLS_PATH");
-                //TODO1?? 
-                if (toolsPath is null) { throw new ShellinatorException("Environment missing TOOLS_PATH"); }
+                _inDev = Debugger.IsAttached; // or look through Process.GetCurrentProcess().Modules
 
-                //_exePath = Path.Combine(toolsPath, "Apps");
+                // Standard path supplied?
+                var toolsPath = Environment.GetEnvironmentVariable("TOOLS_PATH") ?? throw new ShellinatorException("Environment missing TOOLS_PATH");
                 _exePath = toolsPath;
                 if (!Path.Exists(_exePath)) { throw new ShellinatorException($"Missing folder {_exePath}"); }
 
@@ -72,38 +76,39 @@ namespace Shellinator
                     File.Move(_logPath, newfn);
                 }
 
-                ///// Set up commands.
+                // Set up commands.
                 InitCommands();
 
-                ///// Process the args: shellinator.exe id context target. TODO1
+                ///// Process the args: shellinator.exe id context target.
                 string id = args.Length > 0 ? args[0].ToLower() : "No args!";
                 switch (args.Length, id)
                 {
                     case (1, "reg"):
-                        LogInfo($"Shellinator register all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Register(c.Id));
+                        //RegisterAll();
                         break;
 
                     case (1, "unreg"):
-                        LogInfo($"Shellinator unregister all");
-                        _commands.DistinctBy(p => p.Id).ForEach(c => Unregister(c.Id));
+                        //UnregisterAll();
                         break;
 
                     case (1, "dev"):
                         LogInfo($"Shellinator dev mode");
 
-                        //// dev1
-                        //var resd = TestCmd(ExplorerContext.Dir, "Do stuff...");
+                        ///// New dev code. /////
+                        LoadIni(@"C:\Dev\Apps\Shellinator\commands.ini");
 
-                        // dev2
-                        DevGo();
+                        //var dump = DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
+                        //// DumpHive(RegistryHive.LocalMachine, @"Software\Classes");
+                        //// DumpHive(RegistryHive.CurrentUser, @"\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts");
+                        //dump.ForEach(x => Console.WriteLine(x));
 
-                        //// dev3
+                        ///// Original dev code. /////
                         //_fake = true;
                         //LogInfo($"Shellinator register all");
                         //_commands.DistinctBy(p => p.Id).ForEach(c => Reg(c.Id));
                         //LogInfo($"Shellinator unregister all");
                         //_commands.DistinctBy(p => p.Id).ForEach(c => Unreg(c.Id));
+                        //var tcmd = TestCmd(ExplorerContext.Dir, "Do stuff...");
                         break;
 
                     case (3, _):
@@ -164,6 +169,27 @@ namespace Shellinator
 
         #region Internals
         /// <summary>
+        /// 
+        /// </summary>
+        void RegisterAll()
+        {
+            LogInfo($"Shellinator register all");
+            UnregisterAll(); // clean up first
+
+            _commands.DistinctBy(p => p.Id).ForEach(c => Register(c.Id));
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        void UnregisterAll()
+        {
+            LogInfo($"Shellinator unregister all");
+
+            _commands.DistinctBy(p => p.Id).ForEach(c => Unregister(c.Id));
+        }
+
+        /// <summary>
         /// Generic command executor. Called by command handlers. Suppresses console window creation.
         /// </summary>
         /// <param name="args">All args including command first.</param>
@@ -205,6 +231,57 @@ namespace Shellinator
             //LogInfo("Exited.");
 
             return new(proc.ExitCode, stdout, stderr);
+        }
+
+        /// <summary>
+        /// Load an ini config file.
+        /// </summary>
+        /// <param name="fn"></param>
+        /// <exception cref="IniSyntaxException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        void LoadIni(string fn)
+        {
+            // Init runtime values from ini file.
+            var inrdr = new IniReader();
+            inrdr.ParseFile(fn);
+
+            foreach (var sectName in inrdr.GetSectionNames())
+            {
+                var sectionParts = sectName.SplitByTokens(" ");
+                if (sectionParts.Count < 2) throw new IniSyntaxException($"Invalid section name [{sectName}]", -1);
+
+                var ctxt = sectionParts[0];
+                var id = sectionParts[1];
+                var sectVals = inrdr.GetValues(sectName);
+
+                if (!sectVals.TryGetValue("menu", out var menu)) throw new IniSyntaxException($"Missing menu item in section [{sectName}]", -1);
+                if (!sectVals.TryGetValue("command", out var command)) throw new IniSyntaxException($"Missing command item in section [{sectName}]", -1);
+                if (_reserved.Contains(id)) { throw new ArgumentException($"Reserved key [{id}]"); }
+                switch (ctxt.ToLower())
+                {
+                    case "dir":
+                        _commandsNuevo.Add(new(ExplorerContext.Dir, id, menu, command));
+                        break;
+
+                    case "dirbg":
+                        _commandsNuevo.Add(new(ExplorerContext.DirBg, id, menu, command));
+                        break;
+
+                    case "deskbg":
+                        _commandsNuevo.Add(new(ExplorerContext.DeskBg, id, menu, command));
+                        break;
+
+                    case "file":
+                        sectionParts[1..].ForEach(p => _commandsNuevo.Add(new(ExplorerContext.File, p, menu, command)));
+                        break;
+
+                    //case "folder":
+                    //    break;
+
+                    default:
+                        throw new ArgumentException($"Invalid context: {sectionParts[0]}");
+                }
+            }
         }
         #endregion
 
@@ -326,6 +403,52 @@ namespace Shellinator
             var fspec = file != "" ? $"{Path.GetFileName(file)}({line}) " : " ";
             File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} ERROR {fspec}{msg}{Environment.NewLine}");
             //MessageBox.Show($"{fspec}{msg}", "Command failed");
+        }
+
+        /// <summary>
+        /// Utility to look at registry contents of interest.
+        /// </summary>
+        /// <param name="hive"></param>
+        /// <param name="subkey"></param>
+        /// <param name="recursive"></param>
+        List<string> DumpHive(RegistryHive hive, string subkey, bool recursive = true)
+        {
+            List<string> res =
+            [
+                $"",
+                $"====================== {hive} {subkey} ======================",
+                $""
+            ];
+
+            using var hkcr = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
+            using var regRoot = hkcr.OpenSubKey(subkey, writable: false);
+
+            List<string> contexts = ["Directory", "DesktopBackground", "Folder", "*"];
+            contexts.ForEach(ctx => DoSubkey(regRoot!, ctx));
+
+            void DoSubkey(RegistryKey key, string sname, int indent = 0)
+            {
+                string sind = new(' ', indent * 4);
+                res.Add($"{sind}[{sname}]");
+
+                using var subkey = key.OpenSubKey(sname, writable: false);
+                if (subkey is null) return;
+
+                foreach (string sval in subkey.GetValueNames())
+                {
+                    // "" means default
+                    res.Add($"{sind}  [{sval}]:[{subkey.GetValue(sval)}]");
+                }
+
+                if (recursive)
+                {
+                    // Visit the children.
+                    var snames = subkey.GetSubKeyNames();
+                    snames.ForEach(s => DoSubkey(subkey, s, indent + 1));
+                }
+            }
+
+            return res;
         }
         #endregion
     }
