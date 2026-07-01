@@ -13,3 +13,6 @@ Playing with shell extensions to provide some custom context menus.
 
 This is really clunky for a general purpose tool. The plan is to migrate to a version that is configured by
 an `.ini` file. This is partially implemented by code with `Nuevo` in the names.
+
+
+> Nuevo style. Config file is assumed to be next to the executable. TODO1 init a default
