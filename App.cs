@@ -9,6 +9,8 @@ using System.Runtime.CompilerServices;
 using Microsoft.Win32;
 using Ephemera.NBagOfTricks;
 
+//TODO1 service: https://learn.microsoft.com/en-us/dotnet/core/extensions/windows-service
+
 
 namespace Shellinator
 {
@@ -31,11 +33,11 @@ namespace Shellinator
         /// <summary>Don't use reserved commands.</summary>
         readonly List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
 
-        /// <summary>All the app commands.</summary>
-        List<ExplorerCommand> _commands = [];
+        // /// <summary>All the app commands.</summary>
+        // List<ExplorerCommand> _commands = [];
 
         /// <summary>New flavor - All the app commands.</summary>
-        readonly List<ExplorerCommandNuevo> _commandsNuevo = [];
+        readonly List<ExplorerCommand_Nuevo> _commands_Nuevo = [];
 
         /// <summary>Determine mode.</summary>
         bool _inDev = false;
@@ -51,8 +53,8 @@ namespace Shellinator
 
         #region The command line application
         /// <summary>Do the work.</summary>
-        /// <param name="args"></param>
-        public App(string[] args)
+        /// <param name="appArgs"></param>
+        public App(string[] appArgs)
         {
             int code = 0;
 
@@ -80,31 +82,35 @@ namespace Shellinator
 
                 // Set up commands.
                 // old style
-                InitCommands();
+                //InitCommands();
 
-                // Nuevo style. Config file is assumed to be next to the executable. TODO1 init a default
+                // _Nuevo style. Config file is assumed to be next to the executable. TODO1 init a default
                 _tmit.Snap("Start load config");
                 var dir = Path.GetDirectoryName(Application.ExecutablePath);
-                var cfn = Path.Combine(dir, _inDev ? "default.ini" : "shellinator.ini");
+                var cfn = Path.Combine(dir!, _inDev ? "default.ini" : "shellinator.ini");
                 LoadIni(cfn);
                 _tmit.Snap("Done load config");
 
-
                 ///// Process the args: shellinator.exe id context target.
-                string id = args.Length > 0 ? args[0].ToLower() : "No args!";
-                switch (args.Length, id)
+               // string func = appArgs.Length > 0 ? appArgs[0].ToLower() : "No args!";
+
+                var command = appArgs.Length > 0 ? appArgs[0].ToLower() : "";
+                var context = appArgs.Length > 1 ? appArgs[1].ToLower() : null;
+                var target = appArgs.Length > 2 ? appArgs[2] : null;
+
+
+                switch (command, context, target)
                 {
-                    case (1, "reg"):
-                        RegisterAll();
+                    case ("reg", null, null):
+                        RegisterAll_Nuevo();
                         break;
 
-                    case (1, "unreg"):
-                        UnregisterAll();
+                    case ("unreg", null, null):
+                        UnregisterAll_Nuevo();
                         break;
 
-                    case (1, "dev"):
+                    case ("dev", null, null):
                         LogInfo($"Shellinator dev mode");
-
                         ///// New dev code. /////
                         //LoadIni(@"C:\Dev\Apps\Shellinator\commands.ini");
 
@@ -122,16 +128,75 @@ namespace Shellinator
                         //var tcmd = TestCmd(ExplorerContext.Dir, "Do stuff...");
                         break;
 
-                    case (3, _):
-                        // Normal mode called from system using registry entry.
-                        _tmit.Snap("Execute command:");
-                        LogInfo($"Shellinator command args:{string.Join(" ", args)}");
+                    case (_, "dir", not null):
+                    case (_, "dirbg", not null):
+                    case (_, "deskbg", not null):
 
-                        var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[1]);
-                        var target = Environment.ExpandEnvironmentVariables(args[2]);
-                        var cmdProc = _commands.FirstOrDefault(c => c.Id == id);
-                        // Run command.
+                        //    readonly record struct ExplorerCommand_Nuevo(ExplorerContext Context, string Command, string Text, string ExecLine);
+
+                        var cmds = _commands_Nuevo.Where(c => c.Context == context && c.Command == command);
+                        if (!cmds.Any())
+                        {
+                            LogError($"Invalid");
+                        }
+                        else
+                        {
+
+                        }
+
                         var res = cmdProc.Handler(context, target);
+
+
+
+                        break;
+
+
+                    case (_, "file", not null):
+                        // Assume normal mode called from system using registry entry.
+
+                        // [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\findev]
+                        // "MUIVerb"="Open in Everything"
+                        // [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\findev\command]
+                        // @="\"C:\\Users\\cepth\\OneDrive\\Tools\\Apps\\shellinator.exe\" findev DirBg \"%W\""
+
+                        // [HKEY_CURRENT_USER\Software\Classes\Directory\shell\findev]
+                        // "MUIVerb"="Open in Everything"
+                        // [HKEY_CURRENT_USER\Software\Classes\Directory\shell\findev\command]
+                        // @="\"C:\\Users\\cepth\\OneDrive\\Tools\\Apps\\shellinator.exe\" findev Dir \"%D\""
+
+                        // [HKEY_CURRENT_USER\Software\Classes\*\shell\run]
+                        // "MUIVerb"="Run"
+                        // [HKEY_CURRENT_USER\Software\Classes\*\shell\run\command]
+                        // @="\"C:\\Users\\cepth\\OneDrive\\Tools\\Apps\\shellinator.exe\" run File \"%D\""
+
+
+                        // @="\"C:\\Users\\cepth\\OneDrive\\Tools\\Apps\\shellinator.exe\" findev DirBg \"%W\""
+                        // findev DirBg \"%W\""
+                        _tmit.Snap("Execute command:");
+                        LogInfo($"Shellinator command args [{string.Join("|", appArgs)}]");
+
+
+                        // var context = (ExplorerContext)Enum.Parse(typeof(ExplorerContext), args[1]);
+                        // var target = Environment.ExpandEnvironmentVariables(args[2]);
+                        // var cmdProc = _commands_Nuevo.FirstOrDefault(c => c.Id == id);
+                        // // Run command.
+                        // var res = cmdProc.Handler(context, target);
+
+                        // readonly record struct ExplorerCommand_Nuevo(ExplorerContext Context, string Arg, string Text, string CommandLine);
+
+                        // Find and run command.
+                        //var cmd = _commands_Nuevo.FirstOrDefault(c => c.Arg == arg);
+
+
+
+                        // [Dir demo]
+                        // menu = Do something with this dir!
+                        // command = start cmd /C "echo Dir demo $target on %COMPUTERNAME% && pause"
+                        // [File bat cmd]
+                        // menu = Execute
+                        // command = cmd /C $target
+
+
 
                         if (res.Code == 0)
                         {
@@ -153,7 +218,7 @@ namespace Shellinator
                         break;
 
                     default:
-                        throw new ShellinatorException($"Invalid command line args: [{string.Join(" ", args)}]");
+                        throw new ShellinatorException($"Invalid command line args: [{string.Join(" ", appArgs)}]");
                 }
             }
             catch (ShellinatorException ex) // app error
@@ -178,56 +243,26 @@ namespace Shellinator
         }
         #endregion
 
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void RegisterAllNuevo()
-        {
-            LogInfo($"Shellinator register all"); // TODO1 keep a list of installed keys so unreg is cleaner.
-            UnregisterAllNuevo(); // clean up first
-
-            _commandsNuevo.ForEach(cmd => { RegisterNuevo(cmd); });
-
-           // _commands.DistinctBy(p => p.Id).ForEach(c => Register(c.Id));
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void UnregisterAllNuevo()
-        {
-            LogInfo($"Shellinator unregister all");
-
-            _commandsNuevo.ForEach(cmd => { UnregisterNuevo(cmd); });
-
-            //_commands.DistinctBy(p => p.Id).ForEach(c => Unregister(c.Id));
-        }
-
-
-
-
         #region Internals
         /// <summary>
         /// 
         /// </summary>
-        void RegisterAll()
+        void RegisterAll_Nuevo()
         {
             LogInfo($"Shellinator register all"); // TODO1 keep a list of installed keys so unreg is cleaner.
-            UnregisterAll(); // clean up first
+            UnregisterAll_Nuevo(); // clean up first
 
-            _commands.DistinctBy(p => p.Id).ForEach(c => Register(c.Id));
+            _commands_Nuevo.ForEach(cmd => { Register_Nuevo(cmd); });
         }
 
         /// <summary>
         /// 
         /// </summary>
-        void UnregisterAll()
+        void UnregisterAll_Nuevo()
         {
             LogInfo($"Shellinator unregister all");
 
-            _commands.DistinctBy(p => p.Id).ForEach(c => Unregister(c.Id));
+            _commands_Nuevo.ForEach(cmd => { Unregister_Nuevo(cmd); });
         }
 
         /// <summary>
@@ -236,7 +271,7 @@ namespace Shellinator
         /// <param name="args">All args including command first.</param>
         /// <param name="cmd">True for command line commands. Wraps the call in 'cmd /C'.</param>
         /// <returns>Result code, stdout, stderr</returns>
-        ExecResult ExecuteCommand(List<string> args, bool cmd = false)
+        ExecResult ExecuteCommand(List<string> args, bool cmd = false) //TODO1
         {
             //LogInfo($"ExecuteCommand():[{string.Join(" ", args)}] cmd:{cmd}");
 
@@ -301,19 +336,19 @@ namespace Shellinator
                 switch (ctxt.ToLower())
                 {
                     case "dir":
-                        _commandsNuevo.Add(new(ExplorerContext.Dir, id, menu, command));
+                        _commands_Nuevo.Add(new(ExplorerContext.Dir, id, menu, command));
                         break;
 
                     case "dirbg":
-                        _commandsNuevo.Add(new(ExplorerContext.DirBg, id, menu, command));
+                        _commands_Nuevo.Add(new(ExplorerContext.DirBg, id, menu, command));
                         break;
 
                     case "deskbg":
-                        _commandsNuevo.Add(new(ExplorerContext.DeskBg, id, menu, command));
+                        _commands_Nuevo.Add(new(ExplorerContext.DeskBg, id, menu, command));
                         break;
 
                     case "file":
-                        sectionParts[1..].ForEach(p => _commandsNuevo.Add(new(ExplorerContext.File, p, menu, command)));
+                        sectionParts[1..].ForEach(p => _commands_Nuevo.Add(new(ExplorerContext.File, p, menu, command)));
                         break;
 
                     //case "folder":
@@ -333,86 +368,80 @@ namespace Shellinator
         /// Write a command to the registry.
         /// </summary>
         /// <param name="cmd">Which command</param>
-        void RegisterNuevo(ExplorerCommandNuevo cmd)//  string id)
+        void Register_Nuevo(ExplorerCommand_Nuevo cmd)
         {
             // This generates registry entries that look like:
-            // [REG_ROOT\command.RegPath\shell\command.Id]
-            // @=""
-            // "MUIVerb"=command.Text
-            // [REG_ROOT\command.RegPath\shell\Id\command]
-            // @=command.CommandLine
+            // HKEY_CURRENT_USER\Software\Classes\<command-reg-path>\shell\<cmd.Id>
+            // "MUIVerb"="<cmd.Text>"
+            // HKEY_CURRENT_USER\Software\Classes\<command-reg-path>\shell\Id\command
+            // @="<cmd.CommandLine>"
 
-            //var cmds = _commands.Where(c => c.Id == id);
-            //if (!cmds.Any()) { throw new ShellinatorException($"Invalid command: {id}"); }
-            //if (_reserved.Contains(id)) { throw new ArgumentException($"Invalid command: {id}"); }
 
-            //foreach (var cmd in cmds)
+            // [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell]
+            // [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\findev]
+            // "MUIVerb"="Open in Everything"
+            // [HKEY_CURRENT_USER\Software\Classes\Directory\Background\shell\findev\command]
+            // @="\"C:\\Users\\cepth\\OneDrive\\Tools\\Apps\\shellinator.exe\" findev DirBg \"%W\""
+
+            // readonly record struct ExplorerCommand_Nuevo(ExplorerContext Context, string Id, string Text, string CommandLine);
+
+
+
+            // Assemble command: _exePath id context target
+
+            using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
+            using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+
+            // Key names etc.
+            var ssubkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Command}";
+            var ssubkey2 = $"{ssubkey1}\\command";
+
+            // Determine target based on origin. Dir/File/Folder:%D DirBg/DeskBg:%W.
+            var target = cmd.Context switch
             {
-                // Assemble command: _exePath id context target
+                ExplorerContext.DirBg => "%W",
+                ExplorerContext.DeskBg => "%W",
+                _ => "%D",
+            };
 
-                using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
-                using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+            // All paths and macros that expand to paths must be wrapped in double quotes.
+            // The builtin env vars like %ProgramFiles% are also supported.
+            var exec = Path.Join(_exePath, "shellinator.exe");
+            var expCmd = $"\"{exec}\" {cmd.Command} {cmd.Context} \"{target}\"";
+            expCmd = Environment.ExpandEnvironmentVariables(expCmd);
 
-                // Key names etc.
-                var ssubkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
-                var ssubkey2 = $"{ssubkey1}\\command";
+            if (_fake)
+            {
+                LogInfo($"SetValue [{ssubkey1}] -> [MUIVerb={cmd.Text}]");
+                LogInfo($"SetValue [{ssubkey2}] -> [@={expCmd}]");
+            }
+            else
+            {
+                using var k1 = regRoot!.CreateSubKey(ssubkey1);
+                k1.SetValue("MUIVerb", cmd.Text);
 
-                // Determine target based on origin. Dir/File/Folder:%D DirBg/DeskBg:%W.
-                var target = cmd.Context switch
-                {
-                    ExplorerContext.DirBg => "%W",
-                    ExplorerContext.DeskBg => "%W",
-                    _ => "%D",
-                };
-
-                // All paths and macros that expand to paths must be wrapped in double quotes.
-                // The builtin env vars like %ProgramFiles% are also supported.
-                var exec = Path.Join(_exePath, "shellinator.exe");
-                var expCmd = $"\"{exec}\" {cmd.Id} {cmd.Context} \"{target}\"";
-                expCmd = Environment.ExpandEnvironmentVariables(expCmd);
-
-                if (_fake)
-                {
-                    LogInfo($"SetValue [{ssubkey1}] -> [MUIVerb={cmd.Text}]");
-                    LogInfo($"SetValue [{ssubkey2}] -> [@={expCmd}]");
-                }
-                else
-                {
-                    using var k1 = regRoot!.CreateSubKey(ssubkey1);
-                    k1.SetValue("MUIVerb", cmd.Text);
-
-                    using var k2 = regRoot!.CreateSubKey(ssubkey2);
-                    k2.SetValue("", expCmd);
-                }
+                using var k2 = regRoot!.CreateSubKey(ssubkey2);
+                k2.SetValue("", expCmd);
             }
         }
 
         /// <summary>Delete existing registry entry.</summary>
         /// <param name="cmd">Which command</param>
-        void UnregisterNuevo(ExplorerCommandNuevo cmd)// string id)
+        void Unregister_Nuevo(ExplorerCommand_Nuevo cmd)// string id)
         {
-            //var cmds = _commands.Where(c => c.Id == id);
-            //if (!cmds.Any())
-            //{
-            //    throw new ShellinatorException($"Invalid command: {id}");
-            //}
+            using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
+            using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
 
-           // foreach (var cmd in cmds)
+            // Key name.
+            var ssubkey = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Command}";
+
+            if (_fake)
             {
-                using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
-                using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
-
-                // Key name.
-                var ssubkey = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
-
-                if (_fake)
-                {
-                    LogInfo($"DeleteSubKeyTree [{ssubkey}]");
-                }
-                else
-                {
-                    regRoot!.DeleteSubKeyTree(ssubkey, false);
-                }
+                LogInfo($"DeleteSubKeyTree [{ssubkey}]");
+            }
+            else
+            {
+                regRoot!.DeleteSubKeyTree(ssubkey, false);
             }
         }
 
@@ -426,92 +455,92 @@ namespace Shellinator
 
 
         #region Registry editing
-        /// <summary>
-        /// Write a command to the registry.
-        /// </summary>
-        /// <param name="id">Which command</param>
-        void Register(string id)
-        {
-            // This generates registry entries that look like:
-            // [REG_ROOT\command.RegPath\shell\command.Id]
-            // @=""
-            // "MUIVerb"=command.Text
-            // [REG_ROOT\command.RegPath\shell\Id\command]
-            // @=command.CommandLine
+        // /// <summary>
+        // /// Write a command to the registry.
+        // /// </summary>
+        // /// <param name="id">Which command</param>
+        // void Register(string id)
+        // {
+        //     // This generates registry entries that look like:
+        //     // [REG_ROOT\command.RegPath\shell\command.Id]
+        //     // @=""
+        //     // "MUIVerb"=command.Text
+        //     // [REG_ROOT\command.RegPath\shell\Id\command]
+        //     // @=command.CommandLine
 
-            var cmds = _commands.Where(c => c.Id == id);
-            if (!cmds.Any()) { throw new ShellinatorException($"Invalid command: {id}"); }
-            if (_reserved.Contains(id)) { throw new ArgumentException($"Invalid command: {id}"); }
+        //     var cmds = _commands.Where(c => c.Id == id);
+        //     if (!cmds.Any()) { throw new ShellinatorException($"Invalid command: {id}"); }
+        //     if (_reserved.Contains(id)) { throw new ArgumentException($"Invalid command: {id}"); }
 
-            foreach (var cmd in cmds)
-            {
-                // Assemble command: _exePath id context target
+        //     foreach (var cmd in cmds)
+        //     {
+        //         // Assemble command: _exePath id context target
 
-                using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
-                using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+        //         using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
+        //         using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
 
-                // Key names etc.
-                var ssubkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
-                var ssubkey2 = $"{ssubkey1}\\command";
+        //         // Key names etc.
+        //         var ssubkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
+        //         var ssubkey2 = $"{ssubkey1}\\command";
 
-                // Determine target based on origin. Dir/File/Folder:%D DirBg/DeskBg:%W.
-                var target = cmd.Context switch
-                {
-                    ExplorerContext.DirBg => "%W",
-                    ExplorerContext.DeskBg => "%W",
-                    _ => "%D",
-                };
+        //         // Determine target based on origin. Dir/File/Folder:%D DirBg/DeskBg:%W.
+        //         var target = cmd.Context switch
+        //         {
+        //             ExplorerContext.DirBg => "%W",
+        //             ExplorerContext.DeskBg => "%W",
+        //             _ => "%D",
+        //         };
 
-                // All paths and macros that expand to paths must be wrapped in double quotes.
-                // The builtin env vars like %ProgramFiles% are also supported.
-                var exec = Path.Join(_exePath, "shellinator.exe");
-                var expCmd = $"\"{exec}\" {cmd.Id} {cmd.Context} \"{target}\"";
-                expCmd = Environment.ExpandEnvironmentVariables(expCmd);
+        //         // All paths and macros that expand to paths must be wrapped in double quotes.
+        //         // The builtin env vars like %ProgramFiles% are also supported.
+        //         var exec = Path.Join(_exePath, "shellinator.exe");
+        //         var expCmd = $"\"{exec}\" {cmd.Id} {cmd.Context} \"{target}\"";
+        //         expCmd = Environment.ExpandEnvironmentVariables(expCmd);
 
-                if (_fake)
-                {
-                    LogInfo($"SetValue [{ssubkey1}] -> [MUIVerb={cmd.Text}]");
-                    LogInfo($"SetValue [{ssubkey2}] -> [@={expCmd}]");
-                }
-                else
-                {
-                    using var k1 = regRoot!.CreateSubKey(ssubkey1);
-                    k1.SetValue("MUIVerb", cmd.Text);
+        //         if (_fake)
+        //         {
+        //             LogInfo($"SetValue [{ssubkey1}] -> [MUIVerb={cmd.Text}]");
+        //             LogInfo($"SetValue [{ssubkey2}] -> [@={expCmd}]");
+        //         }
+        //         else
+        //         {
+        //             using var k1 = regRoot!.CreateSubKey(ssubkey1);
+        //             k1.SetValue("MUIVerb", cmd.Text);
 
-                    using var k2 = regRoot!.CreateSubKey(ssubkey2);
-                    k2.SetValue("", expCmd);
-                }
-            }
-        }
+        //             using var k2 = regRoot!.CreateSubKey(ssubkey2);
+        //             k2.SetValue("", expCmd);
+        //         }
+        //     }
+        // }
 
-        /// <summary>Delete existing registry entry.</summary>
-        /// <param name="id">Which command</param>
-        void Unregister(string id)
-        {
-            var cmds = _commands.Where(c => c.Id == id);
-            if (!cmds.Any())
-            {
-                throw new ShellinatorException($"Invalid command: {id}");
-            }
+        // /// <summary>Delete existing registry entry.</summary>
+        // /// <param name="id">Which command</param>
+        // void Unregister(string id)
+        // {
+        //     var cmds = _commands.Where(c => c.Id == id);
+        //     if (!cmds.Any())
+        //     {
+        //         throw new ShellinatorException($"Invalid command: {id}");
+        //     }
 
-            foreach (var cmd in cmds)
-            {
-                using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
-                using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
+        //     foreach (var cmd in cmds)
+        //     {
+        //         using var hkcu = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.CurrentUser, Microsoft.Win32.RegistryView.Registry64);
+        //         using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
 
-                // Key name.
-                var ssubkey = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
+        //         // Key name.
+        //         var ssubkey = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Id}";
 
-                if (_fake)
-                {
-                    LogInfo($"DeleteSubKeyTree [{ssubkey}]");
-                }
-                else
-                {
-                    regRoot!.DeleteSubKeyTree(ssubkey, false);
-                }
-            }
-        }
+        //         if (_fake)
+        //         {
+        //             LogInfo($"DeleteSubKeyTree [{ssubkey}]");
+        //         }
+        //         else
+        //         {
+        //             regRoot!.DeleteSubKeyTree(ssubkey, false);
+        //         }
+        //     }
+        // }
 
         /// <summary>Convert the internal enum to registry key.</summary>
         static string GetRegPath(ExplorerContext context)

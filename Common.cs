@@ -24,20 +24,21 @@ namespace Shellinator
         //Folder,
     }
 
-    /// <summary>Describes one menu command.</summary>
-    /// <param name="Id">Internal id and registry key. Don't use: edit, explore, find, open, print, properties, runas.</param>
-    /// <param name="Context">Where to install in REG_ROOT</param>
-    /// <param name="Text">As it appears in the context menu.</param>
-    /// <param name="Description">Not useful??</param>
-    /// <param name="Handler">Handle command.</param>
-    readonly record struct ExplorerCommand(string Id, ExplorerContext Context, string Text, string Description, CommandHandler Handler);
+    // /// <summary>Describes one menu command.</summary>
+    // /// <param name="Id">Internal id and registry key. Don't use: edit, explore, find, open, print, properties, runas.</param>
+    // /// <param name="Context">Where to install in REG_ROOT</param>
+    // /// <param name="Text">As it appears in the context menu.</param>
+    // /// <param name="Description">Not useful??</param>
+    // /// <param name="Handler">Handle command.</param>
+    // readonly record struct ExplorerCommand(string Id, ExplorerContext Context, string Text, string Description, CommandHandler Handler);
 
     /// <summary>New style - Describes one menu command.</summary>
     /// <param name="Context">Where to install.</param>
-    /// <param name="Id">Registry key/command OR file extension. Can't use reserved: edit, explore, find, open, print, properties, runas.</param>
+    /// <param name="Command">Registry key/command OR file extension. Can't use reserved: edit, explore, find, open, print, properties, runas.</param>
     /// <param name="Text">As it appears in the context menu.</param>
-    /// <param name="Command">Command to execute.</param>
-    readonly record struct ExplorerCommandNuevo(ExplorerContext Context, string Id, string Text, string Command);
+    /// <param name="ExecLine">Command line to execute.</param>
+    readonly record struct ExplorerCommand_Nuevo(string Context, string Command, string Text, string ExecLine);
+    //readonly record struct ExplorerCommand_Nuevo(ExplorerContext Context, string Command, string Text, string ExecLine);
 
     /// <summary>Convenience container.</summary>
     /// <param name="Code">Return code</param>
