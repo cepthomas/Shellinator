@@ -11,7 +11,7 @@ using Ephemera.NBagOfTricks;
 using Shellinator.Properties;
 
 
-//TODO2?? service: https://learn.microsoft.com/en-us/dotnet/core/extensions/windows-service
+//TODO use service? https://learn.microsoft.com/en-us/dotnet/core/extensions/windows-service
 
 
 namespace Shellinator
@@ -33,7 +33,7 @@ namespace Shellinator
         readonly bool _fake = false;
 
         /// <summary>Log detail.</summary>
-        readonly bool _logDebug = false;
+        bool _debug = false;
 
         /// <summary>Don't use reserved commands.</summary>
         readonly List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
@@ -69,7 +69,6 @@ namespace Shellinator
 
                 ///// Init internal stuff.
                 _inDev = Debugger.IsAttached;
-                _logDebug = true;
                 _exePath = Path.GetDirectoryName(Application.ExecutablePath)!;
                 _logPath = Path.Join(_exePath, "shellinator.log");
                 FileInfo fi = new(_logPath);
@@ -130,63 +129,52 @@ namespace Shellinator
                     case (_, "file", not null):
                         // Assume normal mode called from system using registry entry.
 
-                        // var cmds = _explorerCommands.
-                        //     Where(c => c.Context == context &&
-                        //     c.Key == (context == "file" ? ext : key));
+                        // Try standard dir contexts.
+                        var cmd = _explorerCommands.Where(c => c.Context == context && c.Key == key).FirstOrDefault();
 
-                        ExplorerCommand? cmd = null;
+                        // Try specific file type.
+                        if (cmd is null) { cmd = _explorerCommands.Where(c => c.Context == context && c.Key == ext).FirstOrDefault(); }
 
-                        // Try standard dirs.
-                        var cmds = _explorerCommands.Where(c => c.Context == context && c.Key == key);
+                        // Try default file.
+                        if (cmd is null) { cmd = _explorerCommands.Where(c => c.Context == context && c.Key == "*").FirstOrDefault(); }
 
+                        // No good.
+                        if (cmd is null) { throw new ShellinatorException($"Invalid command line"); }
+                        //_explorerCommands.ForEach(c => Log(LogLevel.DBG, $"{c}"));
 
-                        if (cmds.Any())
+                        // Do replacements.
+                        var replLines = cmd.ExecLine.Select(l =>
                         {
-                            cmd = cmds.First();
+                            var s = l.Replace("$target", target);
+                            return Environment.ExpandEnvironmentVariables(s);
+                        });
+
+                        // Execute it.
+                        _tmit.Snap("Execute command start");
+                        var res = ExecuteCommand([.. replLines]);
+                        _tmit.Snap("Execute command end");
+
+                        if (res.Code == 0)
+                        {
+                            // Success. Capture any stdout. TIL don't set clipboard to an empty string.
+                            if (res.Stdout.Length > 0) Clipboard.SetText(res.Stdout);
                         }
                         else
                         {
-                            // Try file.
-                            cmds = _explorerCommands.Where(c => c.Context == context && c.Key == ext);
-                            if (cmds.Any())
-                            {
-                                cmd = cmds.First();
-                            }
-                        }
-
-
-                        if (cmd is not null)
-                        {
-                            // TODO2 also? Environment.ExpandEnvironmentVariables(expCmd);
-                            var replLines = cmd.ExecLine.Select(l => l.Replace("$target", target));
-                            _tmit.Snap("Execute command start");
-                            var res = ExecuteCommand([.. replLines]);
-                            _tmit.Snap("Execute command end");
-
-                            if (res.Code == 0)
-                            {
-                                // Success. Capture any stdout. TIL don't set clipboard to an empty string.
-                                if (res.Stdout.Length > 0) Clipboard.SetText(res.Stdout);
-                            }
-                            else
-                            {
-                                // Command failed. Capture everything useful.
-                                List<string> ls =
-                                [
-                                    $"code: {res.Code}",
-                                    $"stdout:{Environment.NewLine}{(res.Stdout.Length > 0 ? res.Stdout : "None")}",
-                                    $"stderr:{Environment.NewLine}{(res.Stderr .Length > 0 ? res.Stderr : "None")}"
-                                ];
-                                var sres = string.Join(Environment.NewLine, ls);
-                                Log(LogLevel.ERR, sres);
-                                Clipboard.SetText(sres);
-                                code = 1;
-                            }
-                        }
-                        else
-                        {
-                            _explorerCommands.ForEach(c => Log(LogLevel.DBG, $"{c}"));
-                            throw new ShellinatorException($"Invalid command line");
+                            // Command failed. Capture everything useful.
+                            List<string> ls =
+                            [
+                                $"==================== error ====================",
+                                $"code: {res.Code}",
+                                $"==================== stdout ====================",
+                                $"{(res.Stdout.Length > 0 ? res.Stdout : "None")}",
+                                $"==================== stderr ====================",
+                                $"{(res.Stderr .Length > 0 ? res.Stderr : "None")}"
+                            ];
+                            var sres = string.Join(Environment.NewLine, ls);
+                            Log(LogLevel.ERR, sres);
+                            Clipboard.SetText(sres);
+                            code = 1;
                         }
                         break;
 
@@ -260,8 +248,15 @@ namespace Shellinator
             using Process proc = new() { StartInfo = pinfo };
             //proc.Exited += (sender, e) => { LogInfo("Process exit event."); };
 
-            //LogInfo("Start process...");
-            proc.Start();
+            try
+            {
+                //LogInfo("Start process...");
+                proc.Start();
+            }
+            catch (Exception ex)
+            {
+                Log(LogLevel.ERR, ex.Message);
+            }
 
             // TIL: To avoid deadlocks, always read the output stream first and then wait.
             var stdout = proc.StandardOutput.ReadToEnd();
@@ -288,37 +283,51 @@ namespace Shellinator
             // Identify the command and context.
             foreach (var sectName in inrdr.GetSectionNames())
             {
-                var sectionParts = sectName.SplitByTokens(" ");
-                if (sectionParts.Count < 2) throw new IniSyntaxException($"Invalid section name [{sectName}]", -1);
-
-                var ctxt = sectionParts[0].ToLower();
-                var cmd = sectionParts[1].ToLower();
-                var sectVals = inrdr.GetValues(sectName);
-
-                if (!sectVals.TryGetValue("menu", out var menu)) throw new IniSyntaxException($"Missing menu item in section [{sectName}]", -1);
-                if (!sectVals.TryGetValue("exec", out var exec)) throw new IniSyntaxException($"Missing exec item in section [{sectName}]", -1);
-                if (_reserved.Contains(cmd)) { throw new ArgumentException($"Reserved command [{cmd}]"); }
-
-                var execParts = exec.SplitByToken(",");
-
-                // Good to go.
-                switch (ctxt)
+                if (sectName.Equals("config", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    case "dir":
-                    case "dirbg":
-                    case "deskbg":
-                        _explorerCommands.Add(new(ctxt, cmd, menu, execParts));
-                        break;
+                    inrdr.GetValues(sectName).ForEach(kv =>
+                    {
+                        switch (kv.Key.ToLower())
+                        {
+                            case "debug": _debug = kv.Value.ToLower() == "true"; break;
+                            default: break;
+                        }
+                    });
+                }
+                else // command section
+                {
+                    var sectionParts = sectName.SplitByTokens(" ");
+                    if (sectionParts.Count < 2) throw new IniSyntaxException($"Invalid section name [{sectName}]", -1);
 
-                    case "file":
-                        sectionParts[1..].ForEach(ext => _explorerCommands.Add(new(ctxt, ext, menu, execParts)));
-                        break;
+                    var ctxt = sectionParts[0].ToLower();
+                    var cmd = sectionParts[1].ToLower();
+                    var sectVals = inrdr.GetValues(sectName);
 
-                    //case "folder":
-                    //    break;
+                    if (!sectVals.TryGetValue("menu", out var menu)) throw new IniSyntaxException($"Missing menu item in section [{sectName}]", -1);
+                    if (!sectVals.TryGetValue("exec", out var exec)) throw new IniSyntaxException($"Missing exec item in section [{sectName}]", -1);
+                    if (_reserved.Contains(cmd)) { throw new ArgumentException($"Reserved command [{cmd}]"); }
 
-                    default:
-                        throw new ArgumentException($"Invalid context: {sectionParts[0]}");
+                    var execParts = exec.SplitByToken(",");
+
+                    // Good to go.
+                    switch (ctxt)
+                    {
+                        case "dir":
+                        case "dirbg":
+                        case "deskbg":
+                            _explorerCommands.Add(new(ctxt, cmd, menu, execParts));
+                            break;
+
+                        case "file":
+                            sectionParts[1..].ForEach(ext => _explorerCommands.Add(new(ctxt, ext, menu, execParts)));
+                            break;
+
+                        //case "folder":
+                        //    break;
+
+                        default:
+                            throw new ArgumentException($"Invalid context: {sectionParts[0]}");
+                    }
                 }
             }
         }
@@ -417,7 +426,7 @@ namespace Shellinator
             {
                 LogLevel.INF => "",
                 LogLevel.ERR => "!!! ",
-                LogLevel.DBG => _logDebug ? ">>> " : null,
+                LogLevel.DBG => _debug ? ">>> " : null,
                 _ => null
             };
 
