@@ -32,6 +32,9 @@ namespace Shellinator
         /// <summary>Dry run the registry writes.</summary>
         readonly bool _fake = false;
 
+        /// <summary>Log detail.</summary>
+        readonly bool _logDebug = false;
+
         /// <summary>Don't use reserved commands.</summary>
         readonly List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
 
@@ -41,10 +44,8 @@ namespace Shellinator
         /// <summary>Determine mode.</summary>
         readonly bool _inDev = false;
 
-        const string DIR = "dir";
-        const string DIRBG = "dirbg";
-        const string DESKBG = "deskbg";
-        const string FILE = "file";
+        /// <summary>Log item level.</summary>
+        enum LogLevel { INF, ERR, DBG }
         #endregion
 
         /// <summary>Where it all begins.</summary>
@@ -68,6 +69,7 @@ namespace Shellinator
 
                 ///// Init internal stuff.
                 _inDev = Debugger.IsAttached;
+                _logDebug = true;
                 _exePath = Path.GetDirectoryName(Application.ExecutablePath)!;
                 _logPath = Path.Join(_exePath, "shellinator.log");
                 FileInfo fi = new(_logPath);
@@ -77,20 +79,28 @@ namespace Shellinator
                     File.Delete(newfn);
                     File.Move(_logPath, newfn);
                 }
+                Log(LogLevel.INF, $"==================== Running shellinator ====================");
+                Log(LogLevel.DBG, $"Command line [{string.Join("|", appArgs)}]");
 
                 // Set up commands. Config file is assumed to be next to the executable. If missing init with default
-                var cfn = Path.Combine(_exePath, _inDev ? "default.ini" : "shellinator.ini");
-                if (!File.Exists(cfn)) { File.WriteAllBytes(cfn, Resources.default_ini); }
+                var cfn = Path.Combine(_exePath, "shellinator.ini");
+                if (!File.Exists(cfn))
+                {
+                    Log(LogLevel.INF, $"Copying default.ini");
+                    File.WriteAllBytes(cfn, Resources.default_ini);
+                }
                 _tmit.Snap("Start load config");
                 LoadIni(cfn);
                 _tmit.Snap("Done load config");
 
                 ///// Process the args: shellinator.exe key context target.
-                Log($"Command line [{string.Join("|", appArgs)}]");
                 var key = appArgs.Length > 0 ? appArgs[0].ToLower() : "";
                 var context = appArgs.Length > 1 ? appArgs[1].ToLower() : null;
                 var target = appArgs.Length > 2 ? appArgs[2] : null;
                 var ext = target is null ? "" : Path.GetExtension(target).Replace(".", "");
+
+                Log(LogLevel.DBG, $"key:{key} context:{context} target:{target} ext:{ext}");
+                //+++ key:run context:file target:C:\Dev\Apps\Shellinator\bin\net8.0-windows\shellinator.exe ext:exe
 
                 switch (key, context, target)
                 {
@@ -103,7 +113,7 @@ namespace Shellinator
                         break;
 
                     case ("dev", null, null):
-                        Log($"Shellinator dev mode");
+                        Log(LogLevel.INF, $"Shellinator dev mode");
                         _fake = true;
                         RegisterAll();
                         _fake = false;
@@ -114,19 +124,40 @@ namespace Shellinator
                         //dump.ForEach(x => Console.WriteLine(x));
                         break;
 
-                    case (_, DIR, not null):
-                    case (_, DIRBG, not null):
-                    case (_, DESKBG, not null):
-                    case (_, FILE, not null):
+                    case (_, "dir", not null):
+                    case (_, "dirbg", not null):
+                    case (_, "deskbg", not null):
+                    case (_, "file", not null):
                         // Assume normal mode called from system using registry entry.
-                        var cmds = _explorerCommands.
-                            Where(c => c.Context == context &&
-                            c.Key == (context == FILE ? ext : key));
+
+                        // var cmds = _explorerCommands.
+                        //     Where(c => c.Context == context &&
+                        //     c.Key == (context == "file" ? ext : key));
+
+                        ExplorerCommand? cmd = null;
+
+                        // Try standard dirs.
+                        var cmds = _explorerCommands.Where(c => c.Context == context && c.Key == key);
+
 
                         if (cmds.Any())
                         {
+                            cmd = cmds.First();
+                        }
+                        else
+                        {
+                            // Try file.
+                            cmds = _explorerCommands.Where(c => c.Context == context && c.Key == ext);
+                            if (cmds.Any())
+                            {
+                                cmd = cmds.First();
+                            }
+                        }
+
+
+                        if (cmd is not null)
+                        {
                             // TODO2 also? Environment.ExpandEnvironmentVariables(expCmd);
-                            var cmd = cmds.First();
                             var replLines = cmd.ExecLine.Select(l => l.Replace("$target", target));
                             _tmit.Snap("Execute command start");
                             var res = ExecuteCommand([.. replLines]);
@@ -142,18 +173,19 @@ namespace Shellinator
                                 // Command failed. Capture everything useful.
                                 List<string> ls =
                                 [
-                                    $">>> ERROR code: {res.Code}",
-                                    $">>> stdout:{Environment.NewLine}{(res.Stdout.Length > 0 ? res.Stdout : "None")}",
-                                    $">>> stderr:{Environment.NewLine}{(res.Stderr .Length > 0 ? res.Stderr : "None")}"
+                                    $"code: {res.Code}",
+                                    $"stdout:{Environment.NewLine}{(res.Stdout.Length > 0 ? res.Stdout : "None")}",
+                                    $"stderr:{Environment.NewLine}{(res.Stderr .Length > 0 ? res.Stderr : "None")}"
                                 ];
                                 var sres = string.Join(Environment.NewLine, ls);
-                                Log(sres);
+                                Log(LogLevel.ERR, sres);
                                 Clipboard.SetText(sres);
                                 code = 1;
                             }
                         }
                         else
                         {
+                            _explorerCommands.ForEach(c => Log(LogLevel.DBG, $"{c}"));
                             throw new ShellinatorException($"Invalid command line");
                         }
                         break;
@@ -164,21 +196,21 @@ namespace Shellinator
             }
             catch (ShellinatorException ex) // app error
             {
-                Log($">>> {ex}");
+                Log(LogLevel.ERR, $"{ex}");
                 Clipboard.SetText(ex.ToString());
                 MessageBox.Show(ex.ToString());
                 code = 2;
             }
             catch (Exception ex) // something else
             {
-                Log($">>> {ex}");
+                Log(LogLevel.ERR, $"{ex}");
                 Clipboard.SetText(ex.ToString());
                 MessageBox.Show(ex.ToString());
                 code = 3;
             }
 
             _tmit.Snap("All done");
-            _tmit.Captures.ForEach(c => Log($"TMIT [{c}]"));
+            _tmit.Captures.ForEach(c => Log(LogLevel.DBG, $"TMIT [{c}]"));
 
             Environment.Exit(code);
         }
@@ -190,8 +222,8 @@ namespace Shellinator
         /// </summary>
         void RegisterAll()
         {
-            Log($"Shellinator register all"); // TODO2 ?? keep a list of installed keys so unreg is cleaner.
-            // UnregisterAll(); // clean up first TODO2?
+            Log(LogLevel.INF, $"Shellinator register all");
+            // UnregisterAll(); // clean up first?
             _explorerCommands.ForEach(cmd => { Register(cmd); });
         }
 
@@ -200,7 +232,7 @@ namespace Shellinator
         /// </summary>
         void UnregisterAll()
         {
-            Log($"Shellinator unregister all");
+            Log(LogLevel.INF, $"Shellinator unregister all");
             _explorerCommands.ForEach(cmd => { Unregister(cmd); });
         }
 
@@ -211,7 +243,7 @@ namespace Shellinator
         /// <returns>Result code, stdout, stderr</returns>
         ExecResult ExecuteCommand(List<string> args)
         {
-            Log($"ExecuteCommand() [{string.Join("|", args)}]");
+            Log(LogLevel.DBG, $"ExecuteCommand() [{string.Join("|", args)}]");
 
             ProcessStartInfo pinfo = new(args[0], args[1..])
             {
@@ -272,13 +304,13 @@ namespace Shellinator
                 // Good to go.
                 switch (ctxt)
                 {
-                    case DIR:
-                    case DIRBG:
-                    case DESKBG:
+                    case "dir":
+                    case "dirbg":
+                    case "deskbg":
                         _explorerCommands.Add(new(ctxt, cmd, menu, execParts));
                         break;
 
-                    case FILE:
+                    case "file":
                         sectionParts[1..].ForEach(ext => _explorerCommands.Add(new(ctxt, ext, menu, execParts)));
                         break;
 
@@ -310,8 +342,8 @@ namespace Shellinator
             // Determine target tag based on origin. Dir/File/Folder => %D  DirBg/DeskBg => %W.
             var targetTag = cmd.Context.ToLower() switch
             {
-                DIRBG => "%W",
-                DESKBG => "%W",
+                "dirbg" => "%W",
+                "deskbg" => "%W",
                 _ => "%D",
             };
 
@@ -321,8 +353,8 @@ namespace Shellinator
 
             if (_fake)
             {
-                Log($"FAKE CreateSubKey({subkey1}) SetValue(MUIVerb, {cmd.Text})");
-                Log($"FAKE CreateSubKey({subkey2}) SetValue(_, {expCmd})");
+                Log(LogLevel.DBG, $"FAKE CreateSubKey({subkey1}) SetValue(MUIVerb, {cmd.Text})");
+                Log(LogLevel.DBG, $"FAKE CreateSubKey({subkey2}) SetValue(_, {expCmd})");
             }
             else
             {
@@ -348,7 +380,7 @@ namespace Shellinator
 
             if (_fake)
             {
-                Log($"FAKE DeleteSubKeyTree({ssubkey})");
+                Log(LogLevel.DBG, $"FAKE DeleteSubKeyTree({ssubkey})");
             }
             else
             {
@@ -363,25 +395,36 @@ namespace Shellinator
         {
             return context.ToLower() switch
             {
-                DIR => "Directory",
-                DIRBG => "Directory\\Background",
-                DESKBG => "DesktopBackground",
-                FILE => "*",
+                "dir" => "Directory",
+                "dirbg" => "Directory\\Background",
+                "deskbg" => "DesktopBackground",
+                "file" => "*",
                 _ => throw new ArgumentException("Impossible")
             };
         }
         #endregion
 
-        #region Common infrastructure
+        #region Infrastructure
         /// <summary>
-        /// Simple logging and notification.
+        /// Simple logging.
         /// </summary>
+        /// <param name="lvl"></param>
         /// <param name="msg"></param>
         /// <param name="line"></param>
-        void Log(string msg, [CallerLineNumber] int line = -1)
+        void Log(LogLevel lvl, string msg, [CallerLineNumber] int line = -1)
         {
-            // Always log.
-            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} ({line}) {msg}{Environment.NewLine}");
+            string? sind = lvl switch
+            {
+                LogLevel.INF => "",
+                LogLevel.ERR => "!!! ",
+                LogLevel.DBG => _logDebug ? ">>> " : null,
+                _ => null
+            };
+
+            if (sind is not null)
+            {
+                File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {sind}({line}) {msg}{Environment.NewLine}");
+            }
         }
 
         /// <summary>
