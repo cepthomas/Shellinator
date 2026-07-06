@@ -11,14 +11,35 @@ using Ephemera.NBagOfTricks;
 using Shellinator.Properties;
 
 
-//TODO use service? https://learn.microsoft.com/en-us/dotnet/core/extensions/windows-service
+// TODO use service? https://learn.microsoft.com/en-us/dotnet/core/extensions/windows-service
 
 
 namespace Shellinator
 {
     /// <summary>The generic part of the app.</summary>
-    internal partial class App
+    class App
     {
+        #region Types
+        /// <summary>Internal exception.</summary>
+        class ShellinatorException(string msg) : Exception(msg) { }
+
+        /// <summary>Describes one menu command.</summary>
+        /// <param name="Context">Where to install.</param>
+        /// <param name="Key">Registry key/command OR file extension. Can't use reserved: edit, explore, find, open, print, properties, runas.</param>
+        /// <param name="Text">As it appears in the context menu.</param>
+        /// <param name="ExecLine">Command line args to execute.</param>
+        record ExplorerCommand(string Context, string Key, string Text, List<string> ExecLine)
+        {
+            public override string ToString() { return $"Context:{Context} Key:{Key} Text:{Text} ExecLine:{string.Join("|", ExecLine)}"; }
+        };
+
+        /// <summary>Convenience container.</summary>
+        /// <param name="Code">Return code</param>
+        /// <param name="Stdout">stdout if any</param>
+        /// <param name="Stderr">stderr if any</param>
+        readonly record struct ExecResult(int Code = -1, string Stdout = "", string Stderr = "");
+        #endregion
+
         #region Fields
         /// <summary>Simple profiling.</summary>
         readonly TimeIt _tmit = new();
@@ -28,6 +49,9 @@ namespace Shellinator
 
         /// <summary>Log file path.</summary>
         readonly string _logPath;
+
+        /// <summary>Debug file path.</summary>
+        readonly string _tracePath;
 
         /// <summary>Dry run the registry writes.</summary>
         readonly bool _fake = false;
@@ -43,9 +67,6 @@ namespace Shellinator
 
         /// <summary>Determine mode.</summary>
         readonly bool _inDev = false;
-
-        /// <summary>Log item level.</summary>
-        enum LogLevel { INF, ERR, DBG }
         #endregion
 
         /// <summary>Where it all begins.</summary>
@@ -70,6 +91,10 @@ namespace Shellinator
                 ///// Init internal stuff.
                 _inDev = Debugger.IsAttached;
                 _exePath = Path.GetDirectoryName(Application.ExecutablePath)!;
+                _tracePath = Path.Join(_exePath, "shellinator.trc");
+                File.Delete(_tracePath);
+
+                // Set up logging.
                 _logPath = Path.Join(_exePath, "shellinator.log");
                 FileInfo fi = new(_logPath);
                 if (fi.Exists && fi.Length > 50000)
@@ -78,14 +103,14 @@ namespace Shellinator
                     File.Delete(newfn);
                     File.Move(_logPath, newfn);
                 }
-                Log(LogLevel.INF, $"==================== Running shellinator ====================");
-                Log(LogLevel.DBG, $"Command line [{string.Join("|", appArgs)}]");
+                Log($"==================== Running shellinator ====================");
+                Log($"Command line [{string.Join("|", appArgs)}]");
 
-                // Set up commands. Config file is assumed to be next to the executable. If missing init with default
+                // Read configuration. Config file is assumed to be next to the executable. If missing init with default
                 var cfn = Path.Combine(_exePath, "shellinator.ini");
                 if (!File.Exists(cfn))
                 {
-                    Log(LogLevel.INF, $"Copying default.ini");
+                    Log($"Copying default.ini");
                     File.WriteAllBytes(cfn, Resources.default_ini);
                 }
                 _tmit.Snap("Start load config");
@@ -98,83 +123,102 @@ namespace Shellinator
                 var target = appArgs.Length > 2 ? appArgs[2] : null;
                 var ext = target is null ? "" : Path.GetExtension(target).Replace(".", "");
 
-                Log(LogLevel.DBG, $"key:{key} context:{context} target:{target} ext:{ext}");
+                // $"key:{key} context:{context} target:{target} ext:{ext}");
                 //+++ key:run context:file target:C:\Dev\Apps\Shellinator\bin\net8.0-windows\shellinator.exe ext:exe
 
                 switch (key, context, target)
                 {
                     case ("reg", null, null):
-                        RegisterAll();
+                        {
+                            RegisterAll();
+                        }
                         break;
 
                     case ("unreg", null, null):
-                        UnregisterAll();
-                        break;
-
-                    case ("dev", null, null):
-                        Log(LogLevel.INF, $"Shellinator dev mode");
-                        _fake = true;
-                        RegisterAll();
-                        _fake = false;
-
-                        //var dump = DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
-                        // DumpHive(RegistryHive.LocalMachine, @"Software\Classes");
-                        // DumpHive(RegistryHive.CurrentUser, @"\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts");
-                        //dump.ForEach(x => Console.WriteLine(x));
+                        {
+                            UnregisterAll();
+                        }
                         break;
 
                     case (_, "dir", not null):
                     case (_, "dirbg", not null):
                     case (_, "deskbg", not null):
                     case (_, "file", not null):
-                        // Assume normal mode called from system using registry entry.
-
-                        // Try standard dir contexts.
-                        var cmd = _explorerCommands.Where(c => c.Context == context && c.Key == key).FirstOrDefault();
-
-                        // Try specific file type.
-                        if (cmd is null) { cmd = _explorerCommands.Where(c => c.Context == context && c.Key == ext).FirstOrDefault(); }
-
-                        // Try default file.
-                        if (cmd is null) { cmd = _explorerCommands.Where(c => c.Context == context && c.Key == "*").FirstOrDefault(); }
-
-                        // No good.
-                        if (cmd is null) { throw new ShellinatorException($"Invalid command line"); }
-                        //_explorerCommands.ForEach(c => Log(LogLevel.DBG, $"{c}"));
-
-                        // Do replacements.
-                        var replLines = cmd.ExecLine.Select(l =>
                         {
-                            var s = l.Replace("$target", target);
-                            return Environment.ExpandEnvironmentVariables(s);
-                        });
+                            // Assume normal mode called from system using registry entry.
 
-                        // Execute it.
-                        _tmit.Snap("Execute command start");
-                        var res = ExecuteCommand([.. replLines]);
-                        _tmit.Snap("Execute command end");
+                            // Try standard dir contexts.
+                            var cmd = _explorerCommands.Where(c => c.Context == context && c.Key == key).FirstOrDefault();
 
-                        if (res.Code == 0)
-                        {
-                            // Success. Capture any stdout. TIL don't set clipboard to an empty string.
-                            if (res.Stdout.Length > 0) Clipboard.SetText(res.Stdout);
+                            // Try specific file type.
+                            cmd ??= _explorerCommands.Where(c => c.Context == context && c.Key == ext).FirstOrDefault();
+
+                            // Try default file.
+                            cmd ??= _explorerCommands.Where(c => c.Context == context && c.Key == "*").FirstOrDefault();
+
+                            // No good.
+                            if (cmd is null) { throw new ShellinatorException($"Invalid command line"); }
+
+                            // Do any replacements.
+                            var replLines = cmd.ExecLine.Select(l =>
+                            {
+                                var s = l.Replace("$target", target);
+                                return Environment.ExpandEnvironmentVariables(s);
+                            });
+
+                            // Execute it.
+                            _tmit.Snap("Execute command start");
+                            var res = ExecuteCommand([.. replLines]);
+                            _tmit.Snap("Execute command end");
+
+                            if (res.Code == 0)
+                            {
+                                // Success. Capture any stdout. TIL don't set clipboard to an empty string.
+                                if (res.Stdout.Length > 0)
+                                {
+                                    Clipboard.SetText(res.Stdout);
+                                }
+                            }
+                            else
+                            {
+                                // Command failed. Capture everything useful.
+                                List<string> ls = [ $"Command failed with code {res.Code}" ];
+
+                                if (res.Stdout.Length != 0)
+                                {
+                                    ls.Add("==================== stdout ====================");
+                                    ls.Add(res.Stdout);
+                                }
+                                if (res.Stderr.Length != 0)
+                                {
+                                    ls.Add("==================== stderr ====================");
+                                    ls.Add(res.Stderr);
+                                }
+
+                                var sres = string.Join(Environment.NewLine, ls);
+                                Log(sres);
+                                Clipboard.SetText(sres);
+                                code = 1;
+                            }
                         }
-                        else
+                        break;
+
+                    case ("dev", null, null):
                         {
-                            // Command failed. Capture everything useful.
-                            List<string> ls =
-                            [
-                                $"==================== error ====================",
-                                $"code: {res.Code}",
-                                $"==================== stdout ====================",
-                                $"{(res.Stdout.Length > 0 ? res.Stdout : "None")}",
-                                $"==================== stderr ====================",
-                                $"{(res.Stderr .Length > 0 ? res.Stderr : "None")}"
-                            ];
-                            var sres = string.Join(Environment.NewLine, ls);
-                            Log(LogLevel.ERR, sres);
-                            Clipboard.SetText(sres);
-                            code = 1;
+                            List<string> res = [];
+
+                            // Trace reg calls without executing.
+                            _fake = true;
+                            UnregisterAll();
+                            RegisterAll();
+                            _fake = false;
+
+                            // Dump hive contents.
+                            res = DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
+                            Trace(res, "HIVE");
+                            // DumpHive(RegistryHive.LocalMachine, @"Software\Classes");
+                            // DumpHive(RegistryHive.CurrentUser, @"\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts");
+                            // res.ForEach(l => File.WriteLine(_debugPath, l));
                         }
                         break;
 
@@ -184,21 +228,17 @@ namespace Shellinator
             }
             catch (ShellinatorException ex) // app error
             {
-                Log(LogLevel.ERR, $"{ex}");
-                Clipboard.SetText(ex.ToString());
-                MessageBox.Show(ex.ToString());
+                Log(ex);
                 code = 2;
             }
             catch (Exception ex) // something else
             {
-                Log(LogLevel.ERR, $"{ex}");
-                Clipboard.SetText(ex.ToString());
-                MessageBox.Show(ex.ToString());
+                Log(ex);
                 code = 3;
             }
 
             _tmit.Snap("All done");
-            _tmit.Captures.ForEach(c => Log(LogLevel.DBG, $"TMIT [{c}]"));
+            Trace(_tmit.Captures, "TMIT");
 
             Environment.Exit(code);
         }
@@ -210,9 +250,9 @@ namespace Shellinator
         /// </summary>
         void RegisterAll()
         {
-            Log(LogLevel.INF, $"Shellinator register all");
-            // UnregisterAll(); // clean up first?
-            _explorerCommands.ForEach(cmd => { Register(cmd); });
+            Log($"Shellinator register all");
+            // UnregisterAll(); // TODO remove old first?
+            _explorerCommands.ForEach(cmd => Register(cmd));
         }
 
         /// <summary>
@@ -220,8 +260,8 @@ namespace Shellinator
         /// </summary>
         void UnregisterAll()
         {
-            Log(LogLevel.INF, $"Shellinator unregister all");
-            _explorerCommands.ForEach(cmd => { Unregister(cmd); });
+            Log($"Shellinator unregister all");
+            _explorerCommands.ForEach(cmd => Unregister(cmd));
         }
 
         /// <summary>
@@ -231,7 +271,7 @@ namespace Shellinator
         /// <returns>Result code, stdout, stderr</returns>
         ExecResult ExecuteCommand(List<string> args)
         {
-            Log(LogLevel.DBG, $"ExecuteCommand() [{string.Join("|", args)}]");
+            Log($"ExecuteCommand() [{string.Join("|", args)}]");
 
             ProcessStartInfo pinfo = new(args[0], args[1..])
             {
@@ -255,7 +295,7 @@ namespace Shellinator
             }
             catch (Exception ex)
             {
-                Log(LogLevel.ERR, ex.Message);
+                Log(ex);
             }
 
             // TIL: To avoid deadlocks, always read the output stream first and then wait.
@@ -289,7 +329,7 @@ namespace Shellinator
                     {
                         switch (kv.Key.ToLower())
                         {
-                            case "debug": _debug = kv.Value.ToLower() == "true"; break;
+                            case "debug": _debug = kv.Value.Equals("true", StringComparison.CurrentCultureIgnoreCase); break;
                             default: break;
                         }
                     });
@@ -338,8 +378,11 @@ namespace Shellinator
         /// Write a command to the registry.
         /// </summary>
         /// <param name="cmd">Which command</param>
-        void Register(ExplorerCommand cmd)
+        /// <returns>What was written</returns>
+        List<string> Register(ExplorerCommand cmd)
         {
+            List<string> res = [];
+
             // Assemble command: shellinator_path id context target
             using var hkcu = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
             using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
@@ -360,12 +403,10 @@ namespace Shellinator
             var exec = Path.Join(_exePath, "shellinator.exe");
             var expCmd = $"\"{exec}\" {cmd.Key} {cmd.Context} \"{targetTag}\"";
 
-            if (_fake)
-            {
-                Log(LogLevel.DBG, $"FAKE CreateSubKey({subkey1}) SetValue(MUIVerb, {cmd.Text})");
-                Log(LogLevel.DBG, $"FAKE CreateSubKey({subkey2}) SetValue(_, {expCmd})");
-            }
-            else
+            res.Add($"REG CreateSubKey({subkey1}) SetValue(MUIVerb, {cmd.Text})");
+            res.Add($"REG CreateSubKey({subkey2}) SetValue(_, {expCmd})");
+
+            if (!_fake)
             {
                 using var k1 = regRoot!.CreateSubKey(subkey1);
                 k1.SetValue("MUIVerb", cmd.Text);
@@ -373,28 +414,33 @@ namespace Shellinator
                 using var k2 = regRoot!.CreateSubKey(subkey2);
                 k2.SetValue("", expCmd);
             }
+
+            return res;
         }
 
         /// <summary>
         /// Delete existing registry entry.
         /// </summary>
         /// <param name="cmd">Which command</param>
-        void Unregister(ExplorerCommand cmd)
+        /// <returns>What was written</returns>
+        List<string> Unregister(ExplorerCommand cmd)
         {
+            List<string> res = [];
+
             using var hkcu = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
             using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
 
             // Key name.
             var ssubkey = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Key}";
 
-            if (_fake)
-            {
-                Log(LogLevel.DBG, $"FAKE DeleteSubKeyTree({ssubkey})");
-            }
-            else
+            res.Add($"UNREG DeleteSubKeyTree({ssubkey})");
+
+            if (!_fake)
             {
                 regRoot!.DeleteSubKeyTree(ssubkey, false);
             }
+
+            return res;
         }
 
         /// <summary>
@@ -417,23 +463,45 @@ namespace Shellinator
         /// <summary>
         /// Simple logging.
         /// </summary>
-        /// <param name="lvl"></param>
         /// <param name="msg"></param>
         /// <param name="line"></param>
-        void Log(LogLevel lvl, string msg, [CallerLineNumber] int line = -1)
+        void Log(string msg, [CallerLineNumber] int line = -1)
         {
-            string? sind = lvl switch
-            {
-                LogLevel.INF => "",
-                LogLevel.ERR => "!!! ",
-                LogLevel.DBG => _debug ? ">>> " : null,
-                _ => null
-            };
+            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} ({line}) {msg}{Environment.NewLine}");
+        }
 
-            if (sind is not null)
-            {
-                File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} {sind}({line}) {msg}{Environment.NewLine}");
-            }
+        /// <summary>
+        /// Simple error logging.
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <param name="line"></param>
+        void Log(Exception ex, [CallerLineNumber] int line = -1)
+        {
+            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} >>> ({line}) {ex}{Environment.NewLine}");
+            MessageBox.Show(ex.ToString(), ex.Message);
+        }
+
+        /// <summary>
+        /// Simple logging.
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <param name="id"></param>
+        /// <param name="line"></param>
+        void Trace(string msg, string id, [CallerLineNumber] int line = -1)
+        {
+            File.AppendAllText(_tracePath, $"{id}({line}) {msg}{Environment.NewLine}");
+        }
+
+        /// <summary>
+        /// Simple logging.
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <param name="id"></param>
+        /// <param name="line"></param>
+        void Trace(List<string> msg, string id, [CallerLineNumber] int line = -1)
+        {
+            var smsg = string.Join(Environment.NewLine, msg);
+            File.AppendAllText(_tracePath, $"{id}({line}){Environment.NewLine}{smsg}{Environment.NewLine}");
         }
 
         /// <summary>
@@ -457,6 +525,7 @@ namespace Shellinator
             List<string> contexts = ["Directory", "DesktopBackground", "Folder", "*"];
             contexts.ForEach(ctx => DoSubkey(regRoot!, ctx));
 
+            // Local recursive func.
             void DoSubkey(RegistryKey key, string sname, int indent = 0)
             {
                 string sind = new(' ', indent * 4);
