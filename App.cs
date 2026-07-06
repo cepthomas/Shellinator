@@ -9,6 +9,8 @@ using System.Runtime.CompilerServices;
 using Microsoft.Win32;
 using Ephemera.NBagOfTricks;
 
+// TODO Shellinator server - like ClipPlayer orr Attic\OCD\MassProcessing\MassProcessingService.
+
 
 namespace Shellinator
 {
@@ -123,10 +125,18 @@ namespace Shellinator
 
                 switch (key, context, target)
                 {
+                    case ("list", null, null):
+                        {
+                            Log($"Shellinator list registry");
+                            List<string> res = ListRegistryCommands();
+                            res.ForEach(l => Console.WriteLine(l));
+                        }
+                        break;
+
                     case ("reg", null, null):
                         {
-                            List<string> res = [];
                             Log($"Shellinator register all");
+                            List<string> res = [];
                             // remove old first?
                             _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd)));
                         }
@@ -134,8 +144,8 @@ namespace Shellinator
 
                     case ("unreg", null, null):
                         {
-                            List<string> res = [];
                             Log($"Shellinator unregister all");
+                            List<string> res = [];
                             _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd)));
                         }
                         break;
@@ -490,6 +500,83 @@ namespace Shellinator
         }
 
         /// <summary>
+        /// List the current shellinator registry commands.
+        /// </summary>
+        List<string> ListRegistryCommands()
+        {
+            List<string> res = [];
+            //res = DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
+
+            using var hkcr = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
+            using var regRoot = hkcr.OpenSubKey(@"Software\Classes", writable: false);
+
+
+            /*
+            [Directory]
+                [Background]
+                    [shell]
+                        [findev]
+                            [MUIVerb]:[Open in Everything]
+                            [command]
+                                []:["C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" findev DirBg "%W"]
+                        ...
+                [shell]
+                    [findev]
+                        [MUIVerb]:[Open in Everything]
+                        [command]
+                            []:["C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" findev Dir "%D"]
+                    ...
+
+            [DesktopBackground]
+                [shell]
+
+            [Folder]
+                [shell]
+
+            [*]
+                [shell]
+                    [run]
+                        [MUIVerb]:[Run]
+                        [command]
+                            []:["C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" run File "%D"]
+                    ...
+            */
+
+            List<string> contexts = ["Directory", @"Desktop\Background", "*"];
+
+
+
+            // string sind = "    ";
+            // contexts.ForEach(ctx => DoSubkey(regRoot!, ctx));
+
+            // //Local recursive func.
+            // void DoSubkey(RegistryKey key, string sname, int indent = 0)
+            // {
+            //     string subind = string.Concat(Enumerable.Repeat(sind, indent));
+
+            //     res.Add($"{subind}[{sname}]");
+
+            //     using var subkey = key.OpenSubKey(sname, writable: false);
+            //     if (subkey is null) return;
+
+            //     foreach (string sval in subkey.GetValueNames())
+            //     {
+            //         // "" means default
+            //         res.Add($"{subind}{sind}[{sval}]:[{subkey.GetValue(sval)}]");
+            //     }
+
+            //     if (recursive)
+            //     {
+            //         // Visit the children.
+            //         var snames = subkey.GetSubKeyNames();
+            //         snames.ForEach(s => DoSubkey(subkey, s, indent + 1));
+            //     }
+            // }
+
+            return res;
+        }
+
+        /// <summary>
         /// Utility to look at registry contents of interest.
         /// </summary>
         /// <param name="hive"></param>
@@ -505,14 +592,16 @@ namespace Shellinator
             using var hkcr = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
             using var regRoot = hkcr.OpenSubKey(subkey, writable: false);
 
-            List<string> contexts = ["Directory", "DesktopBackground", "Folder", "*"];
+            List<string> contexts = ["Directory", "Folder", "*"];
+            string sind = "    ";
             contexts.ForEach(ctx => DoSubkey(regRoot!, ctx));
 
             // Local recursive func.
             void DoSubkey(RegistryKey key, string sname, int indent = 0)
             {
-                string sind = new(' ', indent * 4);
-                res.Add($"{sind}[{sname}]");
+                string subind = string.Concat(Enumerable.Repeat(sind, indent));
+
+                res.Add($"{subind}[{sname}]");
 
                 using var subkey = key.OpenSubKey(sname, writable: false);
                 if (subkey is null) return;
@@ -520,7 +609,7 @@ namespace Shellinator
                 foreach (string sval in subkey.GetValueNames())
                 {
                     // "" means default
-                    res.Add($"{sind}  [{sval}]:[{subkey.GetValue(sval)}]");
+                    res.Add($"{subind}{sind}[{sval}]:[{subkey.GetValue(sval)}]");
                 }
 
                 if (recursive)
