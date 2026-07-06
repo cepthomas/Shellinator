@@ -8,10 +8,6 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 using Microsoft.Win32;
 using Ephemera.NBagOfTricks;
-using Shellinator.Properties;
-
-
-// TODO use service? https://learn.microsoft.com/en-us/dotnet/core/extensions/windows-service
 
 
 namespace Shellinator
@@ -111,7 +107,7 @@ namespace Shellinator
                 if (!File.Exists(cfn))
                 {
                     Log($"Copying default.ini");
-                    File.WriteAllBytes(cfn, Resources.default_ini);
+                    File.WriteAllBytes(cfn, Properties.Resources.default_ini);
                 }
                 _tmit.Snap("Start load config");
                 LoadIni(cfn);
@@ -122,21 +118,25 @@ namespace Shellinator
                 var context = appArgs.Length > 1 ? appArgs[1].ToLower() : null;
                 var target = appArgs.Length > 2 ? appArgs[2] : null;
                 var ext = target is null ? "" : Path.GetExtension(target).Replace(".", "");
-
                 // $"key:{key} context:{context} target:{target} ext:{ext}");
-                //+++ key:run context:file target:C:\Dev\Apps\Shellinator\bin\net8.0-windows\shellinator.exe ext:exe
+                // key:run context:file target:C:\Dev\Apps\Shellinator\bin\net8.0-windows\shellinator.exe ext:exe
 
                 switch (key, context, target)
                 {
                     case ("reg", null, null):
                         {
-                            RegisterAll();
+                            List<string> res = [];
+                            Log($"Shellinator register all");
+                            // remove old first?
+                            _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd)));
                         }
                         break;
 
                     case ("unreg", null, null):
                         {
-                            UnregisterAll();
+                            List<string> res = [];
+                            Log($"Shellinator unregister all");
+                            _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd)));
                         }
                         break;
 
@@ -209,8 +209,12 @@ namespace Shellinator
 
                             // Trace reg calls without executing.
                             _fake = true;
-                            UnregisterAll();
-                            RegisterAll();
+                            _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd)));
+                            Trace(res, "UNREG");
+                            res.Clear();
+                            _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd)));
+                            Trace(res, "REG");
+                            res.Clear();
                             _fake = false;
 
                             // Dump hive contents.
@@ -246,25 +250,6 @@ namespace Shellinator
 
         #region Internals
         /// <summary>
-        /// 
-        /// </summary>
-        void RegisterAll()
-        {
-            Log($"Shellinator register all");
-            // UnregisterAll(); // TODO remove old first?
-            _explorerCommands.ForEach(cmd => Register(cmd));
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        void UnregisterAll()
-        {
-            Log($"Shellinator unregister all");
-            _explorerCommands.ForEach(cmd => Unregister(cmd));
-        }
-
-        /// <summary>
         /// Generic command executor. Called by command handlers. Suppresses console window creation.
         /// </summary>
         /// <param name="args">Command followed by all args.</param>
@@ -282,7 +267,7 @@ namespace Shellinator
                 RedirectStandardError = true,
             };
 
-            // Add app-specific environmental variables.
+            // Add app-specific environmental variables as needed.
             // pinfo.EnvironmentVariables["MY_VAR"] = "Hello!";
 
             using Process proc = new() { StartInfo = pinfo };
@@ -501,7 +486,7 @@ namespace Shellinator
         void Trace(List<string> msg, string id, [CallerLineNumber] int line = -1)
         {
             var smsg = string.Join(Environment.NewLine, msg);
-            File.AppendAllText(_tracePath, $"{id}({line}){Environment.NewLine}{smsg}{Environment.NewLine}");
+            File.AppendAllText(_tracePath, $"+++ {id} ({line}){Environment.NewLine}{smsg}{Environment.NewLine}");
         }
 
         /// <summary>
@@ -514,9 +499,7 @@ namespace Shellinator
         {
             List<string> res =
             [
-                $"",
                 $"====================== {hive} {subkey} ======================",
-                $""
             ];
 
             using var hkcr = RegistryKey.OpenBaseKey(hive, RegistryView.Registry64);
