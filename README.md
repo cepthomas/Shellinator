@@ -10,6 +10,7 @@ Configure with `shellinator.ini` in the same directory as the executable. A defa
 the first time the application is run. Refer to that file for specification of the custom entries.
 When edited, run `shellinator reg` to register them. If the config needs to be changed, first
 run `shellinator unreg`, make the edits, then run `shellinator reg` again.
+To see what commands are currently registered, run `shellinator list`.
 
 If this gets a bit messed up, the registry entries can be removed manually.
 Delete these entries:

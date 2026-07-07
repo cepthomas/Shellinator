@@ -9,8 +9,6 @@ using System.Runtime.CompilerServices;
 using Microsoft.Win32;
 using Ephemera.NBagOfTricks;
 
-// TODO Shellinator server - like ClipPlayer orr Attic\OCD\MassProcessing\MassProcessingService.
-
 
 namespace Shellinator
 {
@@ -129,7 +127,7 @@ namespace Shellinator
                         {
                             Log($"Shellinator list registry");
                             List<string> res = ListRegistryCommands();
-                            res.ForEach(l => Console.WriteLine(l));
+                            Clipboard.SetText(string.Join(Environment.NewLine, res));
                         }
                         break;
 
@@ -505,73 +503,37 @@ namespace Shellinator
         List<string> ListRegistryCommands()
         {
             List<string> res = [];
-            //res = DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
 
             using var hkcr = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
             using var regRoot = hkcr.OpenSubKey(@"Software\Classes", writable: false);
 
+            List<string> contexts = ["Directory", "Directory\\Background", "DesktopBackground", "*"];
 
-            /*
-            [Directory]
-                [Background]
-                    [shell]
-                        [findev]
-                            [MUIVerb]:[Open in Everything]
-                            [command]
-                                []:["C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" findev DirBg "%W"]
-                        ...
-                [shell]
-                    [findev]
-                        [MUIVerb]:[Open in Everything]
-                        [command]
-                            []:["C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" findev Dir "%D"]
-                    ...
+            foreach (var ctx in contexts)
+            {
+                var sname = @$"{ctx}\shell";
+                using var subkey = regRoot!.OpenSubKey(sname, writable: false);
+                if (subkey is null) continue; // nothing of interest here
 
-            [DesktopBackground]
-                [shell]
+                foreach (string id in subkey.GetSubKeyNames()) // e.g. findev, run, ...
+                {
+                    try
+                    {
+                        using var subkey1 = subkey.OpenSubKey(id, writable: false);
+                        var muiVerb = subkey1!.GetValue("MUIVerb");
 
-            [Folder]
-                [shell]
+                        using var subkey2 = subkey1.OpenSubKey("command", writable: false);
+                        var scommand = subkey2!.GetValue("");
 
-            [*]
-                [shell]
-                    [run]
-                        [MUIVerb]:[Run]
-                        [command]
-                            []:["C:\Users\cepth\OneDrive\Tools\Apps\shellinator.exe" run File "%D"]
-                    ...
-            */
+                        res.Add($"[{subkey1}]{Environment.NewLine}    [{muiVerb}] => [{scommand}]");
 
-            List<string> contexts = ["Directory", @"Desktop\Background", "*"];
-
-
-
-            // string sind = "    ";
-            // contexts.ForEach(ctx => DoSubkey(regRoot!, ctx));
-
-            // //Local recursive func.
-            // void DoSubkey(RegistryKey key, string sname, int indent = 0)
-            // {
-            //     string subind = string.Concat(Enumerable.Repeat(sind, indent));
-
-            //     res.Add($"{subind}[{sname}]");
-
-            //     using var subkey = key.OpenSubKey(sname, writable: false);
-            //     if (subkey is null) return;
-
-            //     foreach (string sval in subkey.GetValueNames())
-            //     {
-            //         // "" means default
-            //         res.Add($"{subind}{sind}[{sval}]:[{subkey.GetValue(sval)}]");
-            //     }
-
-            //     if (recursive)
-            //     {
-            //         // Visit the children.
-            //         var snames = subkey.GetSubKeyNames();
-            //         snames.ForEach(s => DoSubkey(subkey, s, indent + 1));
-            //     }
-            // }
+                    }
+                    catch (Exception ex)
+                    {
+                        res.Add($">>> Something wrong with [{subkey}] [{id}]");
+                    }
+                }
+            }
 
             return res;
         }
