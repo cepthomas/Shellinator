@@ -4,7 +4,7 @@ Playing with shell extensions to provide some custom context menus. This can onl
 removal or editing is a much more murky subject.
 
 Consists of a simple command line client that is called from registry commands.
-It executes the requested operation and copies any standard output to the clipboard.
+It executes the requested operation and copies any standard and/or error output to the clipboard.
 
 Configure with `shellinator.ini` in the same directory as the executable. A default is created
 the first time the application is run. Refer to that file for specification of the custom entries.

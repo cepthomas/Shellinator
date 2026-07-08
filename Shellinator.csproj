@@ -55,9 +55,9 @@
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(TOOLS_PATH)' != ''">
-        <Exec Command="copy /Y $(OutputPath)Shellinator.exe $(TOOLS_PATH)" />
-        <Exec Command="copy /Y $(OutputPath)Shellinator.dll $(TOOLS_PATH)" />
-        <Exec Command="copy /Y $(OutputPath)Shellinator.runtimeconfig.json $(TOOLS_PATH)" />
+        <Exec Command="copy /Y $(OutputPath)shellinator.exe $(TOOLS_PATH)" />
+        <Exec Command="copy /Y $(OutputPath)shellinator.dll $(TOOLS_PATH)" />
+        <Exec Command="copy /Y $(OutputPath)shellinator.runtimeconfig.json $(TOOLS_PATH)" />
     </Target>
 
 </Project>
