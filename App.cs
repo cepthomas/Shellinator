@@ -12,12 +12,15 @@ using Ephemera.NBagOfTricks;
 
 namespace Shellinator
 {
-    /// <summary>The generic part of the app.</summary>
     class App
     {
         #region Types
         /// <summary>Internal exception.</summary>
-        class ShellinatorException(string msg) : Exception(msg) { }
+        class ShellinatorException(string msg, [CallerLineNumber] int line = -1) : Exception(msg)
+        {
+            public int Line { get; } = line;
+            public override string ToString() { return $"({Line}) {base.ToString()})"; }
+        }
 
         /// <summary>Describes one standard menu command.</summary>
         /// <param name="Context">Where to install.</param>
@@ -26,8 +29,7 @@ namespace Shellinator
         /// <param name="ExecLine">Command line args to execute.</param>
         record ExplorerCommand(string Context, string Key, string Text, List<string> ExecLine)
         {
-            public List<string> ExecLine { get; set; } = ExecLine;
-            public override string ToString() { return $"ExplorerCommand Context:{Context} Key:{Key} Text:{Text} ExecLine:{string.Join("|", ExecLine)}"; }
+            public override string ToString() { return $"ExplorerCommand Context:[{Context}] Key:[{Key}] Text:[{Text}] ExecLine:[{string.Join("|", ExecLine)}]"; }
         };
 
         /// <summary>Describes one run menu command.</summary>
@@ -35,7 +37,7 @@ namespace Shellinator
         /// <param name="ExecLine">Command line args to execute.</param>
         record RunCommand(string Ext, List<string> ExecLine)
         {
-            public override string ToString() { return $"RunCommand Ext:{Ext} ExecLine:{string.Join("|", ExecLine)}"; }
+            public override string ToString() { return $"RunCommand Ext:[{Ext}] ExecLine:[{string.Join("|", ExecLine)}]"; }
         };
 
         /// <summary>Convenience container.</summary>
@@ -77,12 +79,10 @@ namespace Shellinator
         readonly bool _inDev = false;
         #endregion
 
-        ExplorerCommand _runDummy = new ExplorerCommand("Dummy", "run", "Run", []);
-
         /// <summary>Where it all begins.</summary>
         /// <param name="args"></param>
         [STAThread]
-        static void MainXX(string[] args)
+        static void Main(string[] args)
         {
             // TODO? Server - like ClipPlayer (Ipc.Server) or MassProcessingService.
             new App(args);
@@ -129,20 +129,28 @@ namespace Shellinator
                 _tmit.Snap("Done load config");
 
                 ///// Process the args: shellinator.exe key context target.
-                var key = appArgs.Length > 0 ? appArgs[0].ToLower() : "";
-                var context = appArgs.Length > 1 ? appArgs[1].ToLower() : null;
+                var key = appArgs.Length > 0 ? appArgs[0] : "";
+                var context = appArgs.Length > 1 ? appArgs[1] : null;
+                var contextlc = context is null ? null : context.ToLower();
                 var target = appArgs.Length > 2 ? appArgs[2] : null;
-                var ext = target is null ? "" : Path.GetExtension(target).Replace(".", "");
+                var ext = target is null ? "" : Path.GetExtension(target).ToLower().Replace(".", "");
 
-                switch (key, context, target)
+                switch (key.ToLower(), context, target)
                 {
                     case ("list", null, null):
                         {
                             Log($"Shellinator list registry");
                             List<string> res = ListRegistryCommands();
                             var sres = string.Join(Environment.NewLine, res);
-                            Clipboard.SetText(sres);
-                            Trace(res, "LIST");
+                            if (sres.Length > 0)
+                            {
+                                Clipboard.SetText(sres);
+                                Trace(res, "LIST");
+                            }
+                            else
+                            {
+                                Trace(["empty"], "LIST");
+                            }
                         }
                         break;
 
@@ -150,12 +158,7 @@ namespace Shellinator
                         {
                             Log($"Shellinator register all");
                             List<string> res = [];
-                            // remove old first?
                             _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd)));
-                            if (_runCommands.Count > 0)
-                            {
-                                res.AddRange(Register(_runDummy));
-                            }
                         }
                         break;
 
@@ -164,7 +167,6 @@ namespace Shellinator
                             Log($"Shellinator unregister all");
                             List<string> res = [];
                             _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd)));
-                            res.AddRange(Unregister(_runDummy));
                         }
                         break;
 
@@ -173,13 +175,13 @@ namespace Shellinator
                     case (_, "deskbg", not null):
                         {
                             // Called from system using registry entry.
-                            var cmd = _explorerCommands.Where(c => c.Context == context && c.Key == key).FirstOrDefault();
+                            var cmd = _explorerCommands.Where(c => c.Context == context.ToLower() && c.Key == key.ToLower()).FirstOrDefault();
                             if (cmd is null) { throw new ShellinatorException($"Invalid command line"); }
                             ExecuteCommand(cmd.ExecLine, target);
                         }
                         break;
 
-                    case (_, "run", not null):
+                    case ("run", _, not null):
                         {
                             // Called from system using registry entry.
                             var cmd = _runCommands.Where(c => c.Ext == ext).FirstOrDefault();
@@ -201,14 +203,10 @@ namespace Shellinator
                             _fake = true;
                             res.Clear();
                             _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd)));
-                            //_runCommands.ForEach(cmd => res.AddRange(Unregister(cmd)));
-                            res.AddRange(Unregister(_runDummy));
                             Trace(res, "UNREG");
 
                             res.Clear();
                             _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd)));
-                            //_runCommands.ForEach(cmd => res.AddRange(Register(cmd)));
-                            res.AddRange(Register(_runDummy));
                             Trace(res, "REG");
                             _fake = false;
 
@@ -272,7 +270,6 @@ namespace Shellinator
                 RedirectStandardError = true,
             };
 
-            // Add app-specific environmental variables as needed.
             // pinfo.EnvironmentVariables["MY_VAR"] = "Hello!";
 
             using Process proc = new() { StartInfo = pinfo };
@@ -319,8 +316,12 @@ namespace Shellinator
                 }
 
                 var sres = string.Join(Environment.NewLine, ls);
-                Log(sres);
-                Clipboard.SetText(sres);
+
+                if (sres.Length > 0)
+                {
+                    Log(sres);
+                    Clipboard.SetText(sres);
+                }
             }
 
             _tmit.Snap("Execute command end");
@@ -343,7 +344,6 @@ namespace Shellinator
             foreach (var sectName in inrdr.GetSectionNames())
             {
                 var sectNameParts = sectName.SplitByTokens(" ");
-                if (sectNameParts.Count < 2) throw new IniSyntaxException($"Invalid section name [{sectName}]", -1);
 
                 switch (sectNameParts[0].ToLower())
                 {
@@ -352,7 +352,7 @@ namespace Shellinator
                         {
                             switch (kv.Key.ToLower())
                             {
-                                case "debug": _debug = kv.Value.Equals("1", StringComparison.CurrentCultureIgnoreCase); break;
+                                case "debug": _debug = kv.Value == "1"; break;
                                 default: break; // error?
                             }
                         });
@@ -362,7 +362,9 @@ namespace Shellinator
                     case "dirbg":
                     case "deskbg":
                         {
-                            var ctxt = sectNameParts[0].ToLower();
+                            if (sectNameParts.Count < 2) throw new IniSyntaxException($"Invalid section name [{sectName}]", -1);
+
+                            var ctxt = sectNameParts[0];
                             var cmd = sectNameParts[1].ToLower();
                             var sectVals = inrdr.GetValues(sectName);
 
@@ -378,25 +380,28 @@ namespace Shellinator
 
                     case "run":
                         {
-                            var sectionParts = sectName.SplitByTokens(" ");
-                            if (sectionParts.Count < 2) throw new IniSyntaxException($"Invalid section name [{sectName}]", -1);
+                            if (sectNameParts.Count < 2) throw new IniSyntaxException($"Invalid run args [{sectName}]", -1);
 
-                            var extensions = sectionParts[1..];
+                            var extensions = sectNameParts[1..];
 
                             var sectVals = inrdr.GetValues(sectName);
                             if (!sectVals.TryGetValue("exec", out var exec)) throw new IniSyntaxException($"Missing exec item in section [{sectName}]", -1);
 
                             // Good to go.
                             var execParts = exec.SplitByToken(",");
-                            sectionParts[1..].ForEach(ext => _runCommands.Add(new(ext, execParts)));
-
-                            _runDummy.ExecLine = execParts;
+                            sectNameParts[1..].ForEach(ext => _runCommands.Add(new(ext, execParts)));
                         }
                         break;
 
                     default:
                         throw new ArgumentException($"Invalid context: {sectName}");
                 }
+            }
+
+            // Add the internal command if required.
+            if (_runCommands.Count > 0)
+            {
+                _explorerCommands.Add(new("File", "run", "Run", []));
             }
         }
         #endregion
@@ -416,7 +421,7 @@ namespace Shellinator
             using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
 
             // Key names etc.
-            var subkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Key}";//?
+            var subkey1 = $"{GetRegPath(cmd.Context)}\\shell\\{cmd.Key}";
             var subkey2 = $"{subkey1}\\command";
 
             // Determine target tag based on origin. Dir/File/Folder => %D  DirBg/DeskBg => %W.
@@ -447,44 +452,6 @@ namespace Shellinator
         }
 
         /// <summary>
-        /// Write the generic run command to the registry.
-        /// </summary>
-        /// <returns>What was written</returns>
-        //List<string> RegisterRunCommand() //TODO1 ? combine with above?
-        //{
-        //    List<string> res = [];
-
-        //    // Assemble command: shellinator_path id context target
-        //    using var hkcu = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
-        //    using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
-
-        //    // Key names etc.
-        //    var subkey1 = $"*\\shell\\run";
-        //    var subkey2 = $"{subkey1}\\command";
-
-        //    // Determine target tag.
-        //    var targetTag = "%D";
-
-        //    // All paths and macros that expand to paths must be wrapped in double quotes.
-        //    var exec = Path.Join(_exePath, "shellinator.exe");
-        //    var expCmd = $"\"{exec}\" run Run \"{targetTag}\"";
-
-        //    res.Add($"REG CreateSubKey({subkey1}) SetValue(MUIVerb, Run)");
-        //    res.Add($"REG CreateSubKey({subkey2}) SetValue(_, {expCmd})");
-
-        //    if (!_fake)
-        //    {
-        //        using var k1 = regRoot!.CreateSubKey(subkey1);
-        //        k1.SetValue("MUIVerb", "Run");
-
-        //        using var k2 = regRoot!.CreateSubKey(subkey2);
-        //        k2.SetValue("", expCmd);
-        //    }
-
-        //    return res;
-        //}
-
-        /// <summary>
         /// Delete existing registry entry.
         /// </summary>
         /// <param name="cmd">Which command</param>
@@ -507,30 +474,6 @@ namespace Shellinator
 
             return res;
         }
-
-        ///// <summary>
-        ///// Delete existing registry entry.
-        ///// </summary>
-        ///// <returns>What was written</returns>
-        //List<string> UnregisterRunCommand() //  //TODO1 ? combine with above? RunCommand cmd)
-        //{
-        //    List<string> res = [];
-
-        //    using var hkcu = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
-        //    using var regRoot = hkcu.OpenSubKey(@"Software\Classes", writable: true);
-
-        //    //var ssubkey = $"{GetRegPath(cmd.Context)}\\shell\\run";
-        //    var ssubkey = $"*\\shell\\run";
-
-        //    res.Add($"UNREG DeleteSubKeyTree({ssubkey})");
-
-        //    if (!_fake)
-        //    {
-        //        regRoot!.DeleteSubKeyTree(ssubkey, false);
-        //    }
-
-        //    return res;
-        //}
 
         /// <summary>
         /// Convert the internal enum to registry key.
