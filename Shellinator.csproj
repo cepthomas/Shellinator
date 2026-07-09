@@ -2,7 +2,7 @@
 
     <PropertyGroup>
 
-        <!-- Use Exe to debug using console. WinExe -->
+        <!-- Use Exe to debug using console. WinExe hides console. -->
         <OutputType>WinExe</OutputType>
         <UseWindowsForms>true</UseWindowsForms>
         <OutputPath>bin\</OutputPath>
@@ -13,7 +13,7 @@
         <Version>2.0.0</Version>
         <AssemblyName>shellinator</AssemblyName>
         <RootNamespace>Shellinator</RootNamespace>
-        <NoWarn>CA1806;CA1822;IDE0051</NoWarn>
+        <NoWarn>SYSLIB1054;CA1822</NoWarn>
         <Company>Ephemera Inc</Company>
         <Product>Shellinator</Product>
         <Description>Play with shell stuff.</Description>

@@ -6,6 +6,8 @@ using System.Windows.Forms;
 using System.Linq;
 using System.Collections;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Threading;
 using Microsoft.Win32;
 using Ephemera.NBagOfTricks;
 
@@ -71,9 +73,6 @@ namespace Shellinator
         #endregion
 
         #region Debug help
-        // /// <summary>Dry run the registry writes.</summary>
-        // readonly bool _fake = false;
-
         /// <summary>Flag set in ini config.</summary>
         bool _debug = false;
 
@@ -82,13 +81,14 @@ namespace Shellinator
         #endregion
 
         #region The command line application
+
         /// <summary>Start here.</summary>
         /// <param name="args"></param>
         [STAThread]
         static void Main(string[] args)
         {
             // TODO? Keep in memory like ClipPlayer (Ipc.Server) or MassProcessingService.
-            new App(args);
+            var _ = new App(args);
         }
 
         /// <summary>Do the work.</summary>
@@ -96,6 +96,7 @@ namespace Shellinator
         public App(string[] appArgs)
         {
             int code = 0;
+            List<string> res = [];
 
             try
             {
@@ -104,11 +105,9 @@ namespace Shellinator
                 ///// Init internal stuff.
                 _inDev = Debugger.IsAttached;
                 _exePath = Path.GetDirectoryName(Application.ExecutablePath)!;
-//                _tracePath = Path.Join(_exePath, "shellinator.trc");
-//                File.Delete(_tracePath); // reset
 
-
-//                Console.BackgroundColor = ConsoleColor.Green;
+                // _tracePath = Path.Join(_exePath, "shellinator.trc");
+                // File.Delete(_tracePath); // reset
 
                 // Set up logging.
                 _logPath = Path.Join(_exePath, "shellinator.log");
@@ -155,7 +154,7 @@ namespace Shellinator
                         }
                         break;
 
-                    case ("run", _, not null):
+                    case ("run", "file", not null):
                         {
                             var cmd = _runCommands.Where(c => c.Ext == ext).FirstOrDefault();
                             // Try default file?
@@ -168,38 +167,36 @@ namespace Shellinator
                     ///// These are called from user console. /////
                     case ("list", null, null):
                         {
-                            Tell("Registry commands:");
-                            Tell(ListRegistryCommands());
+                            res.Add("Registry commands:");
+                            res.AddRange(ListRegistryCommands());
                         }
                         break;
 
                     case ("reg", null, null):
                         {
-                            Tell("Register all:");
-                            _explorerCommands.ForEach(c => Tell(Register(c, false)));
+                            res.Add("Register all:");
+                            _explorerCommands.ForEach(c => res.AddRange(Register(c, false)));
                         }
                         break;
 
                     case ("unreg", null, null):
                         {
-                            Tell("Unregister all:");
-                            _explorerCommands.ForEach(c => Tell(Unregister(c, false)));
+                            res.Add("Unregister all:");
+                            _explorerCommands.ForEach(c => res.AddRange(Unregister(c, false)));
                         }
                         break;
 
                     case ("dev", null, null):
                         {
-                            Tell("COMMANDS:");
-                            _explorerCommands.ForEach(cmd => Tell(cmd.ToString()));
-                            _runCommands.ForEach(cmd => Tell(cmd.ToString()));
+                            res.Add("COMMANDS:");
+                            _explorerCommands.ForEach(cmd => res.Add(cmd.ToString()));
+                            _runCommands.ForEach(cmd => res.Add(cmd.ToString()));
 
                             // Trace reg calls without executing.
-//                            _fake = true;
-                            Tell("UNREG:");
-                            _explorerCommands.ForEach(cmd => Tell(Unregister(cmd, true)));
-                            Tell("REG:");
-                            _explorerCommands.ForEach(cmd => Tell(Register(cmd, true)));
-//                            _fake = false;
+                            res.Add("UNREG:");
+                            _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd, true)));
+                            res.Add("REG:");
+                            _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd, true)));
 
                             // Dump hive contents.
                             // Tell("UNREG:");
@@ -212,7 +209,7 @@ namespace Shellinator
 
                     ///// Fail. /////
                     default:
-                        throw new ShellinatorException($"Invalid command line args");
+                        throw new ShellinatorException($"Invalid command line args [{string.Join("|", appArgs)}]");
                 }
             }
             catch (ShellinatorException ex) // app error
@@ -227,6 +224,12 @@ namespace Shellinator
             }
 
             _tmit.Snap("All done");
+
+            if (res.Count > 0)
+            {
+                Clipboard.SetText(string.Join(Environment.NewLine, res));
+            }
+
             //Trace(_tmit.Captures, "TMIT");
 
             Environment.Exit(code);
@@ -239,11 +242,12 @@ namespace Shellinator
         /// </summary>
         /// <param name="cmd">Command followed by all args.</param>
         /// <param name="target"></param>
-        /// <returns>Result code</returns>
-        int ExecuteCommand(List<string> cmd, string target)
+        /// <returns>Results</returns>
+        List<string> ExecuteCommand(List<string> cmd, string target)
         {
             Log($"ExecuteCommand() [{string.Join("|", cmd)}]");
             _tmit.Snap("Execute command start");
+            List<string> res = [];
 
             // Do any replacements.
             var replArgs = cmd.Select(l =>
@@ -287,36 +291,30 @@ namespace Shellinator
                 // Success. Capture any stdout. TIL don't set clipboard to an empty string.
                 if (stdout.Length > 0)
                 {
-                    Clipboard.SetText(stdout);
+                    res.Add(stdout);
+                    //ClipboardX.SetText(stdout);
                 }
             }
             else
             {
                 // Command failed. Capture everything useful.
-                List<string> ls = [ $"Command failed with code {proc.ExitCode}" ];
+                res.Add($"Command failed with code {proc.ExitCode}");
 
                 if (stdout.Length != 0)
                 {
-                    ls.Add("==================== stdout ====================");
-                    ls.Add(stdout);
+                    res.Add("==================== stdout ====================");
+                    res.Add(stdout);
                 }
                 if (stderr.Length != 0)
                 {
-                    ls.Add("==================== stderr ====================");
-                    ls.Add(stderr);
-                }
-
-                var sres = string.Join(Environment.NewLine, ls);
-
-                if (sres.Length > 0)
-                {
-                    Log(sres);
-                    Clipboard.SetText(sres);
+                    res.Add("==================== stderr ====================");
+                    res.Add(stderr);
                 }
             }
 
             _tmit.Snap("Execute command end");
-            return proc.ExitCode;
+
+            return res;
         }
 
         /// <summary>
@@ -486,24 +484,6 @@ namespace Shellinator
 
         #region Infrastructure
         /// <summary>
-        /// Tell the user something.
-        /// </summary>
-        /// <param name="s"></param>
-        void Tell(string s)
-        {
-            Console.WriteLine(s);
-        }
-
-        /// <summary>
-        /// Tell the user something.
-        /// </summary>
-        /// <param name="ls"></param>
-        void Tell(List<string> ls)
-        {
-            ls.ForEach(s => Tell(s));
-        }
-
-        /// <summary>
         /// Simple logging.
         /// </summary>
         /// <param name="msg"></param>
@@ -523,29 +503,6 @@ namespace Shellinator
             File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} >>> ({line}) {ex}{Environment.NewLine}");
             MessageBox.Show(ex.ToString(), ex.Message);
         }
-
-        ///// <summary>
-        ///// Simple logging.
-        ///// </summary>
-        ///// <param name="msg"></param>
-        ///// <param name="id"></param>
-        ///// <param name="line"></param>
-        //void Trace(string msg, string id, [CallerLineNumber] int line = -1)
-        //{
-        //    File.AppendAllText(_tracePath, $"{id}({line}) {msg}{Environment.NewLine}");
-        //}
-
-        ///// <summary>
-        ///// Simple logging.
-        ///// </summary>
-        ///// <param name="msg"></param>
-        ///// <param name="id"></param>
-        ///// <param name="line"></param>
-        //void Trace(List<string> msg, string id, [CallerLineNumber] int line = -1)
-        //{
-        //    var smsg = string.Join(Environment.NewLine, msg);
-        //    File.AppendAllText(_tracePath, $"+++ {id} ({line}){Environment.NewLine}{smsg}{Environment.NewLine}");
-        //}
 
         /// <summary>
         /// List the current shellinator registry commands.
@@ -580,7 +537,7 @@ namespace Shellinator
                     }
                     catch (Exception ex)
                     {
-                        res.Add($">>> Something wrong with [{subkey}] [{id}] [{ex.Message}]");
+                        res.Add($"!!! Something wrong with [{subkey}] [{id}] [{ex.Message}]");
                     }
                 }
             }
