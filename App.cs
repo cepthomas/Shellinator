@@ -57,14 +57,8 @@ namespace Shellinator
         /// <summary>Log file path.</summary>
         readonly string _logPath;
 
-        /// <summary>Debug file path.</summary>
-        readonly string _tracePath;
-
-        /// <summary>Dry run the registry writes.</summary>
-        readonly bool _fake = false;
-
-        /// <summary>Log detail.</summary>
-        bool _debug = false;
+        // /// <summary>Debug file path.</summary>
+        // readonly string _tracePath;
 
         /// <summary>Don't use reserved commands.</summary>
         readonly List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
@@ -74,21 +68,29 @@ namespace Shellinator
 
         /// <summary>All the user commands.</summary>
         readonly List<RunCommand> _runCommands = [];
+        #endregion
 
-        /// <summary>Determine mode.</summary>
+        #region Debug help
+        // /// <summary>Dry run the registry writes.</summary>
+        // readonly bool _fake = false;
+
+        /// <summary>Flag set in ini config.</summary>
+        bool _debug = false;
+
+        /// <summary>Some behavior is altered if running in VS.</summary>
         readonly bool _inDev = false;
         #endregion
 
-        /// <summary>Where it all begins.</summary>
+        #region The command line application
+        /// <summary>Start here.</summary>
         /// <param name="args"></param>
         [STAThread]
         static void Main(string[] args)
         {
-            // TODO? Server - like ClipPlayer (Ipc.Server) or MassProcessingService.
+            // TODO? Keep in memory like ClipPlayer (Ipc.Server) or MassProcessingService.
             new App(args);
         }
 
-        #region The command line application
         /// <summary>Do the work.</summary>
         /// <param name="appArgs"></param>
         public App(string[] appArgs)
@@ -102,8 +104,11 @@ namespace Shellinator
                 ///// Init internal stuff.
                 _inDev = Debugger.IsAttached;
                 _exePath = Path.GetDirectoryName(Application.ExecutablePath)!;
-                _tracePath = Path.Join(_exePath, "shellinator.trc");
-                File.Delete(_tracePath); // reset
+//                _tracePath = Path.Join(_exePath, "shellinator.trc");
+//                File.Delete(_tracePath); // reset
+
+
+//                Console.BackgroundColor = ConsoleColor.Green;
 
                 // Set up logging.
                 _logPath = Path.Join(_exePath, "shellinator.log");
@@ -117,7 +122,8 @@ namespace Shellinator
                 Log($"==================== Running shellinator ====================");
                 Log($"Command line [{string.Join("|", appArgs)}]");
 
-                // Read configuration. Config file is assumed to be next to the executable. If missing init with default
+                // Read configuration. Config file is assumed to be next to the executable.
+                // If missing init with default. TODO1 allow arbitrary for dev?
                 var cfn = Path.Combine(_exePath, "shellinator.ini");
                 if (!File.Exists(cfn))
                 {
@@ -128,54 +134,22 @@ namespace Shellinator
                 LoadIni(cfn);
                 _tmit.Snap("Done load config");
 
-                ///// Process the args: shellinator.exe key context target.
-                var key = appArgs.Length > 0 ? appArgs[0] : "";
+                ///// Process the args: shellinator.exe id context target. id is registry key or internal command name.
+                var id = appArgs.Length > 0 ? appArgs[0] : "";
+                var idlc = id.ToLower();
                 var context = appArgs.Length > 1 ? appArgs[1] : null;
-                var contextlc = context is null ? null : context.ToLower();
+                var contextlc = context?.ToLower();
                 var target = appArgs.Length > 2 ? appArgs[2] : null;
                 var ext = target is null ? "" : Path.GetExtension(target).ToLower().Replace(".", "");
 
-                switch (key.ToLower(), context, target)
+                switch (idlc, contextlc, target)
                 {
-                    case ("list", null, null):
-                        {
-                            Log($"Shellinator list registry");
-                            List<string> res = ListRegistryCommands();
-                            var sres = string.Join(Environment.NewLine, res);
-                            if (sres.Length > 0)
-                            {
-                                Clipboard.SetText(sres);
-                                Trace(res, "LIST");
-                            }
-                            else
-                            {
-                                Trace(["empty"], "LIST");
-                            }
-                        }
-                        break;
-
-                    case ("reg", null, null):
-                        {
-                            Log($"Shellinator register all");
-                            List<string> res = [];
-                            _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd)));
-                        }
-                        break;
-
-                    case ("unreg", null, null):
-                        {
-                            Log($"Shellinator unregister all");
-                            List<string> res = [];
-                            _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd)));
-                        }
-                        break;
-
+                    ///// These are called by windows shell using registry entry. No console available. /////
                     case (_, "dir", not null):
                     case (_, "dirbg", not null):
                     case (_, "deskbg", not null):
                         {
-                            // Called from system using registry entry.
-                            var cmd = _explorerCommands.Where(c => c.Context == context.ToLower() && c.Key == key.ToLower()).FirstOrDefault();
+                            var cmd = _explorerCommands.Where(c => c.Context == contextlc && c.Key == idlc).FirstOrDefault();
                             if (cmd is null) { throw new ShellinatorException($"Invalid command line"); }
                             ExecuteCommand(cmd.ExecLine, target);
                         }
@@ -183,7 +157,6 @@ namespace Shellinator
 
                     case ("run", _, not null):
                         {
-                            // Called from system using registry entry.
                             var cmd = _runCommands.Where(c => c.Ext == ext).FirstOrDefault();
                             // Try default file?
                             cmd ??= _runCommands.Where(c => c.Ext == "*").FirstOrDefault();
@@ -192,34 +165,52 @@ namespace Shellinator
                         }
                         break;
 
-                    case ("dev", null, null):
+                    ///// These are called from user console. /////
+                    case ("list", null, null):
                         {
-                            List<string> res = [];
-                            _explorerCommands.ForEach(cmd => res.Add(cmd.ToString()));
-                            _runCommands.ForEach(cmd => res.Add(cmd.ToString()));
-                            Trace(res, "COMMANDS");
-
-                            // Trace reg calls without executing.
-                            _fake = true;
-                            res.Clear();
-                            _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd)));
-                            Trace(res, "UNREG");
-
-                            res.Clear();
-                            _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd)));
-                            Trace(res, "REG");
-                            _fake = false;
-
-                            // Dump hive contents.
-                            //res.Clear();
-                            //res = DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
-                            //Trace(res, "HIVE");
-                            //DumpHive(RegistryHive.LocalMachine, @"Software\Classes");
-                            //DumpHive(RegistryHive.CurrentUser, @"\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts");
-                            //res.ForEach(l => File.WriteLine(_debugPath, l));
+                            Tell("Registry commands:");
+                            Tell(ListRegistryCommands());
                         }
                         break;
 
+                    case ("reg", null, null):
+                        {
+                            Tell("Register all:");
+                            _explorerCommands.ForEach(c => Tell(Register(c, false)));
+                        }
+                        break;
+
+                    case ("unreg", null, null):
+                        {
+                            Tell("Unregister all:");
+                            _explorerCommands.ForEach(c => Tell(Unregister(c, false)));
+                        }
+                        break;
+
+                    case ("dev", null, null):
+                        {
+                            Tell("COMMANDS:");
+                            _explorerCommands.ForEach(cmd => Tell(cmd.ToString()));
+                            _runCommands.ForEach(cmd => Tell(cmd.ToString()));
+
+                            // Trace reg calls without executing.
+//                            _fake = true;
+                            Tell("UNREG:");
+                            _explorerCommands.ForEach(cmd => Tell(Unregister(cmd, true)));
+                            Tell("REG:");
+                            _explorerCommands.ForEach(cmd => Tell(Register(cmd, true)));
+//                            _fake = false;
+
+                            // Dump hive contents.
+                            // Tell("UNREG:");
+                            //res = DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
+                            //tell(res);
+                            //DumpHive(RegistryHive.LocalMachine, @"Software\Classes");
+                            //DumpHive(RegistryHive.CurrentUser, @"\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts");
+                        }
+                        break;
+
+                    ///// Fail. /////
                     default:
                         throw new ShellinatorException($"Invalid command line args");
                 }
@@ -411,8 +402,9 @@ namespace Shellinator
         /// Write a user command to the registry.
         /// </summary>
         /// <param name="cmd">Which command</param>
+        /// <param name="fake"></param>
         /// <returns>What was written</returns>
-        List<string> Register(ExplorerCommand cmd)
+        List<string> Register(ExplorerCommand cmd, bool fake)
         {
             List<string> res = [];
 
@@ -439,7 +431,7 @@ namespace Shellinator
             res.Add($"REG CreateSubKey({subkey1}) SetValue(MUIVerb, {cmd.Text})");
             res.Add($"REG CreateSubKey({subkey2}) SetValue(_, {expCmd})");
 
-            if (!_fake)
+            if (!fake)
             {
                 using var k1 = regRoot!.CreateSubKey(subkey1);
                 k1.SetValue("MUIVerb", cmd.Text);
@@ -455,8 +447,9 @@ namespace Shellinator
         /// Delete existing registry entry.
         /// </summary>
         /// <param name="cmd">Which command</param>
+        /// <param name="fake"></param>
         /// <returns>What was written</returns>
-        List<string> Unregister(ExplorerCommand cmd)
+        List<string> Unregister(ExplorerCommand cmd, bool fake)
         {
             List<string> res = [];
 
@@ -467,7 +460,7 @@ namespace Shellinator
 
             res.Add($"UNREG DeleteSubKeyTree({ssubkey})");
 
-            if (!_fake)
+            if (!fake)
             {
                 regRoot!.DeleteSubKeyTree(ssubkey, false);
             }
@@ -493,6 +486,24 @@ namespace Shellinator
 
         #region Infrastructure
         /// <summary>
+        /// Tell the user something.
+        /// </summary>
+        /// <param name="s"></param>
+        void Tell(string s)
+        {
+            Console.WriteLine(s);
+        }
+
+        /// <summary>
+        /// Tell the user something.
+        /// </summary>
+        /// <param name="ls"></param>
+        void Tell(List<string> ls)
+        {
+            ls.ForEach(s => Tell(s));
+        }
+
+        /// <summary>
         /// Simple logging.
         /// </summary>
         /// <param name="msg"></param>
@@ -513,28 +524,28 @@ namespace Shellinator
             MessageBox.Show(ex.ToString(), ex.Message);
         }
 
-        /// <summary>
-        /// Simple logging.
-        /// </summary>
-        /// <param name="msg"></param>
-        /// <param name="id"></param>
-        /// <param name="line"></param>
-        void Trace(string msg, string id, [CallerLineNumber] int line = -1)
-        {
-            File.AppendAllText(_tracePath, $"{id}({line}) {msg}{Environment.NewLine}");
-        }
+        ///// <summary>
+        ///// Simple logging.
+        ///// </summary>
+        ///// <param name="msg"></param>
+        ///// <param name="id"></param>
+        ///// <param name="line"></param>
+        //void Trace(string msg, string id, [CallerLineNumber] int line = -1)
+        //{
+        //    File.AppendAllText(_tracePath, $"{id}({line}) {msg}{Environment.NewLine}");
+        //}
 
-        /// <summary>
-        /// Simple logging.
-        /// </summary>
-        /// <param name="msg"></param>
-        /// <param name="id"></param>
-        /// <param name="line"></param>
-        void Trace(List<string> msg, string id, [CallerLineNumber] int line = -1)
-        {
-            var smsg = string.Join(Environment.NewLine, msg);
-            File.AppendAllText(_tracePath, $"+++ {id} ({line}){Environment.NewLine}{smsg}{Environment.NewLine}");
-        }
+        ///// <summary>
+        ///// Simple logging.
+        ///// </summary>
+        ///// <param name="msg"></param>
+        ///// <param name="id"></param>
+        ///// <param name="line"></param>
+        //void Trace(List<string> msg, string id, [CallerLineNumber] int line = -1)
+        //{
+        //    var smsg = string.Join(Environment.NewLine, msg);
+        //    File.AppendAllText(_tracePath, $"+++ {id} ({line}){Environment.NewLine}{smsg}{Environment.NewLine}");
+        //}
 
         /// <summary>
         /// List the current shellinator registry commands.
@@ -572,6 +583,11 @@ namespace Shellinator
                         res.Add($">>> Something wrong with [{subkey}] [{id}] [{ex.Message}]");
                     }
                 }
+            }
+
+            if (res.Count == 0)
+            {
+                res.Add("None");
             }
 
             return res;

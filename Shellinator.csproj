@@ -2,9 +2,8 @@
 
     <PropertyGroup>
 
+        <!-- Use Exe to debug using console. WinExe -->
         <OutputType>WinExe</OutputType>
-        <!-- Use Exe to debug using console. -->
-        <!-- <OutputType>Exe</OutputType> -->
         <UseWindowsForms>true</UseWindowsForms>
         <OutputPath>bin\</OutputPath>
         <TargetFramework>net8.0-windows</TargetFramework>
