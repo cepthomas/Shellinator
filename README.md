@@ -12,6 +12,10 @@ When edited, run `shellinator reg` to register them. If the config needs to be c
 run `shellinator unreg`, make the edits, then run `shellinator reg` again.
 To see what commands are currently registered, run `shellinator list`.
 
+If you provide an env var called `TOOLS_PATH` and a corresponding entry in `PATH`,
+build copies the executables to it. This is also where the application looks for your
+specific `shellinator.ini` file.
+
 If this gets a bit messed up, the registry entries can be removed manually.
 Delete these entries:
 ```

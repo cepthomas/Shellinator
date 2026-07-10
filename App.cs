@@ -18,11 +18,7 @@ namespace Shellinator
     {
         #region Types
         /// <summary>Internal exception.</summary>
-        class ShellinatorException(string msg, [CallerLineNumber] int line = -1) : Exception(msg)
-        {
-            public int Line { get; } = line;
-            public override string ToString() { return $"({Line}) {base.ToString()})"; }
-        }
+        class ShellinatorException(string msg, [CallerLineNumber] int line = -1) : Exception($"{msg} ({line})") { }
 
         /// <summary>Describes one standard menu command.</summary>
         /// <param name="Context">Where to install.</param>
@@ -31,7 +27,7 @@ namespace Shellinator
         /// <param name="ExecLine">Command line args to execute.</param>
         record ExplorerCommand(string Context, string Key, string Text, List<string> ExecLine)
         {
-            public override string ToString() { return $"ExplorerCommand Context:[{Context}] Key:[{Key}] Text:[{Text}] ExecLine:[{string.Join("|", ExecLine)}]"; }
+            public override string ToString() { return $"ExplorerCommand Context:[{Context}] Key:[{Key}] Text:[{Text}] ExecLine:[{string.Join(SEP, ExecLine)}]"; }
         };
 
         /// <summary>Describes one run menu command.</summary>
@@ -39,7 +35,7 @@ namespace Shellinator
         /// <param name="ExecLine">Command line args to execute.</param>
         record RunCommand(string Ext, List<string> ExecLine)
         {
-            public override string ToString() { return $"RunCommand Ext:[{Ext}] ExecLine:[{string.Join("|", ExecLine)}]"; }
+            public override string ToString() { return $"RunCommand Ext:[{Ext}] ExecLine:[{string.Join(SEP, ExecLine)}]"; }
         };
 
         /// <summary>Convenience container.</summary>
@@ -59,9 +55,6 @@ namespace Shellinator
         /// <summary>Log file path.</summary>
         readonly string _logPath;
 
-        // /// <summary>Debug file path.</summary>
-        // readonly string _tracePath;
-
         /// <summary>Don't use reserved commands.</summary>
         readonly List<string> _reserved = ["edit", "explore", "find", "open", "print", "properties", "runas"];
 
@@ -72,26 +65,26 @@ namespace Shellinator
         readonly List<RunCommand> _runCommands = [];
         #endregion
 
+        const string SEP = ",";
+
         #region Debug help
         /// <summary>Flag set in ini config.</summary>
         bool _debug = false;
 
-        /// <summary>Some behavior is altered if running in VS.</summary>
+        /// <summary>Some behavior may be altered if running in VS.</summary>
         readonly bool _inDev = false;
         #endregion
 
         #region The command line application
-
         /// <summary>Start here.</summary>
         /// <param name="args"></param>
         [STAThread]
         static void Main(string[] args)
         {
-            // TODO? Keep in memory like ClipPlayer (Ipc.Server) or MassProcessingService.
             var _ = new App(args);
         }
 
-        /// <summary>Do the work.</summary>
+        /// <summary>Do the work. TODO? in memory like ClipPlayer (Ipc.Server) or MassProcessingService.</summary>
         /// <param name="appArgs"></param>
         public App(string[] appArgs)
         {
@@ -100,14 +93,13 @@ namespace Shellinator
 
             try
             {
-                _tmit.Snap("App constructor");
+                _tmit.Snap("Constructor enter");
+                var sargs = string.Join(SEP, appArgs);
 
                 ///// Init internal stuff.
                 _inDev = Debugger.IsAttached;
-                _exePath = Path.GetDirectoryName(Application.ExecutablePath)!;
-
-                // _tracePath = Path.Join(_exePath, "shellinator.trc");
-                // File.Delete(_tracePath); // reset
+                var toolsPath = Environment.GetEnvironmentVariable("TOOLS_PATH");
+                _exePath = toolsPath ?? Path.GetDirectoryName(Application.ExecutablePath)!;
 
                 // Set up logging.
                 _logPath = Path.Join(_exePath, "shellinator.log");
@@ -119,10 +111,10 @@ namespace Shellinator
                     File.Move(_logPath, newfn);
                 }
                 Log($"==================== Running shellinator ====================");
-                Log($"Command line [{string.Join("|", appArgs)}]");
+                Log($"Command line [{sargs}]");
 
                 // Read configuration. Config file is assumed to be next to the executable.
-                // If missing init with default. TODO1 allow arbitrary for dev?
+                // If missing init with default.
                 var cfn = Path.Combine(_exePath, "shellinator.ini");
                 if (!File.Exists(cfn))
                 {
@@ -139,7 +131,6 @@ namespace Shellinator
                 var context = appArgs.Length > 1 ? appArgs[1] : null;
                 var contextlc = context?.ToLower();
                 var target = appArgs.Length > 2 ? appArgs[2] : null;
-                var ext = target is null ? "" : Path.GetExtension(target).ToLower().Replace(".", "");
 
                 switch (idlc, contextlc, target)
                 {
@@ -148,19 +139,20 @@ namespace Shellinator
                     case (_, "dirbg", not null):
                     case (_, "deskbg", not null):
                         {
-                            var cmd = _explorerCommands.Where(c => c.Context == contextlc && c.Key == idlc).FirstOrDefault();
-                            if (cmd is null) { throw new ShellinatorException($"Invalid command line"); }
-                            ExecuteCommand(cmd.ExecLine, target);
+                            var cmd = _explorerCommands.Where(c => c.Context.ToLower() == contextlc && c.Key.ToLower() == idlc).FirstOrDefault();
+                            if (cmd is null) { throw new ShellinatorException($"Invalid command line [{sargs}]"); }
+                            res.AddRange(ExecuteCommand(cmd.ExecLine, target));
                         }
                         break;
 
                     case ("run", "file", not null):
                         {
-                            var cmd = _runCommands.Where(c => c.Ext == ext).FirstOrDefault();
+                            var ext = Path.GetExtension(target).ToLower().Replace(".", "");
+                            var cmd = _runCommands.Where(c => c.Ext.ToLower() == ext).FirstOrDefault();
                             // Try default file?
                             cmd ??= _runCommands.Where(c => c.Ext == "*").FirstOrDefault();
-                            if (cmd is null) { throw new ShellinatorException($"Invalid command line"); }
-                            ExecuteCommand(cmd.ExecLine, target);
+                            if (cmd is null) { throw new ShellinatorException($"Invalid command line [{sargs}]"); }
+                            res.AddRange(ExecuteCommand(cmd.ExecLine, target));
                         }
                         break;
 
@@ -188,28 +180,30 @@ namespace Shellinator
 
                     case ("dev", null, null):
                         {
-                            res.Add("COMMANDS:");
+                            res.Add("----- COMMANDS -----");
                             _explorerCommands.ForEach(cmd => res.Add(cmd.ToString()));
                             _runCommands.ForEach(cmd => res.Add(cmd.ToString()));
 
-                            // Trace reg calls without executing.
-                            res.Add("UNREG:");
+                            // Execute reg calls without actually writing.
+                            res.Add("----- UNREG -----");
                             _explorerCommands.ForEach(cmd => res.AddRange(Unregister(cmd, true)));
-                            res.Add("REG:");
+                            res.Add("----- REG -----");
                             _explorerCommands.ForEach(cmd => res.AddRange(Register(cmd, true)));
 
                             // Dump hive contents.
-                            // Tell("UNREG:");
-                            //res = DumpHive(RegistryHive.CurrentUser, @"Software\Classes");
-                            //tell(res);
+                            //res.Add(DumpHive(RegistryHive.CurrentUser, @"Software\Classes"));
                             //DumpHive(RegistryHive.LocalMachine, @"Software\Classes");
                             //DumpHive(RegistryHive.CurrentUser, @"\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts");
+
+                            _tmit.Snap("All done");
+                            res.Add("----- TMIT -----");
+                            res.AddRange(_tmit.Captures);
                         }
                         break;
 
                     ///// Fail. /////
                     default:
-                        throw new ShellinatorException($"Invalid command line args [{string.Join("|", appArgs)}]");
+                        throw new ShellinatorException($"Invalid command line args [{sargs}]");
                 }
             }
             catch (ShellinatorException ex) // app error
@@ -223,14 +217,11 @@ namespace Shellinator
                 code = 3;
             }
 
-            _tmit.Snap("All done");
-
+            // TIL don't set clipboard to an empty string.
             if (res.Count > 0)
             {
                 Clipboard.SetText(string.Join(Environment.NewLine, res));
             }
-
-            //Trace(_tmit.Captures, "TMIT");
 
             Environment.Exit(code);
         }
@@ -245,8 +236,7 @@ namespace Shellinator
         /// <returns>Results</returns>
         List<string> ExecuteCommand(List<string> cmd, string target)
         {
-            Log($"ExecuteCommand() [{string.Join("|", cmd)}]");
-            _tmit.Snap("Execute command start");
+            _tmit.Snap("ExecuteCommand start");
             List<string> res = [];
 
             // Do any replacements.
@@ -255,6 +245,8 @@ namespace Shellinator
                 var s = l.Replace("$target", target);
                 return Environment.ExpandEnvironmentVariables(s);
             }).ToList();
+
+            Log($"ExecuteCommand() [{string.Join(SEP, replArgs)}]");
 
             ProcessStartInfo pinfo = new(replArgs[0], replArgs[1..])
             {
@@ -265,13 +257,10 @@ namespace Shellinator
                 RedirectStandardError = true,
             };
 
-            // pinfo.EnvironmentVariables["MY_VAR"] = "Hello!";
-
             using Process proc = new() { StartInfo = pinfo };
 
             try
             {
-                //LogInfo("Start process...");
                 proc.Start();
             }
             catch (Exception ex)
@@ -282,17 +271,14 @@ namespace Shellinator
             // TIL: To avoid deadlocks, always read the output stream first and then wait.
             var stdout = proc.StandardOutput.ReadToEnd();
             var stderr = proc.StandardError.ReadToEnd();
-
-            // LogInfo("Wait for process to exit...");
             proc.WaitForExit();
 
             if (proc.ExitCode == 0)
             {
-                // Success. Capture any stdout. TIL don't set clipboard to an empty string.
+                // Success. Capture any stdout without embellishment.
                 if (stdout.Length > 0)
                 {
                     res.Add(stdout);
-                    //ClipboardX.SetText(stdout);
                 }
             }
             else
@@ -312,7 +298,7 @@ namespace Shellinator
                 }
             }
 
-            _tmit.Snap("Execute command end");
+            _tmit.Snap("ExecuteCommand end");
 
             return res;
         }
@@ -500,7 +486,7 @@ namespace Shellinator
         /// <param name="line"></param>
         void Log(Exception ex, [CallerLineNumber] int line = -1)
         {
-            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} >>> ({line}) {ex}{Environment.NewLine}");
+            File.AppendAllText(_logPath, $"{DateTime.Now:yyyy'-'MM'-'dd HH':'mm':'ss.fff} >>> ({line}) {ex.Message}{Environment.NewLine}");
             MessageBox.Show(ex.ToString(), ex.Message);
         }
 
